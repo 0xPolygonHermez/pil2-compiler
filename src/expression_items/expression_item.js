@@ -201,6 +201,12 @@ class ExpressionItem {
     isInstanceOf(cls) {
         return (this instanceof cls);
     }
+    isAlone() {
+        return true;
+    }
+    getAloneOperand() {
+        return this;
+    }
 }
 
 module.exports = ExpressionItem;

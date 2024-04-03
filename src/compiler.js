@@ -116,7 +116,7 @@ class Compiler {
                 libraries.push({type: 'include', file: include, debug:'', contents: this.loadInclude({file: include})});
             }   
         }
-        const [_src, fileDir, fullFileName, relativeFileName] = this.loadSource(fileName, isMain. options);
+        const [_src, fileDir, fullFileName, relativeFileName] = this.loadSource(fileName, isMain);
 
         const preSrc = options.preSrc ?? '';
         const postSrc = options.postSrc ?? '';
@@ -168,10 +168,12 @@ class Compiler {
         let fullFileName, fileDir, src;
         let relativeFileName = '';
         let includePathIndex = 0;
+        console.log(isMain, this.config);
         if (isMain && this.config.compileFromString) {
             relativeFileName = fullFileName = "(string)";
             fileDir = '';
             src = fileName;
+            console.log('COMPILE FROM STRING')
         }
         else {
             let includePaths = [...this.includePaths];

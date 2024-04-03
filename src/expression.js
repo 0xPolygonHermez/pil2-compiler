@@ -455,32 +455,31 @@ class Expression extends ExpressionItem {
         console.log(util.inspect(values, false, 200, true));
         let value = null;
         if (values.some(value => value instanceof ExpressionItems.NonRuntimeEvaluableItem))  {
-            console.log('HERE');
             value = ExpressionItems.NonRuntimeEvaluableItem.get();
         } else if (values.some(value => value === null))  {
-            console.log('HERE');
             value = null;
             this.dump('value=null '+Context.sourceRef);
-            EXIT_HERE;
         } else if (st.op === false) {
-            console.log('HERE');
             value = values[0];
         } else if (values.some(value => value.isRuntimeEvaluable() === false)) {
-            console.log('HERE');
             value = ExpressionItems.NonRuntimeEvaluableItem.get();
         } else {
-            console.log('HERE');
             values.forEach(x => {if (x.dump) x.dump()});
             value = this.applyOperation(st.op, values);
-            if (Debug.active) {
-                console.log(`evaluateStackPos/applyOperation ${_debugLabel} `);
-                console.log(util.inspect(values, false, null, true));
-                console.log(util.inspect(value, false, null, true));
-            }
-            if (options.instance) {
-                st.op = false;
-                st.operands = [value];
-                if (Debug.active) console.log('ST.OPERANDS=[', value);
+            if (!value.isAlone()) {
+                value = ExpressionItems.NonRuntimeEvaluableItem.get();
+            } else {
+                value = value.getAloneOperand();
+                if (Debug.active) {
+                    console.log(`evaluateStackPos/applyOperation ${_debugLabel} `);
+                    console.log(util.inspect(values, false, null, true));
+                    console.log(util.inspect(value, false, null, true));
+                }
+                if (options.instance) {
+                    console.log(st);
+                    st.op = false;
+                    st.operands = [value];            
+                }
             }
         }
         return (results[0] = value);
@@ -1131,6 +1130,9 @@ class Expression extends ExpressionItem {
     }
     static getType() {
         return 'expr';
+    }
+    isRuntimeEvaluable() {
+        return this.stack.every(stackPos => stackPos.operands.every(operand => operand.isRuntimeEvaluable()));
     }
 }
 

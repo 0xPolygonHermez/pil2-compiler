@@ -11,11 +11,8 @@ class RowOffset {
         if (typeof this.index === 'number') {
             return this.prior ? -this.index : this.index;
         }
-        console.log(this.index);
-        EXIT_HERE;
-        if (this.index instanceof Expression) {
-
-        }
+        const indexValue = this.index.asInt();
+        return this.prior ? -indexValue:indexValue;
     }
     static factory(index, prior = false) {
         if (typeof index === 'undefined') {

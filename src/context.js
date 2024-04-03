@@ -10,11 +10,14 @@ module.exports = class Context {
         this.namespace = '';
         this.subproof = false;
         this.stack = [];        
-        this.config = {debug: {}, ...config};
+        this.config = {debug: {}, test: {}, ...config};
         this.uses = [];
         this.subproofName = false;
         this.airId = false;
         this.airN = false;
+        if (typeof this.config.test.onContextInit === 'function') {
+            this.config.test.onContextInit(Context, this);
+        }
     }
     static get config() {
         return this._instance.config;

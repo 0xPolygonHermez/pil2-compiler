@@ -993,7 +993,7 @@ variable_assignment_list
 
 include_directive
     : INCLUDE flexible_string
-        { $$ = { type: 'include', file: $2 } }
+        { $$ = { type: 'include', file: ExpressionFactory.fromObject($2) } }
     ;
 
 stage_definition

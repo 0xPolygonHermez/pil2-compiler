@@ -38,6 +38,9 @@ class StringValue extends RuntimeItem {
     operatorEq(valueB) {
         return new RuntimeItem.IntValue(this.asString() === valueB.asString() ? 1:0);
     }
+    operatorNe(valueB) {
+        return new RuntimeItem.IntValue(this.asString() === valueB.asString() ? 0:1);
+    }
     operatorAdd(valueB) {
         return new StringValue(this.asString() + valueB.asString());
     }

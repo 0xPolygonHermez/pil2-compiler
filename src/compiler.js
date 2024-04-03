@@ -131,9 +131,9 @@ class Compiler {
             sts = parser.parse(src);
             for (let i=0; i<sts.length; i++) {
                 if (sts[i].type !== 'include') continue;
-                sts[i].contents = this.loadInclude(sts[i]);
+                sts[i].contents = this.loadInclude(sts[i].file.asString());
             }
-            for (const library of libraries.reverse()) {
+            for (const library of libraries.slice().reverse()) {
                 sts.unshift(library);
             }   
         } catch (e) {
@@ -146,10 +146,11 @@ class Compiler {
         const parser = this.instanceParser(expression, "template expression");
         return parser.parse(expression);
     }
-    loadInclude(s, options = {}) {
+    loadInclude(filename, options = {}) {
+        const includeFile = filename
+        const fullFileNameI = this.config.includePaths ? filename : path.resolve(this.fileDir, includeFile);
+        console.log(fullFileNameI);
 
-        const includeFile = this.asString(s.file);
-        const fullFileNameI = this.config.includePaths ? s.file : path.resolve(this.fileDir, includeFile);
         if (this.includedFiles[fullFileNameI]) {
             return false;
         }
@@ -163,6 +164,7 @@ class Compiler {
         return sts;
     }
     loadSource(fileName, isMain) {
+        console.log('LOADSOURCE', fileName);
         let fullFileName, fileDir, src;
         let relativeFileName = '';
         let includePathIndex = 0;
@@ -173,6 +175,8 @@ class Compiler {
         }
         else {
             let includePaths = [...this.includePaths];
+            console.log(includePaths);
+
             let directIncludePathIndex;
             const cwd = this.cwd ? this.cwd : process.cwd();
 
@@ -185,6 +189,7 @@ class Compiler {
                 includePaths.unshift(cwd);
             }
             do {
+                console.log(includePaths[includePathIndex], fileName);
                 fullFileName = path.resolve(includePaths[includePathIndex], fileName);
                 if (fs.existsSync(fullFileName)) break;
                 ++includePathIndex;

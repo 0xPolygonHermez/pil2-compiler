@@ -198,6 +198,9 @@ class ExpressionItem {
         // default implementation
         return true;
     }
+    isInstanceOf(cls) {
+        return (this instanceof cls);
+    }
 }
 
 module.exports = ExpressionItem;

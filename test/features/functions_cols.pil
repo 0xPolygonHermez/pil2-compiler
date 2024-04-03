@@ -1,0 +1,68 @@
+function f1 (col witness &p1) {
+    p1 === 314;
+}
+
+function f2 (col witness p1) {
+    p1 === 318;
+}
+
+function f1v (col witness &p1[]) {
+    for (int index = 0; index < length(p1); ++index) {
+        p1[index] === 31416;
+    }
+}
+
+function f1v_ (col witness &p1[]) {
+    for (col witness &p in p1) {
+        p === 31415;
+    }
+}
+
+function f1m (col witness &p1[][]) {
+    for (col witness &p in p1) {
+        for (col witness &p2 in p) {
+            p2 === 3113;
+        }
+    }
+}
+
+subproof Functions(2**23) {
+
+    col witness c1,c2;
+    col witness vec[10];
+    col witness m[4][3];
+
+    int values[5];
+    int matrix[2][3];
+
+    for (int i = 0; i < length(values); ++i) {
+        values[i] = 100 + i;
+    }
+
+    for (int i = 0; i < length(matrix); ++i) {
+        for (int j = 0; j < length(matrix[i]); ++j) {
+            matrix[i][j] = 1000 + 100 * i + j;
+        }
+    }
+
+    f1(c1);
+    f1(c2);
+    f1(vec[3]);
+
+    f2(c1);
+    f2(c2);
+    f2(vec[3]);
+
+    f1v(vec);
+    f1m(m);
+
+    for (col witness &p in [...vec]) {
+        p === 300;
+    }
+
+    for (col witness&p in vec) {
+        p === 301;
+    }
+
+    f1v_(vec);
+}

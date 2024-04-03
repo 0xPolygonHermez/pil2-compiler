@@ -138,6 +138,9 @@ module.exports = class Processor {
         this.proto.setupPilOut('noname');
 
         this.transpiler = new Transpiler({processor: this});
+        if (typeof Context.config.test.onProcessorInit === 'function') {
+            Context.config.test.onProcessorInit(this);
+        }
     }
     loadBuiltInClass() {
         const filenames = fs.readdirSync(__dirname + '/builtin');
@@ -305,6 +308,11 @@ module.exports = class Processor {
             case 'fixed':
                 this.nextStatementFixed = true;
                 break;
+            case 'dump': {                
+                const value = this.references.get(params[1]).value;
+                value.dump('pragma');
+                break;
+            }
         }
         
     }
@@ -790,6 +798,14 @@ module.exports = class Processor {
             this.references.set('BITS', [], air.bits);
             this.references.set('PRIME', [], this.prime);
             this.references.set('__SUBPROOF__', [], subproofName);
+            if (Context.config.test.onSubproofBegin && subproof.airs.length === 1) {
+                Context.config.test.onSubproofBegin(subproof);
+            }
+
+            if (Context.config.test.onAirBegin) {
+                Context.config.test.onAirBegin(subproof, air);
+            }
+
 
 /*            this.references.set('N', [], new ExpressionItems.IntValue(air.rows));
             this.references.set('BITS', [], new ExpressionItems.IntValue(air.bits));
@@ -815,8 +831,14 @@ module.exports = class Processor {
             // clearing air scope
             this.subproofProtoOut(subproofId, airId)
 
-            this.clearAirScope(airName);
             this.constraints = new Constraints(this.Fr, this.expressions);
+            if (Context.config.test.onAirEnd) {
+                Context.config.test.onAirEnd(subproof, air);
+            }
+            if (Context.config.test.onSubproofEnd && subproof.airs.length === 1) {
+                Context.config.test.onSubproofEnd(subproof);
+            }
+            this.clearAirScope(airName);
             this.scope.popInstanceType(['witness', 'fixed', 'im']);
             this.context.pop();
             console.log(`END AIR ${subproofName} (${airRows}) #${this.airId}`);
@@ -1062,10 +1084,20 @@ module.exports = class Processor {
 
         assertLog(s.left instanceof Expression, s.left);
         assertLog(s.right instanceof Expression, s.right);
+        s.left.dump('LEFT-CONSTRAINT 1');
+        // s.right.dump('RIGHT-CONSTRAINT 1');
+        Debug.active = true;
         const left = s.left.instance();
-        const right = s.right.instance();
+        Debug.active = false;
+        // const right = s.right.instance();
+        left.dump('LEFT-CONSTRAINT 2');
+        // right.dump('RIGHT-CONSTRAINT 2');
+        const _left = s.left.instance({simplify: true})
+        const _right = s.right.instance({simplify: true});
+        _left.dump('LEFT-CONSTRAINT 3');
+        _right.dump('RIGHT-CONSTRAINT 3');
         if (scopeType === 'air') {
-            id = this.constraints.define(s.left.instance({simplify: true}), s.right.instance({simplify: true}),false,this.sourceRef);
+            id = this.constraints.define(_left, _right,false,this.sourceRef);
             expr = this.constraints.getExpr(id);
         } else if (scopeType === 'proof') {
             id = this.globalConstraints.define(s.left.instance({simplify: true}), s.right.instance({simplify: true}),false,this.sourceRef);
@@ -1113,7 +1145,7 @@ module.exports = class Processor {
                         initValue = inits[index].eval().asIntItem();
                         break;
                     case 'string':
-                        initValue = new ExpressionItems.StringValue(this.expressions.e2value(inits[index]));
+                        initValue = inits[index].eval().asStringItem();;
                         break;
                 }
                 if (Debug.active) console.log(name, s.vtype, initValue.toString ? initValue.toString() : initValue);

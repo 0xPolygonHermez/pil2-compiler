@@ -161,13 +161,21 @@ class Reference {
         let toIndex = false;
         if (Array.isArray(indexes) && indexes.length > 0) {
             for (let index = 0; index < indexes.length; ++index) {
-                if (indexes[index].isInstanceOf(RangeIndex)) {
+                if (indexes[index].isInstanceOf && indexes[index].isInstanceOf(RangeIndex)) {
                     if (index + 1 !== indexes.length) {
                         throw new Error(`Range index is valid only in last index ${Context.sourceRef}`);
                     }
                     const rangeIndex = indexes[index].getAloneOperand();
                     fromIndex = rangeIndex.from === false ? false : Number(rangeIndex.from.asInt());
                     toIndex = rangeIndex.to === false ? false : Number(rangeIndex.to.asInt());
+                    continue;
+                }
+                if (typeof indexes[index] === 'number') {
+                    evaluatedIndexes.push(BigInt(indexes[index]));
+                    continue;
+                }
+                if (typeof indexes[index] === 'bigint') {
+                    evaluatedIndexes.push(indexes[index]);
                     continue;
                 }
                 evaluatedIndexes.push(indexes[index].asInt());

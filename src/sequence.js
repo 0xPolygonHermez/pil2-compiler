@@ -72,11 +72,11 @@ module.exports = class Sequence {
         this.paddingSize = 0;
         const size = this._sizeOf(e);
         assert(size >= this.paddingCycleSize, `size(${size}) < paddingCycleSize(${this.paddingCycleSize})`);
-        if (Debug.active) {
+        // if (Debug.active) {
             console.log(['SIZE(MAXSIZE)', this.maxSize]);
             console.log(['SIZE(paddingCycleSize)', this.paddingCycleSize]);
             console.log(['SIZE(paddingSize)', this.paddingSize]);
-        }
+        // }
         if (this.paddingCycleSize) {
             this.paddingSize = this.maxSize - (size - this.paddingCycleSize);
             this.size = size - this.paddingCycleSize + this.paddingSize;
@@ -125,7 +125,8 @@ module.exports = class Sequence {
         return this.paddingCycleSize;
     }
     _sizeOfPaddingSeq(e) {
-        return this.setPaddingSize(this._sizeOf(e.value));
+        const size = this._sizeOf(e.value);
+        return this.setPaddingSize(size);
     }
     getRangeSeqInfo(e) {
         const fromTimes = e.times ? this.toNumber(this.e2num(e.times)): 1;
@@ -264,8 +265,7 @@ module.exports = class Sequence {
         // TODO: review case tn !== false and reverse
         const tf = reverse ? t1 : tn;
         const ti = reverse ? tn : t1;
-        if (tf % ti !== 0n || (reverse && tn > t2) || (!reverse && tn < t2)) {
-            // console.log({tf, ti, mod:tf % ti, reverse, t1, t2, tn});
+        if ((reverse && tn > t2) || (!reverse && tn < t2)) {
             return [false, false, false, false, false];
         }
         if (n == 0) {
@@ -273,7 +273,6 @@ module.exports = class Sequence {
             // console.log({_: 'calculateGeomN', n, ratio, ti, tf});
         }
         if (tf !== (ti * (ratio ** BigInt(n)))) {
-            // console.log({padding, calculateSize, ti, tf, ratio, n, t1, t2, tn});
             throw new Error(`ERROR geometric seq calculation ${tf} !== ${ti} * (${ratio} ** ${BigInt(n)})`);
         }
         return [this.toNumber(n) + 1, reverse, ti, tf, ratio];
@@ -333,19 +332,102 @@ module.exports = class Sequence {
         }
         return this.extendPos - initialExtendPos;
     }
-    _gcodeRangeSeq(e) {
-        const [fromValue, toValue, times] = this.getRangeSeqInfo(e);
-        const delta = fromValue > toValue ? -1n:1n;
+    geomCount(fromValue, toValue, delta) {
+        if (delta < Number.MIN_SAFE_INTEGER || delta > Number.MAX_SAFE_INTEGER) {
+            throw new Error(`Geometric coeficient to big ${delta}`);
+        }
+        if (!fromValue || !toValue || !delta) {
+            throw new Error(`Invalid geometric parameters from:${fromValue} to:${toValue} delta:${delta}`);
+        }
+
+        const _delta = Number(delta);
+        if (fromValue >= Number.MIN_SAFE_INTEGER && fromValue <= Number.MAX_SAFE_INTEGER && 
+            toValue >= Number.MIN_SAFE_INTEGER && toValue <= Number.MAX_SAFE_INTEGER) {
+            console.log({fromValue, toValue, delta, _delta});
+            if (toValue > fromValue) {
+                assert(Number(toValue/fromValue) > 0);
+                return Math.floor(Math.log(Number(toValue/fromValue))/Math.log(_delta)) + 1;
+            } 
+            assert(Number(fromValue/toValue) > 0);
+            return Math.floor(Math.log(Number(fromValue/toValue))/Math.log(_delta)) + 1;
+        }                
+        const _maxToValue = delta ** BigInt(Math.floor(Math.log(Number.MAX_SAFE_INTEGER)/Math.log(_delta)));
+        const _times = fromValue / BigInt(_maxToValue);
+        assert((_times * 54n) <= Number.MAX_SAFE_INTEGER);
+        let count = Number(fromValue / BigInt(_maxToValue)) * this.geomCount(1, _maxToValue, _delta);
+        const _remainToValue = Number(fromValue % BigInt(_maxToValue));
+        if (_remainToValue) {
+            count += this.geomCount(1, _remainToValue, _delta);
+        }
+        return count;       
+    }
+    calculateToValue(fromValue, delta, times, operation) {
+        const size = Math.ceil(this.paddingSize / times);
+        switch (operation) {
+            case '+': return fromValue + BigInt(size - 1) * delta;
+            case '-': return fromValue - BigInt(size - 1) * delta;
+            case '*': return fromValue * (delta ** BigInt(size - 1));
+            case '/': return fromValue / (delta ** BigInt(size - 1));
+        }
+        throw new Error(`Invalid sequence operation ${operation}`);            
+    }
+    calculateSingleCount(fromValue, toValue, delta, operation) {
+        switch (operation) {
+            case '+': return Number((toValue - fromValue) / delta) + 1; 
+            case '-': return Number((fromValue - toValue) / delta) + 1; 
+            case '*': return this.geomCount(fromValue, toValue, delta);
+            case '/': return this.geomCount(fromValue, toValue, delta);
+        }
+        throw new Error(`Invalid sequence operation ${operation}`);
+    }
+    _gcodeFromTo(fromValue, toValue, delta, times, operation = '+') {
+        let count = 0;
+        if (toValue === false) {            
+            toValue = this.calculateToValue(fromValue, delta, times, operation);
+            count = this.paddingSize;
+        } else {
+            count = this.calculateSingleCount(fromValue, toValue, delta, operation);
+        }
+        count = times * count;
         const v = this.createCodeVariable('_v');
-        let code = `for(let ${v}=${fromValue}n;${v}<=${toValue}n;${v}=${v}${delta > 0n?'+'+delta:delta}n){`;
+        const comparator = ((operation === '+' || operation === '*') && delta > 0n) ? '<=':'>=';
+        let code = `for(let ${v}=${fromValue}n;${v}${comparator}${toValue}n;${v}=${v}${delta > 0n? operation+delta:delta}n){`;
         if (times === 1) {
             code += `__values.push(${v});}\n`;
         } else {
             const v2 = this.createCodeVariable();
             code += `for(let ${v2}=0;${v2}<${times};++${v2}){__values.push(${v})}}\n;`;
         }
-        const count = times * (Number((toValue - fromValue) / delta) + 1);
         return [code, count];
+    }
+
+    _gcodeRangeSeq(e) {
+        const [fromValue, toValue, times] = this.getRangeSeqInfo(e);
+        const delta = fromValue > toValue ? -1n:1n;
+        return this._gcodeFromTo(fromValue, toValue, delta, times);
+    }
+    _gcodeArithSeq(e) {
+        const [t1, t2, tn, times] = this.getTermSeqInfo(e);
+        if (t1 === t2) {
+            throw new Error(`Invalid arithmetic parameters t1:${t1} t2:${t2} tn:${tn} times:${times}`);
+        }
+        if (t1 > t2) {
+            return this._gcodeFromTo(t1, tn, t1-t2, times, '-');
+        }
+        return this._gcodeFromTo(t1, tn, t2-t1, times, '+');
+    }
+    _gcodeGeomSeq(e) {
+        const [t1, t2, tn, times] = this.getTermSeqInfo(e);
+        if (t1 > t2) {
+            if (t1 % t2) {
+                throw new Error(`Invalid geometric parameters t1:${t1} t2:${t2} tn:${tn} times:${times}`);
+            }
+            return this._gcodeFromTo(t1, tn, t1/t2, times, '/');
+        }
+        if (t2 % t1) {
+            throw new Error(`Invalid geometric parameters t1:${t1} t2:${t2} tn:${tn} times:${times}`);
+        }
+        return this._gcodeFromTo(t1, tn, t2/t1, times, '*');
     }
 
     extend() {
@@ -449,13 +531,12 @@ module.exports = class Sequence {
     _gcodePaddingSeq(e) {        
         // TODO: if last element it's a padding, not need to fill and after when access to
         // a position applies an module over index.
-        const [_code, seqSize] = this._gcode(e.value);
+        const [_code, seqSize] = this._gcode(e.value);        
         let remaingValues = this.paddingSize - seqSize;
         if (remaingValues < 0) {
-            throw new Error(`In padding range must be space at least for one time sequence at ${this.debug}`);
+            throw new Error(`In padding range must be space at least for one time sequence [paddingSize(${this.paddingSize}) - seqSize(${seqSize}) = ${remaingValues}] at ${this.debug}`);
         }
         if (seqSize < 1) {
-            console.log(e.value);
             throw new Error(`Sequence must be at least one element at ${this.debug}`);
         }
         if (remaingValues === 0) {

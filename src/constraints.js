@@ -34,6 +34,8 @@ module.exports = class Constraints {
     define(left, right, boundery, sourceRef) {
         assertLog(left instanceof Expression, left);
         assertLog(right instanceof Expression, right);
+        left.dump('LEFT(simplied)');
+        right.dump('RIGHT(simplied)');
         if (left.isRuntime()) {
             left.dump('LEFT  CONSTRAINT');
             throw new Error(`left constraint has runtime no resolved elements`);

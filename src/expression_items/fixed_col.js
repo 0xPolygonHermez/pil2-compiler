@@ -45,9 +45,6 @@ module.exports = class FixedCol extends ProofItem {
     }
     cloneUpdate(source) {
         super.cloneUpdate(source);
-        if (source.rowOffset) {
-            console.log('CLONE.ROWOFFSET');
-        }
         this.rows = source.rows;
         this.values = [...source.values];
         this.fullFilled = source.fullFilled;

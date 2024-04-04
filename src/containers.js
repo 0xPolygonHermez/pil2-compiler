@@ -48,11 +48,11 @@ module.exports = class Containers {
         throw new Error(`unsetProperty was called with invalid property ${property}`);
     }
     clearScope(proofScope) {
-        console.log(`CLEAR-SCOPE.CONTAINERS.IN ${proofScope}`, Object.keys(this.containers).map(name => [name, this.containers[name].scope]));
+        // console.log(`CLEAR-SCOPE.CONTAINERS.IN ${proofScope}`, Object.keys(this.containers).map(name => [name, this.containers[name].scope]));
         this.containers = Object.keys(this.containers)
             .filter(name => this.containers[name].scope !== proofScope)
             .reduce((containers, name) => { containers[name] = this.containers[name]; return containers; }, {});
-        console.log(`CLEAR-SCOPE.CONTAINERS.OUT ${proofScope}`, Object.keys(this.containers).map(name => [name, this.containers[name].scope]));
+        // console.log(`CLEAR-SCOPE.CONTAINERS.OUT ${proofScope}`, Object.keys(this.containers).map(name => [name, this.containers[name].scope]));
     }
     create(name, alias = false)
     {
@@ -66,7 +66,7 @@ module.exports = class Containers {
             this.addScopeAlias(alias, name);
         }
 
-        console.log(`CREATE CONTAINER ${name}`);
+        // console.log(`CREATE CONTAINER ${name}`);
         // if container is defined, contents is ignored
         if (this.containers[name]) {
             return false;
@@ -75,7 +75,7 @@ module.exports = class Containers {
         // const nameInfo = this.decodeName(name).scope;
         ;
         this.containers[name] = {scope: this.parent.getNameScope(name), alias, references: {}};
-        console.log(this.containers[name]);
+        // console.log(this.containers[name]);
         this.current = name;
         return true;
     }
@@ -99,8 +99,8 @@ module.exports = class Containers {
             throw new Error(`Could add reference ${name} to closed container`);
         }
         const container = this.containers[this.current];
-        console.log(this.containers);
-        console.log(this.current);
+        // console.log(this.containers);
+        // console.log(this.current);
         if (container.references[name]) {
             throw new Error(`Reference ${name} was declared previously on scope ${this.current}`);
         }

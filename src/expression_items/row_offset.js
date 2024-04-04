@@ -44,7 +44,7 @@ class RowOffset {
         const value = this.value;
         if (!value) return ['',''];
         const res = [this.prior ? `${value < -1 ? -value : ''}'`: '', this.prior ? '' : `'${value > 1 ? value : ''}`];
-        console.log(['ROWOFFSET.GETSTRINGS', res]);
+        // console.log(['ROWOFFSET.GETSTRINGS', res]);
         return res;
     }
 }

@@ -310,7 +310,7 @@ module.exports = class Processor {
                 break;
             case 'dump': {                
                 const value = this.references.get(params[1]).value;
-                value.dump('pragma');
+                value.dump('*************** PRAGMA '+Context.sourceRef+' ***************');
                 break;
             }
         }
@@ -1084,18 +1084,16 @@ module.exports = class Processor {
 
         assertLog(s.left instanceof Expression, s.left);
         assertLog(s.right instanceof Expression, s.right);
-        s.left.dump('LEFT-CONSTRAINT 1');
+        if (Debug.active) s.left.dump('LEFT-CONSTRAINT 1');
         // s.right.dump('RIGHT-CONSTRAINT 1');
-        Debug.active = true;
         const left = s.left.instance();
-        Debug.active = false;
         // const right = s.right.instance();
-        left.dump('LEFT-CONSTRAINT 2');
+        if (Debug.active) left.dump('LEFT-CONSTRAINT 2');
         // right.dump('RIGHT-CONSTRAINT 2');
         const _left = s.left.instance({simplify: true})
         const _right = s.right.instance({simplify: true});
-        _left.dump('LEFT-CONSTRAINT 3');
-        _right.dump('RIGHT-CONSTRAINT 3');
+        if (Debug.active) _left.dump('LEFT-CONSTRAINT 3');
+        if (Debug.active) _right.dump('RIGHT-CONSTRAINT 3');
         if (scopeType === 'air') {
             id = this.constraints.define(_left, _right,false,this.sourceRef);
             expr = this.constraints.getExpr(id);

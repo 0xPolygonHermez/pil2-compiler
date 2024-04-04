@@ -43,7 +43,7 @@ module.exports = class ReferenceItem extends RuntimeItem {
             }
         }
         const item = Context.references.getItem(this.name, this.indexes);
-        console.log('EVAL ITEM INSIDE '+this.name + ' ' + item.constructor.name);
+        // console.log('EVAL ITEM INSIDE '+this.name + ' ' + item.constructor.name);
         if (item.isEmpty()) {
             throw new Error(`accessing to ${item.label} before his initialization at ${Context.sourceRef}`);
         }

@@ -34,8 +34,8 @@ module.exports = class Constraints {
     define(left, right, boundery, sourceRef) {
         assertLog(left instanceof Expression, left);
         assertLog(right instanceof Expression, right);
-        left.dump('LEFT(simplied)');
-        right.dump('RIGHT(simplied)');
+        // left.dump('LEFT(simplied)');
+        // right.dump('RIGHT(simplied)');
         if (left.isRuntime()) {
             left.dump('LEFT  CONSTRAINT');
             throw new Error(`left constraint has runtime no resolved elements`);
@@ -56,7 +56,7 @@ module.exports = class Constraints {
         // left.instance().dump(`XXXXXXXXX-${dumpId}-2`);
         left.simplify();
         const exprId = Context.expressions.insert(left);
-        console.log(`DEFINE CONSTRAINT ${sourceRef}`);
+        // console.log(`DEFINE CONSTRAINT ${sourceRef}`);
         return this.constraints.push({exprId, sourceRef, boundery}) - 1;
     }
 

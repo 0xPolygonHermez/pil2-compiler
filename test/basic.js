@@ -17,11 +17,12 @@ describe("Sequences tests", async function () {
 
     it("Test Sequence.pil", async () => {
         const compilerTest = new ExpressionCompilerTest();
+        compile(F, __dirname + '/basic.pil', null, { test: compilerTest, compileFromString: false});
 //        compile(F, 'subproof Main(2**23) {\nexpr cols[3];col witness a;col witness b;col witness c;\ncols[0] = a;\ncols[1] = b;\ncols[2] = c;\n'+
 //                   'cols[0] * (1 - cols[0]) === 0;\n'+
 //                   'cols[0] * (1 - cols[0]) * (2 - cols[0]) === 0;\n}' , null, { test: compilerTest, compileFromString: true });
-        compile(F, 'subproof Main(2**23) {\nexpr cols[3];col witness a;\ncols[0] = a;\n'+
-                   'cols[0] * (1 - cols[0]) * (2 - cols[0]) === 0;\n}' , null, { test: compilerTest, compileFromString: true });
+//        compile(F, 'subproof Main(2**23) {\ncol witness a;col witness b;\n'+
+//                   'expr res = 0;\n#pragma dump res\n;res = res + 2 * a;\n#pragma dump res\nres = res + 4 * b;\n#pragma dump res\nres === 0\n;#pragma dump res\n;}' , null, { test: compilerTest, compileFromString: true});
     });
 
 });

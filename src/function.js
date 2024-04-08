@@ -60,6 +60,10 @@ module.exports = class Function {
         let eargs = [];
         let argslen = args.length ?? 0;
         let argnames = Object.keys(this.args);
+        if (argslen < argnames.length) {
+            console.log(eargs);
+            throw new Error(`Invalid number of arguments calling ${this.name} function, called with ${argslen} arguments, but defined with ${argnames.length} arguments at ${Context.sourceRef}`);
+        }
         for (let iarg = 0; iarg < argslen; ++iarg) {
             const argname = argnames[iarg] ?? 'undef';
             if (Debug.active) {
@@ -96,7 +100,7 @@ module.exports = class Function {
         let iarg = 0;
         let textArgs = [];
         for (const name in this.args) {
-            textArgs.push(name + ': ' + eargs[iarg].toString());
+            textArgs.push(name + ((eargs[iarg] && typeof eargs[iarg].toString === 'function') ? ': ' + eargs[iarg].toString():''));
             ++iarg;
         }
         return this.name + '(' + textArgs.join(', ') + ')';
@@ -241,6 +245,12 @@ module.exports = class Function {
             }
         }
 
+        console.log(value);
+        if (value && value.dump) value.dump();
+        console.log(arg);
+        if (value instanceof Expression && value.isAlone()) {
+            value = value.getAloneOperand();
+        }
         let lengths = [];
         if (value.array) {            
             lengths = value.array.lengths;
@@ -252,7 +262,7 @@ module.exports = class Function {
         if (lengths.length !== arg.dim) {        
             console.log(arg);
             console.log(value.dim);
-            throw new Error(`Invalid match dimensions on parameter ${name} (${lengths.length} !== ${arg.dim})`);
+            throw new Error(`Invalid match dimensions on call ${this.name} and parameter ${name} (${lengths.length} !== ${arg.dim})`);
         }
         if (Debug.active) {
             console.log(`${this.name}.${name} = ${value.constructor.name}`);

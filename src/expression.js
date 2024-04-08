@@ -351,7 +351,7 @@ class Expression extends ExpressionItem {
         if (Debug.active) cloned.dump('PRE-SIMPLIFY');
         cloned.simplify();
         if (Debug.active) cloned.dump('POST-SIMPLIFY');
-        /* 21/03/2024
+        // next lines was commented at 21/03/2024
         if (options.unroll) {
             return cloned.unroll();
         }
@@ -360,8 +360,7 @@ class Expression extends ExpressionItem {
             if (operand instanceof ExpressionItem) {
                 return operand;
             }
-        }*/
-
+        }
         // console.log(stackResults);
         // cloned.dumpStackResults(stackResults, '');
         return cloned;
@@ -501,6 +500,10 @@ class Expression extends ExpressionItem {
      * */
     applyOperation(operation, values) {
         if (Debug.active) console.log([operation, ...values]);
+        if (operation === 'if') {
+            return this.applyOperationIf(values);
+        }
+    
         const operationInfo = ExpressionOperationsInfo.get(operation);
 
         if (operationInfo === false) {
@@ -575,6 +578,13 @@ class Expression extends ExpressionItem {
         }
         
         throw new Error(`Operation ${operation} not was defined by types ${types.join(',')} [${methods.join(', ')}]`);
+    }
+    applyOperationIf(values) {
+        if (values.length !== 3) {
+            throw new Error(`Invalid number of arguments on operation if, received ${values.length} values but was expected 3`);
+        }
+        const cond = values[0].asBool();
+        return values[cond ? 1 : 2].eval();
     }
     castingItemMethod(type) {
         if (type === 'StringValue' || type === 'IntValue') {

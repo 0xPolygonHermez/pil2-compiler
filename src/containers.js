@@ -48,11 +48,12 @@ module.exports = class Containers {
         throw new Error(`unsetProperty was called with invalid property ${property}`);
     }
     clearScope(proofScope) {
-        // console.log(`CLEAR-SCOPE.CONTAINERS.IN ${proofScope}`, Object.keys(this.containers).map(name => [name, this.containers[name].scope]));
+        // const previousScopes = Object.keys(this.containers).map(name => `${name}(${this.containers[name].scope})`).join();
+        const _containers = Object.keys(this.containers).map(name => [name, this.containers[name].scope]);
         this.containers = Object.keys(this.containers)
             .filter(name => this.containers[name].scope !== proofScope)
             .reduce((containers, name) => { containers[name] = this.containers[name]; return containers; }, {});
-        // console.log(`CLEAR-SCOPE.CONTAINERS.OUT ${proofScope}`, Object.keys(this.containers).map(name => [name, this.containers[name].scope]));
+        console.log(`clearScope(Container) ${proofScope}: ` + _containers.filter(c => typeof this.containers[c[0]] === 'undefined').map(c => `${c[0]}(${c[1]})`).join(', '));
     }
     create(name, alias = false)
     {
@@ -60,7 +61,7 @@ module.exports = class Containers {
             throw new Error(`Container ${this.current} is open, must be closed before start new container`);
         }
 
-        // console.log(`createContainer(${name},${alias}) at ${this.context.sourceRef}`);
+        console.log(`createContainer(${name},${alias}) at ${Context.sourceRef}`);
         // if container is defined, contents is ignored but alias must be defined
         if (alias) {
             this.addScopeAlias(alias, name);

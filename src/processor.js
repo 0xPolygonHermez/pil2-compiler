@@ -53,6 +53,7 @@ module.exports = class Processor {
         this.context = new Context(this.Fr, this, config);
         this.nextStatementTranspile = false;
         this.nextStatementFixed = false;
+        this.loadedRequire = {};
         console.log(config);
 
         this.scope.mark('proof');
@@ -671,10 +672,29 @@ module.exports = class Processor {
     }
     execInclude(s) {
         if (!s.contents) {
+            // to support dynamic includes, add some internal statements need to compile inside subproof
+            // but after take compiled statements. TODO: analyze use current subproof name
             const sts = this.compiler.loadInclude(s, {preSrc: 'subproof __(2**2) {\n', postSrc: '\n};\n'});
             s.contents = sts[0].statements;
         }
         return this.execute(s.contents);
+    }
+    execRequire(s) {
+        const requireId = s.file.asString();
+        if (!s.contents) {
+            // TODO: check if sense use dynamic requires
+            const sts = this.compiler.loadInclude(requireId, {preSrc: 'subproof __(2**2) {\n', postSrc: '\n};\n'});
+            if (sts === false) {
+                return;
+            }
+            s.contents = sts[0].statements;
+        }
+
+        // require is "executed" once to avoid redefinitions
+        if (!this.loadedRequire[requireId]) {
+            this.loadedRequire[requireId] = true;
+            return this.execute(s.contents);
+        }    
     }
     execFunctionDefinition(s) {
         if (Debug.active) console.log('FUNCTION '+s.funcname);
@@ -820,7 +840,9 @@ module.exports = class Processor {
                 this.execute(statements, `SUBPROOF ${subproofName}`);
                 // this.scope.pop();
             }
+            console.log('before-air-final');
             this.finalAirScope();
+            console.log('after-air-final');
             subproof.airEnd();
 
             // pilout generation
@@ -904,9 +926,10 @@ module.exports = class Processor {
             return false;
         }
         for (const fname in this.delayedCalls[scope][event]) {
-            if (Debug.active) console.log(`CALL DELAYED(${scope},${event}) FUNCTION ${fname}`);
+            if (true||Debug.active) console.log(`CALL DELAYED(${scope},${event}) FUNCTION ${fname}`);
             this.execCall({ op: 'call', function: {name: fname}, args: [] });
         }
+        this.delayedCalls[scope][event] = {};
     }
     execWitnessColDeclaration(s) {
         this.colDeclaration(s, 'witness', false, true, {stage: s.stage ? Number(s.stage):0 });

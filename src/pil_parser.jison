@@ -18,6 +18,7 @@ declare                                     { return 'DECLARE'; }
 use                                         { return 'USE'; }
 alias                                       { return 'ALIAS'; }
 include                                     { return 'INCLUDE'; }
+require                                     { return 'REQUIRE'; }
 in                                          { return 'IN'; }
 is                                          { return 'IS'; }
 publictable                                 { return 'PUBLIC_TABLE'; }
@@ -428,10 +429,13 @@ statement_closed
 
 function
     : FUNCTION IDENTIFIER
-        { $$ = {private: false, funcname: $2} }
+        { $$ = {private: false, public: true, funcname: $2} }
 
     | PRIVATE FUNCTION IDENTIFIER
-        { $$ = {private: true, funcname: $3} }
+        { $$ = {private: true, public: false, funcname: $3} }
+
+    | PUBLIC FUNCTION IDENTIFIER
+        { $$ = {private: false, public: true, funcname: $3} }
     ;
 
 function_definition
@@ -993,7 +997,17 @@ variable_assignment_list
 
 include_directive
     : INCLUDE flexible_string
-        { $$ = { type: 'include', file: ExpressionFactory.fromObject($2) } }
+        { $$ = { type: 'include', private: false, public: true, file: ExpressionFactory.fromObject($2) } }
+    | REQUIRE flexible_string
+        { $$ = { type: 'require', private: false, public: true, file: ExpressionFactory.fromObject($2) } }
+    | PRIVATE INCLUDE flexible_string
+        { $$ = { type: 'include', private: true, public: false, file: ExpressionFactory.fromObject($2) } }
+    | PRIVATE REQUIRE flexible_string
+        { $$ = { type: 'require', private: true, public: false, file: ExpressionFactory.fromObject($2) } }
+    | PUBLIC INCLUDE flexible_string
+        { $$ = { type: 'include', private: false, public: true, file: ExpressionFactory.fromObject($2) } }
+    | PUBLIC REQUIRE flexible_string
+        { $$ = { type: 'require', private: false, public: true, file: ExpressionFactory.fromObject($2) } }
     ;
 
 stage_definition

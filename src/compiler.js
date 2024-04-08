@@ -130,7 +130,7 @@ class Compiler {
         try {
             sts = parser.parse(src);
             for (let i=0; i<sts.length; i++) {
-                if (sts[i].type !== 'include') continue;
+                if (sts[i].type !== 'include' && sts[i].type !== 'require') continue;
                 sts[i].contents = this.loadInclude(sts[i].file.asString());
             }
             for (const library of libraries.slice().reverse()) {

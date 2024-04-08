@@ -121,7 +121,6 @@ module.exports = class Transpiler {
     f()
     {for (let i=0;i < N;++i) {
     {let [a,b,cin,plast,c,cout,op]=[A*[i],B*[i],CIN*[i],LAST*[i],0,0,OP*[i]];
-    println(i);
     switch (op) {
 
         case 0:

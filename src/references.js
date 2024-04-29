@@ -26,7 +26,11 @@ module.exports = class References {
                 break;
             }
         }
-        if (Debug.active) console.log(instance, item.id);
+        if (instance === null && item.constructor.name === 'ExpressionReference') {
+            instance = this.types.expr.instance;
+        }
+
+        if (Debug.active) console.log(instance, item.constructor.name, item.id, Object.keys(this.types),Object.values(this.types).map(x => x.instance.expressionItemClass));
         const res = instance.get ? instance.get(item.id): false;
         if (Debug.active) console.log(res);
         return res;

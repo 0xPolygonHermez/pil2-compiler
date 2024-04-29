@@ -131,8 +131,6 @@ module.exports = class ProtoOut {
         }
     }
     encode() {
-        console.log(['PROTO.CHALLENGES', this.pilOut.numChallenges]);
-
         fs.writeFileSync('tmp/pilout.pre.log', util.inspect(this.pilOut, false, null, false));
         let message = this.PilOut.fromObject(this.pilOut);
         fs.writeFileSync('tmp/pilout.log', util.inspect(this.pilOut, false, null, false));
@@ -164,7 +162,6 @@ module.exports = class ProtoOut {
         this.spvId2Proto = [];
         let subproofBaseId = [];
         for (const [id, aggregation, subproofId] of values) {
-            console.log([id, aggregation, subproofId]);
             let baseId = subproofBaseId[subproofId] ?? false;
             if (baseId === false) {
                 baseId = id;
@@ -250,7 +247,6 @@ module.exports = class ProtoOut {
         this.setConstantCols(periodicCols, this.currentAir.numRows, true);
     }
     setChallenges(challenges) {
-        console.log(challenges);
         const values = challenges.getPropertyValues(['id', 'stage']);
         const valuesSortedByStageAndId = values.sort((a,b) => (a[1] > b[1] || (a[1] == b[1] && a[0] > b[0])) ? 1 : -1);
         let previousStage = false;
@@ -268,23 +264,25 @@ module.exports = class ProtoOut {
             ++protoId;
         }
         this.pilOut.numChallenges = Array.from(countByStage, x => x ?? 0);
-        console.log(this.pilOut.numChallenges);
     }
     setConstantCols(cols, rows, periodic) {
         const property = periodic ? 'periodicCols':'fixedCols';
         const airCols = this.setupAirProperty(property);
 
-        console.log(cols.constructor.name);
         const colType = periodic ? 'P':'F';
         for (const col of cols) {
-            console.log(col.constructor.name);
             const colIsPeriodic = col.isPeriodic() && col.rows < rows;
             if (colIsPeriodic !== periodic) continue;
             const _rows = periodic ? col.rows : rows;
             this.fixedId2ProtoId[col.id] = [colType, airCols.length];
             let values = [];
             for (let irow = 0; irow < _rows; ++irow) {
-                values.push(this.toBaseField(col.getValue(irow)));
+                const _value = col.getValue(irow);
+                if (typeof _value === 'undefined') {
+                    console.log(irow, col);
+                    throw new Error(`Error ${col.constructor.name} on row ${irow}`);
+                }
+                values.push(this.toBaseField(_value));
             }
             airCols.push({values});
         }
@@ -418,7 +416,6 @@ module.exports = class ProtoOut {
         let airConstraints = this.setupAirProperty('constraints');
         for (const [index, constraint] of constraints.keyValues()) {
             let payload;
-            console.log([index, constraint]);
             const debugLine = constraints.getDebugInfo(index, packed, options);
             console.log(`DEBUGLINE: ${debugLine}`);
             const packedExpressionId = constraints.getPackedExpressionId(constraint.exprId, packed, options);
@@ -524,6 +521,9 @@ module.exports = class ProtoOut {
         return BigInt(value);
     }
     bint2buf(value, bytes = 0) {
+        if (value && typeof value.asInt === 'function') {
+            value = value.asInt();
+        }
         if (this.bitIntType === 'bigint') {
             return BigInt(value);
         }
@@ -531,8 +531,13 @@ module.exports = class ProtoOut {
             return Buffer.alloc(0);
         }
 
-        console.log(value);
         const buf = Buffer.alloc(32);
+        if (typeof value !== 'bigint') {
+            console.log(value);
+            if (value && value.dump) {
+                value.dump();
+            }
+        }
         buf.writeBigInt64BE(value >> 64n*3n, 0);
         buf.writeBigUInt64BE((value >> 64n*2n) & 0xFFFFFFFFFFFFFFFFn, 8);
         buf.writeBigUInt64BE((value >> 64n)  & 0xFFFFFFFFFFFFFFFFn, 16);

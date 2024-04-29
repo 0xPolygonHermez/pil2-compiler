@@ -3,14 +3,18 @@ const Context = require('./context.js');
 const {assert, assertLog} = require('./assert.js');
 const NonRuntimeEvaluableItem = require('./expression_items/non_runtime_evaluable_item.js');
 const Debug = require('./debug.js');
+const util = require('util');
 
 module.exports = class Assign {
     constructor () {
     }
     assign (name, indexes, value) {
-        if (Debug.active) console.log(value);
+        if (Debug.active) {
+            console.log(util.inspect(value, false, 200, true));
+            console.log(indexes);
+        }
         value = this.getValue(value);
-        if (Debug.active) console.log(value);
+        if (Debug.active) console.log(util.inspect(value, false, 200, true));
         assert(value !== null);
         return this.#assign(name, indexes, value);
     }

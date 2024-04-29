@@ -1,6 +1,11 @@
 const util = require('util');
+// const {assert} = require('chai');
 
+const assert = (x) => {
+    if (!x) { debugger; }
+};
 const OPERATOR_SYMBOLS = {mul: '*', add: '+', sub:'-', neg:'-'};
+const VALID_OBJ_TYPES = ['constant','challenge','subproofValue','proofValue','publicValue','periodicCol','fixedCol','witnessCol','expression'];
 module.exports = class PackedExpressions {
 
     constructor () {
@@ -34,31 +39,43 @@ module.exports = class PackedExpressions {
         const [value] = this.pop(1, 'neg');
         return this.insert({sub: {value}});
     }
+    push(obj) {
+        assert(VALID_OBJ_TYPES.includes(Object.keys(obj)[0]));
+        this.values.push(obj);
+    }
     pushConstant (value) {
         this.values.push({constant: {value}});
     }
     pushChallenge (idx, stage = 1) {
+        assert(typeof idx !== 'undefined');
         this.values.push({challenge: {stage, idx}});
     }
     pushSubproofValue (idx, subproofId) {
+        assert(typeof idx !== 'undefined');
         this.values.push({subproofValue: {idx, subproofId}});
     }
     pushProofValue (idx) {
+        assert(typeof idx !== 'undefined');
         this.values.push({proofValue: {idx}});
     }
     pushPublicValue (idx) {
+        assert(typeof idx !== 'undefined');
         this.values.push({publicValue: {idx}});
     }
     pushPeriodicCol (idx, rowOffset = 0) {
+        assert(typeof idx !== 'undefined');
         this.values.push({periodicCol: {idx, rowOffset}});
     }
     pushFixedCol (idx, rowOffset = 0) {
+        assert(typeof idx !== 'undefined');
         this.values.push({fixedCol: {idx, rowOffset}});
     }
     pushWitnessCol (colIdx, rowOffset = 0, stage = 1) {
+        assert(typeof colIdx !== 'undefined');
         this.values.push({witnessCol: {colIdx, rowOffset, stage}});
     }
     pushExpression (idx) {
+        assert(typeof idx !== 'undefined');
         this.values.push({expression: {idx}});
     }
     dump() {
@@ -66,7 +83,10 @@ module.exports = class PackedExpressions {
     }
     exprToString(id, options) {
         const expr = this.expressions[id];
-        console.log([id, expr, this.expressions.length]);
+        if (!expr) {
+            console.log(expr);
+            debugger;
+        }
         const [op] = Object.keys(expr);
         let opes = [];
         for (const ope of Object.values(expr[op])) {

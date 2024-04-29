@@ -193,7 +193,7 @@ module.exports = class Processor {
         }
     }
     generateProtoOut()
-    {
+    {        
         if (Context.config.protoOut === false) return;
         this.proto.setPublics(this.publics);
         this.proto.setProofvalues(this.proofvalues);
@@ -281,7 +281,12 @@ module.exports = class Processor {
         const instr = params[0] ?? false;
         switch (instr) {
             case 'debug':
-                if (params[1] === 'on') Debug.active = true;
+                if (params[1] === 'on') {
+                    Debug.active = true;
+                    console.log('##############');
+                    console.log('## DEBUG ON ##');
+                    console.log('##############');
+                }
                 else if (params[1] === 'off') Debug.active = false;        
                 break;
             case 'exit':
@@ -674,7 +679,7 @@ module.exports = class Processor {
         if (!s.contents) {
             // to support dynamic includes, add some internal statements need to compile inside subproof
             // but after take compiled statements. TODO: analyze use current subproof name
-            const sts = this.compiler.loadInclude(s, {preSrc: 'subproof __(2**2) {\n', postSrc: '\n};\n'});
+            const sts = this.compiler.loadInclude(s.file.asString(), {preSrc: 'subproof __(2**2) {\n', postSrc: '\n};\n'});
             s.contents = sts[0].statements;
         }
         return this.execute(s.contents);
@@ -840,9 +845,7 @@ module.exports = class Processor {
                 this.execute(statements, `SUBPROOF ${subproofName}`);
                 // this.scope.pop();
             }
-            console.log('before-air-final');
             this.finalAirScope();
-            console.log('after-air-final');
             subproof.airEnd();
 
             // pilout generation
@@ -869,7 +872,7 @@ module.exports = class Processor {
             ++this.airId;
         }
         this.finalSubproofScope();
-        if (!Context.config.protoOut) {
+        if (Context.config.protoOut === false) {
             this.proto.setSubproofValues(this.subproofvalues.getAggreationTypesBySubproofId(subproofId));
         }
         this.scope.popInstanceType();
@@ -879,7 +882,7 @@ module.exports = class Processor {
         ++this.subproofId;
     }
     subproofProtoOut(subproofId, airId) {
-        if (!Context.config.protoOut) return;
+        if (Context.config.protoOut === false) return;
         
         let packed = new PackedExpressions();
         this.proto.setFixedCols(this.fixeds);
@@ -926,7 +929,7 @@ module.exports = class Processor {
             return false;
         }
         for (const fname in this.delayedCalls[scope][event]) {
-            if (true||Debug.active) console.log(`CALL DELAYED(${scope},${event}) FUNCTION ${fname}`);
+            if (Debug.active) console.log(`CALL DELAYED(${scope},${event}) FUNCTION ${fname}`);
             this.execCall({ op: 'call', function: {name: fname}, args: [] });
         }
         this.delayedCalls[scope][event] = {};
@@ -1147,6 +1150,7 @@ module.exports = class Processor {
         const inits = (init && s.init.type === 'expression_list') ? s.init.values : s.init;
 
         if (init && inits.length !== count) {
+            // TODO: could be an array initialization count = 1 init = n
             this.error(s, `Mismatch between len of variables (${count}) and len of their inits (${inits.length})`);
         }
 

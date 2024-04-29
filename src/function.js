@@ -245,9 +245,9 @@ module.exports = class Function {
             }
         }
 
-        console.log(value);
-        if (value && value.dump) value.dump();
-        console.log(arg);
+        // console.log(value);
+        // if (value && value.dump) value.dump();
+        // console.log(arg);
         if (value instanceof Expression && value.isAlone()) {
             value = value.getAloneOperand();
         }

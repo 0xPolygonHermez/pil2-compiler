@@ -71,11 +71,14 @@ class Reference {
         for (let index = 0; index < len; ++index) {
             let _indexes = [...indexes];
             _indexes.push(index);
+            // console.log(_indexes);
             if (level + 1 === this.array.dim) {
                 if (Array.isArray(value)) {
 //                    console.log('native', _indexes[level], _indexes);
                     this.setOneItem(value[_indexes[level]], _indexes, options);
                 } else {    
+                    // console.log(value);
+                    if (value.dump) value.dump();
                     const _item = value.getItem(_indexes);
 //                    console.log('getItem', _indexes, _item);
                     this.setOneItem(_item, _indexes, options);

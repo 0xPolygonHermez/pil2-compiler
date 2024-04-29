@@ -864,6 +864,9 @@ variable_type_declaration
     | INT variable_declaration_item '=' expression
         { $$ = { type: 'variable_declaration', vtype: 'int', items: [$2], init: [$4] } }
 
+    | INT variable_declaration_item '=' '[' expression_list ']'
+        { $$ = { type: 'variable_declaration', vtype: 'int', items: [$2], init: $5 } }
+
     | FE variable_declaration_item '=' expression
         { $$ = { type: 'variable_declaration', vtype: 'fe', items: [$2], init: [$4] } }
 

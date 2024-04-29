@@ -17,6 +17,7 @@ module.exports = class ExpressionPacker {
         return this.container.pop(1)[0];
     }
     pack(options) {
+        assert(this.expression.stack.length);
         let top = this.expression.stack.length-1;
         return this.stackPosPack(top, options);
     }
@@ -68,18 +69,12 @@ module.exports = class ExpressionPacker {
         // container.pushExpression(Expression.parent.getPackedExpressionId(id, container, options));
         // break;
         const id = ope.getId();
-        console.log(options);
         const def = Context.references.getDefinitionByItem(ope, options);
-        console.log(ope);
-        console.log(def);
         assert(typeof def === 'object')
-        console.log(def instanceof ExpressionItems.ExpressionItem, DefinitionItem.prototype.constructor.name, Object.getPrototypeOf(def.constructor).name);
         assert(def instanceof DefinitionItem);
         if (ope instanceof ExpressionItems.WitnessCol) {
             // container.pushWitnessCol(id, next ?? 0, stage ?? 1)
-            console.log(ope);
             // CURRENT ERROR: in this scope definition not available.
-            console.log(def);
             this.container.pushWitnessCol(id, ope.getRowOffset(), def.stage);
 
         } else if (ope instanceof ExpressionItems.FixedCol) {
@@ -101,7 +96,17 @@ module.exports = class ExpressionPacker {
         } else if (ope instanceof ExpressionItems.Subproofval) {
             // container.pushSubproofValue(id)
             const def = Context.references.getDefinitionByItem(ope);
-            this.container.pushSubproofValue(def.relativeId, def.subproofId);
+//            this.container.pushSubproofValue(def.relativeId, def.subproofId);
+            this.container.pushSubproofValue(def.id, def.subproofId);
+        } else if (ope instanceof ExpressionItems.ExpressionReference) {
+            const def = Context.references.getDefinitionByItem(ope);
+            const packer = new ExpressionPacker(this.container, def.getValue());
+            const res = packer.pack(options);
+            if (typeof res === 'number') {
+                this.container.pushExpression(res);
+            } else {
+                this.container.push(res);
+            }
         } else {
             throw new Error(`Invalid reference class ${ope.constructor.name} to pack`);
         }

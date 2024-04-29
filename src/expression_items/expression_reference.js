@@ -5,6 +5,7 @@ module.exports = class ExpressionReference extends ProofItem {
         super(options);
         this.id = id;
         this.instance = instance;
+        // if (id == 600) debugger;
     }
     getTag() {
         return 'im';

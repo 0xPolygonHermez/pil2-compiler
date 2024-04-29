@@ -131,11 +131,13 @@ private function PIOP_gsum_air() {
 
     const expr gsP[gsum_proves_count];
     for (int i = 0; i < gsum_proves_count; i = i + 1) {
-        gsP[i] === gsum_proves[i];
+        // ERROR: gsP[i] === gsum_proves[i];
+        gsP[i] = gsum_proves[i];
     }
     const expr gsA[gsum_assumes_count];
     for (int i = 0; i < gsum_assumes_count; i = i + 1) {
-        gsA[i] === gsum_assumes[i];
+        // ERROR: gsA[i] === gsum_assumes[i];
+        gsA[i] = gsum_assumes[i];
     }
     
     for (int i = 0; i < gsum_proves_count; i = i + 1) {

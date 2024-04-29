@@ -59,6 +59,7 @@ module.exports = class Indexable {
             const absoluteIndex = index + id;
             const _label = label + (multiarray ? multiarray.offsetToIndexesString(index) : '');
             this.values[absoluteIndex] = this.getEmptyValue(absoluteIndex, {...data, label: _label});
+            this.values[absoluteIndex].sourceRef = Context.sourceRef;
             if (this.debug) {
                 console.log(`INIT ${this.constructor.name}.${this.type} @${absoluteIndex} (${id}+${index}) ${this.values[absoluteIndex]} LABEL:${label}`);
             }

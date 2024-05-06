@@ -164,20 +164,16 @@ class Compiler {
         return sts;
     }
     loadSource(fileName, isMain) {
-        console.log('LOADSOURCE', fileName);
         let fullFileName, fileDir, src;
         let relativeFileName = '';
         let includePathIndex = 0;
-        console.log(isMain, this.config);
         if (isMain && this.config.compileFromString) {
             relativeFileName = fullFileName = "(string)";
             fileDir = '';
             src = fileName;
-            console.log('COMPILE FROM STRING')
         }
         else {
             let includePaths = [...this.includePaths];
-            console.log(includePaths);
 
             let directIncludePathIndex;
             const cwd = this.cwd ? this.cwd : process.cwd();
@@ -191,7 +187,6 @@ class Compiler {
                 includePaths.unshift(cwd);
             }
             do {
-                console.log(includePaths[includePathIndex], fileName);
                 fullFileName = path.resolve(includePaths[includePathIndex], fileName);
                 if (fs.existsSync(fullFileName)) break;
                 ++includePathIndex;

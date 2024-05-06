@@ -54,7 +54,6 @@ module.exports = class Processor {
         this.nextStatementTranspile = false;
         this.nextStatementFixed = false;
         this.loadedRequire = {};
-        console.log(config);
 
         this.scope.mark('proof');
         this.delayedCalls = {};
@@ -136,7 +135,7 @@ module.exports = class Processor {
         this.sourceRef = '(init)';
 
         this.proto = new ProtoOut(this.Fr);
-        this.proto.setupPilOut('noname');
+        this.proto.setupPilOut(Context.config.name ?? 'noname');
 
         this.transpiler = new Transpiler({processor: this});
         if (typeof Context.config.test.onProcessorInit === 'function') {
@@ -204,7 +203,7 @@ module.exports = class Processor {
         this.proto.setGlobalExpressions(packed);
         this.proto.setGlobalSymbols(this.references);
         this.proto.encode();
-        this.proto.saveToFile('tmp/pilout.ptb');
+        this.proto.saveToFile(Context.config.outputFile);
     }
     traceLog(text, color = '') {
         if (!this.trace) return;
@@ -814,9 +813,6 @@ module.exports = class Processor {
             Context.airName = airName;
             
             subproof.airs.define(airName, air);
-
-            // TO-DO loop with different rows
-            console.log([air.bits, air.rows, Expression.constructor.name]);
 
             // create built-in constants
             this.references.set('N', [], air.rows);

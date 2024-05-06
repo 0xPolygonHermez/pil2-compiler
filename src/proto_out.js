@@ -417,7 +417,6 @@ module.exports = class ProtoOut {
         for (const [index, constraint] of constraints.keyValues()) {
             let payload;
             const debugLine = constraints.getDebugInfo(index, packed, options);
-            console.log(`DEBUGLINE: ${debugLine}`);
             const packedExpressionId = constraints.getPackedExpressionId(constraint.exprId, packed, options);
             switch (constraint.boundery) {
                 case false:

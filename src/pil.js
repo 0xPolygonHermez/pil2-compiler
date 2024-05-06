@@ -13,6 +13,7 @@ const argv = require("yargs")
     .usage("pil <source.pil> -o <output.json> [-P <pilconfig.json>]")
     .alias("e", "exec")
     .alias("o", "output")
+    .alias("n", "name")
     .alias("P", "config")
     .alias("v", "verbose")
     .alias("I", "include")
@@ -38,8 +39,20 @@ async function run() {
     const fullFileName = path.resolve(process.cwd(), inputFile);
     const fileName = path.basename(fullFileName, ".pil");
 
-    const outputFile = typeof(argv.output) === "string" ?  argv.output : fileName + ".json";
     let config = typeof(argv.config) === "string" ? JSON.parse(fs.readFileSync(argv.config.trim())) : {};
+
+
+    if (argv.output) {
+        config.outputFile = argv.output;
+    } else if (typeof config.outputFile === 'undefined') {
+        config.outputFile = fileName + ".pilout";
+    }
+
+    if (argv.name) {
+        config.name = argv.name;
+    } else if (typeof config.name === 'undefined') {
+        config.name = path.parse(config.outputFile).name;
+    }
 
     if (argv.verbose) {
         config.verbose = true;
@@ -66,21 +79,8 @@ async function run() {
     if (argv.includePathFirst) {
         config.includePathFirst = true;
     }
-    console.log(config);
-    const out = await compile(F, fullFileName, null, config);
-    console.log(out);
-/*
-    console.log("Input Pol Commitmets: " + out.nCommitments);
-    console.log("Q Pol Commitmets: " + out.nQ);
-    console.log("Constant Pols: " + out.nConstants);
-    console.log("Im Pols: " + out.nIm);
-    console.log("plookupIdentities: " + out.plookupIdentities.length);
-    console.log("permutationIdentities: " + out.permutationIdentities.length);
-    console.log("connectionIdentities: " + out.connectionIdentities.length);
-    console.log("polIdentities: " + out.polIdentities.length);
-*/
-    // await fs.promises.writeFile(outputFile.trim(), JSON.stringify(out, null, 1) + "\n", "utf8");
-}
+    const out = compile(F, fullFileName, null, config);
+}    
 
 
 run().then(()=> {

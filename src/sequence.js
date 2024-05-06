@@ -72,11 +72,11 @@ module.exports = class Sequence {
         this.paddingSize = 0;
         const size = this._sizeOf(e);
         assert(size >= this.paddingCycleSize, `size(${size}) < paddingCycleSize(${this.paddingCycleSize})`);
-        // if (Debug.active) {
+        if (Debug.active) {
             console.log(['SIZE(MAXSIZE)', this.maxSize]);
             console.log(['SIZE(paddingCycleSize)', this.paddingCycleSize]);
             console.log(['SIZE(paddingSize)', this.paddingSize]);
-        // }
+        }
         if (this.paddingCycleSize) {
             this.paddingSize = this.maxSize - (size - this.paddingCycleSize);
             this.size = size - this.paddingCycleSize + this.paddingSize;

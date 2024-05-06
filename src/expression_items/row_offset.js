@@ -21,7 +21,6 @@ class RowOffset {
         if (index instanceof RowOffset) {
             return index.clone();
         }
-        console.log(['ROWOFFSET !!!!!', index, prior]);
         assert(typeof index.prior === 'undefined');
         return new RowOffset(index, prior);
     }

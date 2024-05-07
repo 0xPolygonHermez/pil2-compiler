@@ -4,8 +4,7 @@
   "description": "PIL2 compiler",
   "main": "index.js",
   "bin": {
-    "pilcom": "src/pil.js",
-    "pilverifier": "src/main_pilverifier.js"
+    "pil2com": "src/pil.js",
   },
   "scripts": {
     "test": "mkdir -p tmp; mocha",

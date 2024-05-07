@@ -2,7 +2,7 @@
 
 const path = require("path");
 const fs = require("fs");
-const pil_parser = require("../build/pil_parser.js");
+const pil_parser = require("./pil_parser.js");
 const { check } = require("yargs");
 const Scalar = require("ffjavascript").Scalar;
 const Expressions = require("./expressions.js");

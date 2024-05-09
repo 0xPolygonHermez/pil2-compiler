@@ -131,9 +131,9 @@ module.exports = class ProtoOut {
         }
     }
     encode() {
-        fs.writeFileSync('tmp/pilout.pre.log', util.inspect(this.pilOut, false, null, false));
+        // fs.writeFileSync('tmp/pilout.pre.log', util.inspect(this.pilOut, false, null, false));
         let message = this.PilOut.fromObject(this.pilOut);
-        fs.writeFileSync('tmp/pilout.log', util.inspect(this.pilOut, false, null, false));
+        // fs.writeFileSync('tmp/pilout.log', util.inspect(this.pilOut, false, null, false));
         this.data = this.PilOut.encode(message).finish();
         return this.data;
     }

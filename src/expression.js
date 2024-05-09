@@ -459,7 +459,7 @@ class Expression extends ExpressionItem {
         } else if (values.some(value => value.isRuntimeEvaluable() === false)) {
             value = ExpressionItems.NonRuntimeEvaluableItem.get();
         } else {
-            values.forEach(x => {if (x.dump) x.dump()});
+            // values.forEach(x => {if (x.dump) x.dump()});
             value = this.applyOperation(st.op, values);
             if (!value.isAlone()) {
                 value = ExpressionItems.NonRuntimeEvaluableItem.get();

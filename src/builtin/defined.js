@@ -23,7 +23,7 @@ module.exports = class Defined extends Function {
             // }
         } catch (e) {
             if (e instanceof Exceptions.ReferenceNotFound || e instanceof Exceptions.ReferenceNotVisible) {
-                console.log(`defined(${arg0.toString()}) EXCEPTION `, e.message);
+                // console.log(`defined(${arg0.toString()}) EXCEPTION `, e.message);
             } else {
                 throw e;
             }

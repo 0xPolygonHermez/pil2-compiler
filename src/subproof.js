@@ -45,13 +45,13 @@ module.exports = class Subproof {
         }
         if (this.insideFirstAir) {
             // this.colDeclaration(s, 'subproofvalue', true, false, {aggregateType: s.aggregateType});
-            console.log(['SUBPROOFVALUE', name,lengths, data]);
+            // console.log(['SUBPROOFVALUE', name,lengths, data]);
             const res = Context.references.declare(name, 'subproofvalue', lengths, data);
-            console.log(Context.references.getNameScope(name));
-            console.log(Context.references.containers.getCurrent())
-            console.log(Context.references.containers.get(Context.references.containers.getCurrent()));
+            // console.log(Context.references.getNameScope(name));
+            // console.log(Context.references.containers.getCurrent())
+            // console.log(Context.references.containers.get(Context.references.containers.getCurrent()));
             this.spvDeclaredInFirstAir[name] = {res, lengths: [...lengths]};
-            console.log(res);
+            // console.log(res);
             return res;
         }
 

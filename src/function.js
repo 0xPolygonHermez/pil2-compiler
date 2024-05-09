@@ -22,7 +22,7 @@ module.exports = class Function {
         this.sourceRef = data.sourceRef;
     }
     setValue(value) {
-        if (Debug.active || value.name == 'multiset_assumes') {
+        if (Debug.active) {
             console.log(`FUNCTION.setValue ${value.name}`, value.args);
         }
         if (this.initialized) {
@@ -35,7 +35,7 @@ module.exports = class Function {
         this.name = value.name;
         // TODO: clone return types
         this.args = {...value.args};
-        if (Debug.active || value.name == 'multiset_assumes') {
+        if (Debug.active) {
             console.log(`FUNCTION.setValue2 ${value.name}`, this.args);
         }
         this.returns = value.returns && Array.isArray(value.returns) ? [...value.returns] : value.returns;

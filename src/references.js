@@ -197,7 +197,6 @@ module.exports = class References {
         assert(!name.includes('.object'));
 
         const nameInfo = this.decodeName(name);
-        if (name === 'Main.jmp') { console.log(nameInfo); }
         // console.log(`DECLARE_REFERENCE ${name} ==> ${nameInfo.name} ${type} ${lengths.length ? '[' + lengths.join(',') + '] ': ''}scope:${nameInfo.scope} #${Context.scope.deep} ${initValue}[type: ${initValue instanceof Object ? initValue.constructor.name : typeof initValue}]`, options);
 
         let [array, size] = Reference.getArrayAndSize(lengths);

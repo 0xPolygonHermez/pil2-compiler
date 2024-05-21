@@ -452,9 +452,7 @@ module.exports = class ProtoOut {
                 payload.subproofId = subproofId;
                 payload.airId = airId;
             }
-            console.log(hint);
             const res = this.toHintField(hint.data, {...options, hints, packed})
-            console.log(util.inspect(res, false, null, true));
             payload.hintFields = Array.isArray(res) ? res: [res];
 
             // TODO
@@ -466,11 +464,9 @@ module.exports = class ProtoOut {
         const path = options.path ?? '';
         // check if an alone expression to use and translate its single operand
         if (hdata && typeof hdata.pack === 'function') {
-            console.log('HINT', typeof hdata.toString() ? hdata.constructor.name + ' ==> ' + hdata.toString() : hdata);
+            // console.log('HINT', typeof hdata.toString == 'function' ? hdata.constructor.name + ' ==> ' + hdata.toString() : hdata);
             const operand = hdata.pack(options.packed, options);
-            console.log('HINT', operand);
             this.translate(operand);
-            console.log('HINT', operand);
             return { operand };
         }
         if (typeof hdata === 'object' && hdata.constructor.name === 'ExpressionId') {
@@ -486,7 +482,6 @@ module.exports = class ProtoOut {
             for (let index = 0; index < hdata.length; ++index) {
                 result.push(this.toHintField(hdata[index], {...options, path: path + '[' + index + ']'}));
             }
-            console.log('HINT',result);
             return { hintFieldArray: { hintFields: Array.isArray(result) ? result : [result] }};
         }
         if (typeof hdata === 'bigint' || typeof hdata === 'number') {
@@ -501,10 +496,8 @@ module.exports = class ProtoOut {
                 const value = this.toHintField(hdata[name], {...options, path: path + '.' + name});
                 result.push({...value, name});
             }
-            console.log('HINT',result);
             return { hintFieldArray: { hintFields: Array.isArray(result) ? result : [result] }};
         }
-        console.log(hdata);
         throw new Error(`Invalid hint-data (type:${typeof hdata}/${(hdata.constructor ?? {name:''}).name}) on cloneHint of ${path}`);
     }
     bint2uint8(value, bytes = 0) {
@@ -532,7 +525,6 @@ module.exports = class ProtoOut {
 
         const buf = Buffer.alloc(32);
         if (typeof value !== 'bigint') {
-            console.log(value);
             if (value && value.dump) {
                 value.dump();
             }

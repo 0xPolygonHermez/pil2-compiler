@@ -897,11 +897,11 @@ module.exports = class Processor {
         const info = {airId, subproofId};
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.labelRanges, 'fixed', info);
-        this.proto.setExpressions(packed);
         this.proto.addHints(this.hints, packed, {
                 subproofId,
                 airId
             });
+        this.proto.setExpressions(packed);
     }
     finalAirScope() {
         this.callDelayedFunctions('air', 'final');

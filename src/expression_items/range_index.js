@@ -1,5 +1,4 @@
 const RuntimeItem = require("./runtime_item.js");
-const {assert, assertLog} = require('../assert.js');
 const Context = require('../context.js');
 module.exports = class RangeIndex extends RuntimeItem {
     constructor (from, to) {

@@ -1,10 +1,10 @@
 const ProofItem = require("./proof_item.js");
-const {assert, assertLog} = require('../assert.js');
+const assert = require('../assert.js');
 module.exports = class Subproofval extends ProofItem {
     constructor (id, data = {}) {
         super(id);
         const subproofId = data.subproofId ?? false;
-        assert(typeof data.subproofId === 'number');
+        assert.strictEqual(typeof data.subproofId, 'number');
         this.subproofId = subproofId;
         this.aggregateType = data.aggregateType;
         this.sourceRef = data.sourceRef;

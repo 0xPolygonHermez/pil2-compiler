@@ -1,22 +1,31 @@
 const ProofItem = require("./proof_item.js");
-const {assert, assertLog} = require('../assert.js');
+const assert = require('../assert.js');
 module.exports = class ExpressionReference extends ProofItem {
     constructor (id, instance, options = {}) {
         super(options);
         this.id = id;
         this.instance = instance;
-        // if (id == 600) debugger;
     }
     getTag() {
         return 'im';
     }
     static createFrom(value, options = {}) {
-        assertLog(typeof options.id !== 'undefined' && typeof options.instance !== 'undefined', 
-                 {value, options, msg: 'ExpressionReference.createFrom need knows id and instance'});
+        if (assert.isEnabled) {
+            assert.defined(options.id, 'ExpressionReference.createFrom need knows id');
+            assert.defined(options.instance, 'ExpressionReference.createFrom need knows instance');
+        }
         return new ExpressionReference(options.id, options.instance);
     }
     cloneInstance(options) {
         return new ExpressionReference(this.id, this.instance, this.options);
+    }
+    eval(options) {
+        // check if is baseType, in this case return it.
+        const value = this.instance.get(this.id).getValue();
+        if (value.isBaseType) return value;
+
+        // if not clone
+        return this.clone();
     }
     evalInside(options) {
         return this;

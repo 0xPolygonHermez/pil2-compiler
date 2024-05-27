@@ -5,6 +5,7 @@ const WitnessCol = require('./expression_items/witness_col.js');
 const NonRuntimeEvaluable = require('./non_runtime_evaluable.js');
 const ExpressionPacker = require('./expression_packer.js');
 const Context = require('./context.js');
+const assert = require('./assert.js');
 module.exports = class Expressions {
     constructor () {
         this.expressions = [];
@@ -29,7 +30,7 @@ module.exports = class Expressions {
         return id;
     }
     getTypedValue(id, offset, type) {
-        assert(offset === 0);
+        assert.strictEqual(offset === 0);
         const res = { type, value: this.expressions[id], id };
         return res;
     }

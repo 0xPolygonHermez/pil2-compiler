@@ -162,15 +162,15 @@ class ExpressionItem {
         if (!this.rowOffset || !this.rowOffset.isPriorRows()) {
             return false;
         }
-        if (Debug.active) console.log(['ROWOFFSET.EVALPRIOR', this.rowOffset.value]);
-        return this.rowOffset.value;
+        const value = this.rowOffset.getValue(options);
+        return value;
     }
     evalNext(options) {
         if (!this.rowOffset || !this.rowOffset.isNextRows()) {
             return false;
         }
-        if (Debug.active) console.log(['ROWOFFSET.EVALNEXT', this.rowOffset.value]);
-        return this.rowOffset.value;
+        const value = this.rowOffset.getValue(options);
+        return value;
     }
     eval(options) {
         let results = {};

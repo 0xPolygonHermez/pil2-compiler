@@ -1,9 +1,9 @@
-const {assert} = require("chai");
+const assert = require('./assert.js');
 module.exports = class Context {
     static _instance = null;
 
     constructor (Fr, processor, config = {}) {
-        assert(Context._instance === null);
+        assert.equal(Context._instance, null);
         Context._instance = this;
         this.Fr = Fr;
         this._processor = processor;

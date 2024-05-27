@@ -1,7 +1,7 @@
-const {assert, assertLog} = require('../assert.js');
 const Variable = require("./variable.js");
 const ExpressionItem = require('../expression_items/int_value.js');
 const Debug = require('../debug.js');
+const assert = require('../assert.js');
 
 class IntVariable extends Variable {
     constructor (value = 0n) {
@@ -11,7 +11,7 @@ class IntVariable extends Variable {
         if (typeof value === 'number') {
             value = BigInt(value);
         }
-        assertLog(typeof value === 'bigint', value);
+        assert.typeOf(value, 'bigint');
         super(value);
     }
     setValue(value) {
@@ -22,7 +22,7 @@ class IntVariable extends Variable {
         if (typeof value === 'number') {
             value = BigInt(value);
         }
-        assertLog(typeof value === 'bigint', value);
+        assert.typeOf(value, 'bigint');
         super.setValue(value);
     }
     clone() {

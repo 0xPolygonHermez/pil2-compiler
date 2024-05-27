@@ -1,5 +1,4 @@
 const util = require('util');
-const {assert, assertLog, assertReturnInstanceOf} = require('../assert.js');
 
 module.exports = class TranslationTable {
     constructor () {

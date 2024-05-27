@@ -1,11 +1,10 @@
-const {assert, assertLog} = require("../assert.js");
 const RuntimeItem = require("./runtime_item.js");
 const StringValue = require("./string_value.js");
 const Context = require('../context.js');
-
+const assert = require('../assert.js');
 class StringTemplate extends StringValue {
     constructor (value = '') {
-        assertLog(typeof value === 'string', value);
+        assert.typeOf(value, 'string');
         super(value);
     }
     evalTemplate(options) {

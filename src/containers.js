@@ -1,5 +1,5 @@
+const assert = require('./assert.js');
 const Context = require('./context.js');
-const {assert, assertLog} = require('./assert.js');
 module.exports = class Containers {
     constructor (parent) {
         this.parent = parent;
@@ -27,7 +27,7 @@ module.exports = class Containers {
     }
     unsetAlias(aliases) {
         for (const alias of aliases) {
-            assert(this.aliases[alias]);
+            assert.defined(this.aliases[alias]);
             delete this.aliases[alias];
         }
     }
@@ -36,7 +36,7 @@ module.exports = class Containers {
         while (count > 0) {
             const use1 = this.uses.pop();
             const use2 = uses.pop();
-            assert(use1 === use2);
+            assert.equal(use1, use2);
             --count;
         }
     }

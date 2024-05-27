@@ -1,9 +1,9 @@
-const {assert} = require("chai");
 const protobuf = require('protobufjs');
 const {cloneDeep} = require('lodash');
 const Long = require('long');
 const fs = require('fs');
 const util = require('util');
+const assert = require('./assert.js');
 
 //
 // Legacy Pil Stats
@@ -258,7 +258,7 @@ module.exports = class ProtoOut {
                 previousStage = stage;
                 protoId = 0;
             }
-            assert(stage > 0);
+            assert.ok(stage > 0);
             countByStage[stage-1] = (countByStage[stage-1] ?? 0) + 1;
             this.challengeId2Proto[id] = [protoId, stage];
             ++protoId;
@@ -506,7 +506,7 @@ module.exports = class ProtoOut {
             result[this.uint8size - index - 1] = value & 0xFF;
             value = value >> 8;
         }
-        assert(value === 0n);
+        assert.strictEqual(value, 0n);
         return result;
     }
     bint2bint(value, bytes = 0) {

@@ -1,6 +1,5 @@
 const LabelRanges = require('./label_ranges.js');
 const ExpressionItem = require('./expression_items/expression_item.js');
-const {assert,assertLog} = require('./assert.js');
 module.exports = class Ids {
 
     constructor (type, definitionClass, itemClass) {

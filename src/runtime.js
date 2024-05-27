@@ -1,7 +1,6 @@
 const util = require('util');
 const Expression = require('./expression.js');
 const NonRuntimeEvaluable = require('./non_runtime_evaluable.js');
-const {assert, assertLog} = require('./assert.js');
 const ExpressionItems = require("./expression_items.js");
 const Context = require('./context.js');
 

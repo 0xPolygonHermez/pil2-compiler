@@ -1,9 +1,9 @@
 const Expression = require("./expression.js");
 const Context = require('./context.js');
-const {assert, assertLog} = require('./assert.js');
 const NonRuntimeEvaluableItem = require('./expression_items/non_runtime_evaluable_item.js');
 const Debug = require('./debug.js');
 const util = require('util');
+const assert = require('./assert.js');
 
 module.exports = class Assign {
     constructor () {
@@ -15,7 +15,7 @@ module.exports = class Assign {
         }
         value = this.getValue(value);
         if (Debug.active) console.log(util.inspect(value, false, 200, true));
-        assert(value !== null);
+        assert.notStrictEqual(value, null);
         return this.#assign(name, indexes, value);
     }
     getValue(value) {

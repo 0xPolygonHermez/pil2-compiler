@@ -1,10 +1,11 @@
-const {assert, assertLog} = require('./assert.js');
 const MultiArray = require("./multi_array.js");
 const ArrayOf = require('./expression_items/array_of.js');
 const RangeIndex = require('./expression_items/range_index.js');
 const IntValue = require('./expression_items/int_value.js');
 const Context = require('./context.js');
 const Debug = require('./debug.js');
+const assert = require('./assert.js');
+
 /**
  * @property {MultiArray} array
  */
@@ -14,7 +15,7 @@ class Reference {
     constructor (name, type, isReference, array, id, instance, scopeId, properties) {
         this.name = name;
         this.type = type;
-        assert(typeof isReference === 'boolean');
+        assert.typeOf(isReference, 'boolean');
         this.isReference = isReference;
         this.array = array;
         this.locator = id;
@@ -22,7 +23,7 @@ class Reference {
         this.instance = instance;
         this.initialized = false;
         for (const property in properties) {
-            assert(typeof this[property] === 'undefined');
+            assert.undefined(this[property]);
             if (Debug.active) if (property === 'const') console.log(['CONST ********', properties[property]]);
             this[property] = properties[property];
         }
@@ -36,7 +37,7 @@ class Reference {
     }
     markAsInitialized(indexes = []) {
         if (indexes.length === 0 || !this.array) {
-            assert(this.initialized === false);
+            assert.strictEqual(this.initialized, false);
             this.initialized = true;
         }
         else {
@@ -58,7 +59,7 @@ class Reference {
     }
     set (value, indexes = [], options = {}) {
         if (Debug.active) console.stdebug(`set(${this.name}, [${indexes.join(',')}]`);
-        assert(value !== null); // to detect obsolete legacy uses
+        assert.notStrictEqual(value, null); // to detect obsolete legacy uses
         if (!this.array || this.array.isFullIndexed(indexes)) {
             return this.setOneItem(value, indexes, options);
         }
@@ -106,7 +107,7 @@ class Reference {
     }
     #doInit(value, indexes) {
         const [row, id] = this.getRowAndId(indexes);
-        assert(id !== null);
+        assert.notStrictEqual(id, null);
         if (row !== false) {
             this.instance.setRowValue(id, row, value);
         } else {
@@ -115,7 +116,7 @@ class Reference {
         this.markAsInitialized(indexes);
     }
     init (value, indexes = [], options = {}) {
-        assert(value !== null); // to detect obsolete legacy uses
+        assert.notStrictEqual(value, null); // to detect obsolete legacy uses
         this.set(value, indexes, {...options, doInit: true});
     }
     static getArrayAndSize(lengths) {

@@ -1,4 +1,3 @@
-const {assert, assertLog} = require('./assert.js');
 const MultiArray = require("./multi_array.js");
 const Expression = require("./expression.js");
 const {ExpressionItem, ArrayOf} = require("./expression_items.js");
@@ -7,6 +6,7 @@ const Containers = require('./containers.js');
 const Context = require('./context.js');
 const Exceptions = require('./exceptions.js');
 const Debug = require('./debug.js');
+const assert = require('./assert.js');
 module.exports = class References {
 
     constructor () {
@@ -111,7 +111,7 @@ module.exports = class References {
         return typedef.instance;
     }
     decodeName (name) {
-        assert(typeof name === 'string');
+        assert.typeOf(name, 'string');
         const parts = name.split('.');
         let scope = false;
         if (parts.length === 1) {
@@ -177,13 +177,6 @@ module.exports = class References {
         }
 
         const scopeId = this.hasScope(type) ? Context.scope.declare(nameInfo.name, type, existingReference, false) : 0;
-        if (nameInfo.name === 'Main.jmp') {
-            console.log(scopeId);
-            console.log(existingReference);
-            // EXIT_HERE;
-        }
-        // scope(name, def) => exception !!!
-        //                  => scopeId;
         if (existingReference !== false && this.isVisible(existingReference)) {
             if  (existingReference.scopeId === scopeId || existingReference.scope === false || scopeId === false) {
                 throw new Error(`At ${Context.sourceRef} is defined ${nameInfo.name}, but ${existingReference.name} as ${existingReference.type} was defined previously on ${existingReference.data.sourceRef}`)
@@ -192,9 +185,11 @@ module.exports = class References {
         return [scopeId, false];
     }
     declare(name, type, lengths = [], options = {}, initValue = null) {
-        assert(typeof name === 'string');
-        assert(!name.includes('::object'));
-        assert(!name.includes('.object'));
+        if (assert.isEnabled) {
+            assert.typeOf(name, 'string');
+            assert.ok(!name.includes('::object'));
+            assert.ok(!name.includes('.object'));
+        }
 
         const nameInfo = this.decodeName(name);
         // console.log(`DECLARE_REFERENCE ${name} ==> ${nameInfo.name} ${type} ${lengths.length ? '[' + lengths.join(',') + '] ': ''}scope:${nameInfo.scope} #${Context.scope.deep} ${initValue}[type: ${initValue instanceof Object ? initValue.constructor.name : typeof initValue}]`, options);
@@ -265,7 +260,7 @@ module.exports = class References {
     }
 
     get (name, indexes = []) {
-        assertLog(typeof name === 'string', name);
+        assert.typeOf(name, 'string');
         if (Debug.active) console.log('GET', name, indexes);
 
         // getReference produce an exception if name not found
@@ -284,7 +279,7 @@ module.exports = class References {
     }
     getItem(name, indexes, options) {
 
-        assert(typeof name === 'string' || (Array.isArray(name) && name.length > 0));
+        if (assert.isEnabled) assert.ok(typeof name === 'string' || (Array.isArray(name) && name.length > 0));
 
         if (Debug.active) console.log(indexes);
         indexes = indexes ?? [];
@@ -297,13 +292,13 @@ module.exports = class References {
         if (options.preDelta) {
             EXIT_HERE;
             console.log(typeof tvalue.value);
-            assert(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
+            if (assert.isEnabled) assert.ok(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
             tvalue.value += options.preDelta;
             instance.set(info.locator + info.offset, tvalue.value);
         }
         if (options.postDelta) {
             EXIT_HERE;
-            assert(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
+            if (assert.isEnabled) assert.ok(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
             instance.set(info.locator + info.offset, tvalue.value + options.postDelta);
         }
         return item;
@@ -321,7 +316,7 @@ module.exports = class References {
         }
         // TODO: review
         if (info.type !== 'function') {
-            assertLog(tvalue instanceof ExpressionItem, {name, infotype: info.type, tvalue});
+            assert.instanceOf(tvalue, ExpressionItem, {name, infotype: info.type, tvalue});
         }
         if (typeof info.row !== 'undefined') {
             tvalue.row = info.row;
@@ -346,12 +341,12 @@ module.exports = class References {
         }
         if (options.preDelta) {
             console.log(typeof tvalue.value);
-            assert(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
+            if (assert.isEnabled) assert.ok(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
             tvalue.value += options.preDelta;
             instance.set(info.locator + info.offset, tvalue.value);
         }
         if (options.postDelta) {
-            assert(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
+            if (assert.isEnabled) assert.ok(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
             instance.set(info.locator + info.offset, tvalue.value + options.postDelta);
         }
         return tvalue;
@@ -375,7 +370,7 @@ module.exports = class References {
         }
         // TODO: review
         if (info.type !== 'function') {
-            assertLog(tvalue instanceof ExpressionItem, {name, infotype: info.type, tvalue});
+            assert.instanceOf(tvalue, ExpressionItem, {name, infotype: info.type, tvalue});
         }
         if (typeof info.row !== 'undefined') {
             tvalue.row = info.row;
@@ -400,12 +395,12 @@ module.exports = class References {
         }
         if (options.preDelta) {
             if (Debug.active) console.log(typeof tvalue.value);
-            assert(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
+            if (assert.isEnabled) assert.ok(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
             tvalue.value += options.preDelta;
             instance.set(info.locator + info.offset, tvalue.value);
         }
         if (options.postDelta) {
-            assert(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
+            if (assert.isEnabled) assert.ok(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
             instance.set(info.locator + info.offset, tvalue.value + options.postDelta);
         }
         return tvalue;
@@ -549,8 +544,10 @@ module.exports = class References {
         if (value instanceof Expression) {
             value = value.getAloneOperand();
             if (value instanceof ReferenceItem) {
-                assert(!value.next);
-                assert(!value.array);
+                if (assert.isEnabled) {
+                    assert.ok(!value.next);
+                    assert.ok(!value.array);
+                }
                 const src = this.getReference(value.name);
                 if (src.array) {
                     const __array = src.array.getIndexesTypedOffset(value.__indexes);
@@ -572,7 +569,7 @@ module.exports = class References {
                 reference.array = value.array;
             }
         } else if (value instanceof ProofItem) {
-            assert(!value.__next);
+            assert.ok(!value.__next);
             reference.locator = value.id;
             reference.type = value.refType;
         } else {
@@ -584,7 +581,7 @@ module.exports = class References {
     }
     set (name, indexes, value) {
         if (Debug.active) console.log('SET', name, indexes, value);
-        assert(value !== null); // to detect obsolete legacy uses
+        assert.notStrictEqual(value, null); // to detect obsolete legacy uses
 
         // getReference produce an exception if name not found
         const reference = this.getReference(name);

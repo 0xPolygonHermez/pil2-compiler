@@ -1,6 +1,6 @@
-const {assert, assertLog} = require('../assert.js');
 const ValueItem = require("./value_item.js");
 const Types = require('../types.js');
+const assert = require('../assert.js');
 class IntValue extends ValueItem {
     constructor (value = 0n) {
         if (value instanceof IntValue) {
@@ -9,14 +9,14 @@ class IntValue extends ValueItem {
         if (typeof value === 'number') {
             value = BigInt(value);
         }
-        assertLog(typeof value === 'bigint', value);
+        assert.typeOf(value, 'bigint');
         super(value);
     }
     setValue(value) {
         if (typeof value === 'number') {
             value = BigInt(value);
         }
-        assert(typeof value === 'bigint');
+        assert.typeOf(value, 'bigint');
         this.value = value;
     }
     cloneInstance() {

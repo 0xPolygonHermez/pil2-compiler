@@ -1,17 +1,24 @@
-const {assert, assertLog} = require("../assert.js");
+
+const assert = require('../assert.js');
 class RowOffset {
     static Zero;
     constructor (index, prior = false) {
-        assert(typeof index.prior === 'undefined');
+        assert.typeOf(index.prior, 'undefined');
         this.index = (typeof index === 'object' && typeof index.clone === 'function') ? index.clone() : index;
-        assert(typeof prior === 'boolean');
+        assert.typeOf(prior, 'boolean');
         this.prior = prior;
     }
     get value() {
+        return this.getValue();
+    }
+    getValue(options = {}) {
         if (typeof this.index === 'number') {
             return this.prior ? -this.index : this.index;
         }
-        const indexValue = this.index.asInt();
+        const indexValue = Number(this.index.asInt());
+        if (options.instance) {
+            this.index = indexValue;
+        }
         return this.prior ? -indexValue:indexValue;
     }
     static factory(index, prior = false) {
@@ -21,7 +28,7 @@ class RowOffset {
         if (index instanceof RowOffset) {
             return index.clone();
         }
-        assert(typeof index.prior === 'undefined');
+        assert.typeOf(index.prior, 'undefined');
         return new RowOffset(index, prior);
     }
     isPriorRows() {

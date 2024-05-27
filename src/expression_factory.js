@@ -4,10 +4,10 @@ const Expression = require("./expression.js");
 const {ReferenceItem, IntValue, StringValue, StringTemplate,
     FunctionCall, ExpressionList, RangeIndex} = require("./expression_items.js");
 const Router = require("./router.js");
-const {assert, assertLog} = require('./assert');
 const RowOffset = require('./expression_items/row_offset.js');
 const Context = require('./context.js');
 const Debug = require('./debug.js');
+const assert = require('./assert.js');
 module.exports = class ExpressionFactory {
 
     // pre function to delete property op only used by routing
@@ -30,15 +30,16 @@ module.exports = class ExpressionFactory {
             return obj;
         }
         // console.log(obj);
-        assertLog(typeof obj === 'object', obj);
-        assertLog(typeof obj.op === 'undefined', obj);
+        assert.typeOf(obj, 'object');
+        assert.typeOf(obj.op, 'undefined');
         if (Array.isArray(obj)) {
             obj = [...obj];
         } else {
             obj = {...obj};
         }
 
-        assert(obj.type !== 'object' && obj.type !== 'objects');
+        assert.notStrictEqual(obj.type, 'object');
+        assert.notStrictEqual(obj.type, 'objects');
         if (obj.dim === 0) delete obj.dim;
 
         // console.log(obj);

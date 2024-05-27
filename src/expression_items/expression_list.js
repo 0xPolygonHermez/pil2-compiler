@@ -1,9 +1,9 @@
 const Exceptions = require('../exceptions.js');
-const {assert, assertLog} = require('../assert.js');
 const ExpressionItem = require('./expression_item.js');
 const MultiArray = require('../multi_array.js');
 const util = require('util');
 const Context = require('../context.js');
+const assert = require('../assert.js');
 class ExpressionList extends ExpressionItem {
 
     constructor(items, options = {}) {
@@ -28,7 +28,7 @@ class ExpressionList extends ExpressionItem {
         return new ExpressionList(this.items, this.debug);
     }
     pushItem(item) {
-        assertLog(item instanceof ExpressionItem, item);
+        assert.instanceOf(item, ExpressionItem);
         this.items.push(item.clone());
         this.indexes = [this.items.length];
     }

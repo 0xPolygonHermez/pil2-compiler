@@ -1,6 +1,6 @@
-const {assert, assertLog} = require('./assert.js');
 const Expression = require('./expression.js');
 const Context = require('./context.js');
+const assert = require('./assert.js');
 module.exports = class Constraints {
     constructor () {
         this.constraints = [];
@@ -32,8 +32,8 @@ module.exports = class Constraints {
         return res;
     }
     define(left, right, boundery, sourceRef) {
-        assertLog(left instanceof Expression, left);
-        assertLog(right instanceof Expression, right);
+        assert.instanceOf(left, Expression);
+        assert.instanceOf(right, Expression);
         // left.dump('LEFT(simplied)');
         // right.dump('RIGHT(simplied)');
         if (left.isRuntime()) {

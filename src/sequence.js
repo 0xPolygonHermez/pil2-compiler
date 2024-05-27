@@ -1,9 +1,9 @@
-const {assert, assertLog} = require("./assert.js");
 const Router = require("./router.js");
 const Expression = require("./expression.js");
 const Values = require('./values.js');
 const Debug = require('./debug.js');
 const vm = require('vm');
+const assert = require('./assert.js');
 
 const MAX_ELEMS_GEOMETRIC_SEQUENCE = 300;
 class SequencePadding {
@@ -55,9 +55,6 @@ module.exports = class Sequence {
         return this.#values.__setValue(index, value);
     }
     setValue(index, value) {
-        /* assert(this.extendPos >= 0 && (this.maxSize === false || this.extendPos < this.maxSize),
-               `Invalid value of extendPos:${this.extendPos} maxSize:${this.maxSize}`);*/
-        // console.log('SETTING VALUE ['+index+']='+value+' '+this.debug);
         if ((index >= 0 && (this.maxSize === false || index < this.maxSize) === false)) {
             console.log(`\x1B[33mERROR Invalid value of extendPos:${index} maxSize:${this.maxSize}  ${this.debug}\x1B[0m`);
         }
@@ -71,7 +68,7 @@ module.exports = class Sequence {
         this.paddingCycleSize = false;
         this.paddingSize = 0;
         const size = this._sizeOf(e);
-        assert(size >= this.paddingCycleSize, `size(${size}) < paddingCycleSize(${this.paddingCycleSize})`);
+        assert.ok(size >= this.paddingCycleSize, `size(${size}) < paddingCycleSize(${this.paddingCycleSize})`);
         if (Debug.active) {
             console.log(['SIZE(MAXSIZE)', this.maxSize]);
             console.log(['SIZE(paddingCycleSize)', this.paddingCycleSize]);
@@ -323,7 +320,7 @@ module.exports = class Sequence {
     extendRangeSeq(fromValue, toValue, times, delta = 1n, ratio = 1n) {
         const initialExtendPos = this.extendPos;
         let value = fromValue;
-        assert(times > 0);
+        assert.ok(times > 0);
         while (value <= toValue) {
             for (let itimes = 0; itimes < times; ++itimes) {
                 this.#setValue(this.extendPos++, value);
@@ -345,15 +342,15 @@ module.exports = class Sequence {
             toValue >= Number.MIN_SAFE_INTEGER && toValue <= Number.MAX_SAFE_INTEGER) {
             console.log({fromValue, toValue, delta, _delta});
             if (toValue > fromValue) {
-                assert(Number(toValue/fromValue) > 0);
+                assert.ok(Number(toValue/fromValue) > 0);
                 return Math.floor(Math.log(Number(toValue/fromValue))/Math.log(_delta)) + 1;
             } 
-            assert(Number(fromValue/toValue) > 0);
+            assert.ok(Number(fromValue/toValue) > 0);
             return Math.floor(Math.log(Number(fromValue/toValue))/Math.log(_delta)) + 1;
         }                
         const _maxToValue = delta ** BigInt(Math.floor(Math.log(Number.MAX_SAFE_INTEGER)/Math.log(_delta)));
         const _times = fromValue / BigInt(_maxToValue);
-        assert((_times * 54n) <= Number.MAX_SAFE_INTEGER);
+        assert.ok((_times * 54n) <= Number.MAX_SAFE_INTEGER);
         let count = Number(fromValue / BigInt(_maxToValue)) * this.geomCount(1, _maxToValue, _delta);
         const _remainToValue = Number(fromValue % BigInt(_maxToValue));
         if (_remainToValue) {
@@ -442,14 +439,16 @@ module.exports = class Sequence {
         this.#values.mutable = false;
     }
     verify() {
+        if (!assert.isEnabled) return;
+
         if (Debug.active) {
             console.log(this.toString());
             console.log([this.extendPos, this.size]);
             console.log(['SIZE', this.size]);
         }
-        assert(this.valueCounter === this.size);
+        assert.strictEqual(this.valueCounter, this.size);
         for (let index = 0; index < size; ++index) {
-            assert(this.values[index] === 'bigint', `type of index ${index} not bigint (${typeof this.values[index]}) ${value}`);
+            assert.typeOf(this.values[index], 'bigint', `type of index ${index} not bigint (${typeof this.values[index]}) ${value}`);
         }
     }
     _extend(e) {

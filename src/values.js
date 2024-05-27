@@ -1,5 +1,3 @@
-const {assert, assertLog} = require("./assert.js");
-
 module.exports = class Values {
     #values;
     #mutable;

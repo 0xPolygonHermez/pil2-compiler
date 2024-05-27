@@ -1,9 +1,9 @@
 const LabelRanges = require("./label_ranges.js");
 const {cloneDeep} = require('lodash');
-const {assert, assertLog} = require('./assert.js');
 const ExpressionItem = require('./expression_items/expression_item.js');
 const Debug = require('./debug.js');
 const Context = require('./context.js');
+const assert = require('./assert.js');
 module.exports = class Indexable {
     constructor (type, definitionClass, expressionItemClass, options = {}) {
         this.expressionItemClass = expressionItemClass ?? false;
@@ -13,7 +13,7 @@ module.exports = class Indexable {
         this.type = type;
         this.options = options ?? {}
         this.rtype = this.options.rtype ?? type;
-        assertLog(this.expressionItemClass.prototype instanceof ExpressionItem, expressionItemClass);
+        assert.instanceOf(this.expressionItemClass.prototype, ExpressionItem);
         this.labelRanges = new LabelRanges();
         this.debug = false;
     }
@@ -108,7 +108,7 @@ module.exports = class Indexable {
             }
             return new itemClass();
         }
-        assertLog(typeof itemClass.createFrom === 'function', [this.type, this.constructor.name, itemClass, res, res.value]);
+        if (assert.isEnabled) assert.typeOf(itemClass.createFrom, 'function', [this.type, this.constructor.name, itemClass, res, res.value]);
         return itemClass.createFrom(res.value, {id, instance: this});
     }
 
@@ -134,7 +134,7 @@ module.exports = class Indexable {
     }
     set(id, value) {
         const item = this.get(id);
-        assertLog(item, {type: this.type, definition: this.definitionClass, id, item});
+        if (assert.isEnabled) assert.ok(item, {type: this.type, definition: this.definitionClass, id, item});
         if (typeof item.setValue !== 'function') {
             throw new Error(`Invalid assignation at ${Context.sourceRef}`);
         }

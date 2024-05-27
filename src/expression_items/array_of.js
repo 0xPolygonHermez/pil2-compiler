@@ -1,13 +1,14 @@
 const LabelRanges = require("../label_ranges.js");
 const RuntimeItem = require("./runtime_item.js");
 const MultiArray = require('../multi_array.js');
-const {assert, assertLog} = require('../assert.js');
 const Context = require('../context.js');
 const Types = require('../types.js');
+const assert = require('../assert.js');
+
 module.exports = class ArrayOf extends RuntimeItem {
     constructor (instanceType, array, unrollLevels = 0) {
         super();
-        assertLog(array instanceof MultiArray, array);
+        assert.instanceOf(array, MultiArray);
         this._array = array.clone();
         this.unrollLevels = unrollLevels;
 //        console.log(`ARRAYOF(${instanceType})[${array.lengths.map(x => x.toString(10)).join('],[')}] D${this.dim}`);
@@ -21,7 +22,7 @@ module.exports = class ArrayOf extends RuntimeItem {
         return this._array.dim;
     }
     get array() {
-        assert(this._array !== false, 'try to access to array, but array lengths not defined');
+        assert.notStrictEqual(this._array, false, 'try to access to array, but array lengths not defined');
         return this._array;
     }
     set array(value) {
@@ -66,7 +67,7 @@ module.exports = class ArrayOf extends RuntimeItem {
         return this.unrollLevels > 0;
     }
     unroll() {
-        assert(this.unrollLevels === 1);
+        assert.strictEqual(this.unrollLevels, 1);
 
         if (this._array.dim > 1) {
             // TODO: implement array of arrays of

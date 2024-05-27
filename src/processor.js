@@ -1,4 +1,4 @@
-const {assert, assertLog} = require('./assert.js');
+const { performance } = require('perf_hooks');
 const Scope = require("./scope.js");
 const Expressions = require("./expressions.js");
 const Expression = require("./expression.js");
@@ -38,10 +38,12 @@ const Hints = require('./hints.js');
 const util = require('util');
 const Debug = require('./debug.js');
 const Transpiler = require('./transpiler.js');
+const assert = require('./assert.js');
 
 const MAX_SWITCH_CASE_RANGE = 512;
 module.exports = class Processor {
     constructor (Fr, parent, config = {}) {
+        this.lastMs = Math.floor(performance.now());
         this.sourceRef = '(processor constructor)';
         this.compiler = parent;
         this.trace = true;
@@ -161,16 +163,6 @@ module.exports = class Processor {
         return this.functionDeep > 0;
     }
     startExecution(statements) {
-        let bits = 0;
-        while (bits < 530) {
-            ++bits;
-            let value = 2n ** BigInt(bits);
-            // console.log([value, bits, this.log2(value)]);
-            assert(bits === this.log2(value));
-            assert((bits-1) === this.log2(value-1n));
-            assert(bits === this.log2(value+1n));
-            // if (value > 0n) console.log([value-1n, bits, this.log2(value-1n)]);
-        }
         this.sourceRef = '(start-execution)';
         // TODO: use a constant
         this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
@@ -279,6 +271,11 @@ module.exports = class Processor {
         const params = st.value.split(/\s+/);
         const instr = params[0] ?? false;
         switch (instr) {
+            case 'message':
+                    const ms = Math.floor(performance.now());
+                    console.log(`\x1B[46m${st.value.slice(8)} (${ms}ms +${ms-this.lastMs}ms)\x1B[0m`);
+                    this.lastMs = ms;
+                    break;
             case 'debug':
                 if (params[1] === 'on') {
                     Debug.active = true;
@@ -287,6 +284,14 @@ module.exports = class Processor {
                     console.log('##############');
                 }
                 else if (params[1] === 'off') Debug.active = false;        
+                break;
+            case 'profile':
+                if (params[1] === 'on') {
+                    console.profile();
+                }
+                else if (params[1] === 'off') {
+                    console.profileEnd();
+                }        
                 break;
             case 'exit':
                 EXIT_HERE;
@@ -374,11 +379,9 @@ module.exports = class Processor {
             EXIT_HERE;
         }
         if (Debug.active) console.log(st.value);
-        if (Debug.active) st.value.dump('@@@@@@@@@@@@@@@@@@');
         const expr2 = st.value.instance();
-        if (Debug.active) expr2.dump('@^^@------/');
         if (st.name.reference) {
-            assert(indexes.length === 0);
+            assert.strictEqual(indexes.length, 0);
             const assignedValue = st.value.instance();
             if (Debug.active) console.log(assignedValue);
             this.assign.assignReference(names, assignedValue);
@@ -491,7 +494,7 @@ module.exports = class Processor {
         if (!s.__cached_values) {
             this.prepareSwitchCase(s);
         }
-        assert(s.value instanceof Expression);
+        assert.instanceOf(s.value, Expression);
         const value = s.value.asInt();
         let caseIndex = false;
         if (typeof s.__cached_values[value] !== 'undefined') {
@@ -621,7 +624,7 @@ module.exports = class Processor {
     }
     execForInListReferences(s) {
         const name = s.init.items[0].name;
-        assert(!s.init.items[0].indexes);
+        assert.ok(!s.init.items[0].indexes);
         let index = 0;
         for (const value of s.list) {
             // console.log(s.init.items[0]);
@@ -679,6 +682,9 @@ module.exports = class Processor {
             // to support dynamic includes, add some internal statements need to compile inside subproof
             // but after take compiled statements. TODO: analyze use current subproof name
             const sts = this.compiler.loadInclude(s.file.asString(), {preSrc: 'subproof __(2**2) {\n', postSrc: '\n};\n'});
+            if (sts === false) {
+                throw new Error(`ERROR loading include ${s.file.asString()}`);
+            }
             s.contents = sts[0].statements;
         }
         return this.execute(s.contents);
@@ -739,7 +745,7 @@ module.exports = class Processor {
         this.context.pop();
     }
     evalExpressionList(e) {
-        assert(e.type === 'expression_list');
+        assert.strictEqual(e.type, 'expression_list');
         let values = [];
         for (const value of e.values) {
             values.push(value.evalAsInt());
@@ -1104,8 +1110,8 @@ module.exports = class Processor {
         const scopeType = this.scope.getInstanceType();
         let id, expr, prefix = '';
 
-        assertLog(s.left instanceof Expression, s.left);
-        assertLog(s.right instanceof Expression, s.right);
+        assert.instanceOf(s.left, Expression);
+        assert.instanceOf(s.right, Expression);
         if (Debug.active) s.left.dump('LEFT-CONSTRAINT 1');
         // s.right.dump('RIGHT-CONSTRAINT 1');
         const left = s.left.instance();

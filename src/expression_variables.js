@@ -1,4 +1,3 @@
-const {assert, assertLog} = require('./assert.js');
 const Variables = require("./variables.js");
 const ExpressionReference = require('./expression_items/expression_reference.js');
 

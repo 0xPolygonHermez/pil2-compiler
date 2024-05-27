@@ -1,5 +1,4 @@
 const util = require('util');
-const {assert} = require("chai");
 const ExpressionItem = require('./expression_items/expression_item.js');
 module.exports = class ExpressionOperatorMethods {
     static operatorAddIntValue(valueA, valueB) {

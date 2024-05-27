@@ -1,9 +1,6 @@
 const util = require('util');
-// const {assert} = require('chai');
+const assert = require('./assert.js');
 
-const assert = (x) => {
-    if (!x) { debugger; }
-};
 const OPERATOR_SYMBOLS = {mul: '*', add: '+', sub:'-', neg:'-'};
 const VALID_OBJ_TYPES = ['constant','challenge','subproofValue','proofValue','publicValue','periodicCol','fixedCol','witnessCol','expression'];
 module.exports = class PackedExpressions {
@@ -40,42 +37,42 @@ module.exports = class PackedExpressions {
         return this.insert({sub: {value}});
     }
     push(obj) {
-        assert(VALID_OBJ_TYPES.includes(Object.keys(obj)[0]));
+        if (assert.isEnabled) assert.ok(VALID_OBJ_TYPES.includes(Object.keys(obj)[0]));
         this.values.push(obj);
     }
     pushConstant (value) {
         this.values.push({constant: {value}});
     }
     pushChallenge (idx, stage = 1) {
-        assert(typeof idx !== 'undefined');
+        assert.defined(idx);
         this.values.push({challenge: {stage, idx}});
     }
     pushSubproofValue (idx, subproofId) {
-        assert(typeof idx !== 'undefined');
+        assert.defined(idx);
         this.values.push({subproofValue: {idx, subproofId}});
     }
     pushProofValue (idx) {
-        assert(typeof idx !== 'undefined');
+        assert.defined(idx);
         this.values.push({proofValue: {idx}});
     }
     pushPublicValue (idx) {
-        assert(typeof idx !== 'undefined');
+        assert.defined(idx);
         this.values.push({publicValue: {idx}});
     }
     pushPeriodicCol (idx, rowOffset = 0) {
-        assert(typeof idx !== 'undefined');
+        assert.defined(idx);
         this.values.push({periodicCol: {idx, rowOffset}});
     }
     pushFixedCol (idx, rowOffset = 0) {
-        assert(typeof idx !== 'undefined');
+        assert.defined(idx);
         this.values.push({fixedCol: {idx, rowOffset}});
     }
     pushWitnessCol (colIdx, rowOffset = 0, stage = 1) {
-        assert(typeof colIdx !== 'undefined');
+        assert.defined(colIdx);
         this.values.push({witnessCol: {colIdx, rowOffset, stage}});
     }
     pushExpression (idx) {
-        assert(typeof idx !== 'undefined');
+        assert.defined(idx);
         this.values.push({expression: {idx}});
     }
     dump() {

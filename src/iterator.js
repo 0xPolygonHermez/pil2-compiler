@@ -1,5 +1,5 @@
 const Expression = require("./expression.js");
-const {assert, assertLog} = require('./assert.js');
+const assert = require('./assert.js');
 
 module.exports = class Iterator {
 
@@ -13,8 +13,7 @@ module.exports = class Iterator {
         }
         this.index = 0;
         this.expr = expr.eval();
-        console.log(this.expr);
-        assertLog(this.expr.array, this.expr);
+        assert.ok(this.expr.array, this.expr);
         // this.reference = this.expr.getReference();
         // this.count = this.reference.array.getLength(0);
     }

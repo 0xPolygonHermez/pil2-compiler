@@ -1,12 +1,12 @@
-const {assert, assertLog} = require("../assert.js");
 const Variable = require("./variable.js");
 const StringValueItem = require("../expression_items/string_value.js");
+const assert = require('../assert.js');
 
 class StringVariable extends Variable {
     constructor (id, properties) {
         super(id, properties);
         const value = properties.value ?? '';
-        assertLog(typeof value === 'string', value);
+        assert.typeOf(value, 'string');
         this.value = value;
     }
     getValue() {
@@ -16,7 +16,7 @@ class StringVariable extends Variable {
         if (typeof value.asString === 'function') {
             value = value.asString();
         }
-        assertLog(typeof value === 'string', value);
+        assert.typeOf(value, 'string');
         this.value = value;
         return this.value;
     }

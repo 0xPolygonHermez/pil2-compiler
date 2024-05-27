@@ -1,4 +1,4 @@
-const {assert, assertLog} = require('./assert.js');
+const assert = require('./assert.js');
 const Debug = require('./debug.js');
 class MultiArray {
     static ErrorIndexOutOfRange = class extends Error {
@@ -6,8 +6,10 @@ class MultiArray {
     constructor (lengths, options = {}) {
         // baseOffset is accumulated offset, means parentOffset + new offset.
         this.baseOffset = options.baseOffset ?? 0;
-        assertLog(Array.isArray(lengths), lengths);
-        assertLog(lengths.every(x => typeof x === 'number'), lengths);
+        if (assert.isEnabled) {
+            assert.ok(Array.isArray(lengths), lengths);
+            assert.ok(lengths.every(x => typeof x === 'number'), lengths);
+        }
         this.initOffsets(lengths);
 
         // if parentInitizalized means need to extract
@@ -34,16 +36,16 @@ class MultiArray {
         const dim = this.offsets.length - dims;
         let _lengths = this.lengths.slice(-dim);
         if (from !== false || to !== false) {
-            assert(dim === 1);
+            assert.equal(dim, 1);
             if (to === false) {
-                assert(from < _lengths[0]);
+                assert.ok(from < _lengths[0]);
                 _lengths[0] = _lengths[0] - to;
                 offset += to 
             } else if (from === false) {
-                assert(to < _lengths[0]);
+                assert.ok(to < _lengths[0]);
                 _lengths[0] = to + 1;
             } else {
-                assert(to < _lengths[0] && from < _lengths[0] && from <= to);
+                assert.ok(to < _lengths[0] && from < _lengths[0] && from <= to);
                 _lengths[0] = to - from + 1;
                 offset += from 
             }
@@ -117,9 +119,10 @@ class MultiArray {
         return locatorId + offset;
     }
     indexesToOffset(indexes) {
-        assert(indexes && Array.isArray(indexes));
+        assert.defined(indexes);
+        assert.ok(Array.isArray(indexes));
         const [offset, dim] = this.getIndexesOffset(indexes);
-        assert(this.offsets.length === indexes.length);
+        assert.strictEqual(this.offsets.length,indexes.length);
         return offset;
     }
     getIndexesOffset(indexes) {

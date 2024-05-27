@@ -3,7 +3,6 @@ const ExpressionClass = require('../expression_class.js');
 const Debug = require('../debug.js');
 const ValueItem = require('../expression_items/value_item.js');
 const util = require('util');
-const {assert, assertLog} = require('../assert.js');
 module.exports = class ExpressionVariable extends Variable {
     constructor (id, properties = {}) {
         super(id, properties);

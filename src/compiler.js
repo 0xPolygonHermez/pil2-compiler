@@ -14,7 +14,7 @@ const Constraints = require("./constraints.js");
 const Processor = require("./processor.js");
 const Context = require("./context.js");
 const { mainModule } = require("process");
-
+const assert = require('./assert.js');
 
 const oldParseError = pil_parser.Parser.prototype.parseError;
 

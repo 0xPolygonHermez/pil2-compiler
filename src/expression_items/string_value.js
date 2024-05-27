@@ -1,9 +1,9 @@
-const {assert, assertLog} = require("../assert.js");
+const assert = require('../assert.js');
 const RuntimeItem = require("./runtime_item.js");
 class StringValue extends RuntimeItem {
     constructor (value = '') {
         super();
-        assertLog(typeof value === 'string', value);
+        assert.typeOf(value, 'string');
         this.value = value;
     }
     get isBaseType () {
@@ -19,7 +19,7 @@ class StringValue extends RuntimeItem {
         return this.value;
     }
     setValue(value) {
-        assertLog(typeof value === 'string', value);
+        assert.typeOf(value, 'string');
         this.value = value;
         return this.value;
     }

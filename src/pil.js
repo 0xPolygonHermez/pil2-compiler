@@ -6,6 +6,7 @@ const version = require("../package").version;
 const compile = require("./compiler.js");
 const ffjavascript = require("ffjavascript");
 const tty = require('tty');
+const assert = require('./assert.js');
 const debugConsole = require('./debug_console.js').init();
 
 const argv = require("yargs")
@@ -20,6 +21,7 @@ const argv = require("yargs")
     .option("nofixed")
     .alias("l", "lib")
     .alias("f", "includePathFirst")
+    .alias("a", "asserts")
     .argv;
 
 Error.stackTraceLimit = Infinity;
@@ -74,6 +76,9 @@ async function run() {
     }
     if (argv.include) {
         config.includePaths = argv.include.split(',');
+    }
+    if (argv.asserts) {
+        assert.enable(true);
     }
 
     if (argv.includePathFirst) {

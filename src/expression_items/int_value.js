@@ -124,11 +124,6 @@ class IntValue extends ValueItem {
         return new IntValue(this.asInt()**valueB.asInt());
     }
     operatorEq(valueB) {
-        console.log(this);
-        console.log(valueB);
-        if (valueB && valueB.nonRuntimeEvaluableItem) {
-            return new IntValue(0);
-        }
         return new IntValue(this.asInt() == valueB.asInt() ? 1:0);
     }
 }

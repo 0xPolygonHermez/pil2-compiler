@@ -6,6 +6,7 @@ class NonRuntimeEvaluableItem extends ExpressionItem {
     static _singletonInstance = new NonRuntimeEvaluableItem();
     constructor () {
         super();
+        this.nonRuntimeEvaluableItem = true;
     }
     static get () {
         return NonRuntimeEvaluableItem._singletonInstance;

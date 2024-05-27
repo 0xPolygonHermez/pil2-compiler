@@ -422,7 +422,7 @@ class Expression extends ExpressionItem {
         if (Debug.active) this.dump(`evaluateFullStack #${evaluateId} MIDDLE`);
         this.evaluateStackPos(stackResults, this.stack.length - 1, {...options, evaluateId});
         if (Debug.active) this.dump(`evaluateFullStack #${evaluateId} END`);
-    }
+    }    
     evaluateStackPos(stackResults, stackIndex, options = {}) {
         assert.ok(stackIndex < this.stack.length);
         const st = this.stack[stackIndex];
@@ -459,14 +459,14 @@ class Expression extends ExpressionItem {
         if (Debug.active) this.dump(`evaluateStackPos #${stackIndex} #${options.evaluateId ?? 0}`);
         let value = null;
         if (values.some(value => value instanceof ExpressionItems.NonRuntimeEvaluableItem))  {
-            value = ExpressionItems.NonRuntimeEvaluableItem.get();
+            value = this.evalNonRuntimeOperands(st.op, values);
         } else if (values.some(value => value === null))  {
             value = null;
             this.dump('value=null '+Context.sourceRef);
         } else if (st.op === false) {
             value = values[0];
         } else if (values.some(value => value.isRuntimeEvaluable() === false)) {
-            value = ExpressionItems.NonRuntimeEvaluableItem.get();
+            value = this.evalNonRuntimeOperands(st.op, values);
         } else {
             // values.forEach(x => {if (x.dump) x.dump()});
             value = this.applyOperation(st.op, values);
@@ -487,6 +487,12 @@ class Expression extends ExpressionItem {
             }
         }
         return (results[0] = value);
+    }
+    evalNonRuntimeOperands(operation, values) {
+        if ((operation === 'eq' || operation === 'ne') && values.some(value => value.isRuntimeEvaluable())) {
+            return new ExpressionItems.IntValue(operation === 'ne' ? 1n:0n);
+        }
+        return ExpressionItems.NonRuntimeEvaluableItem.get();
     }
     /**
      * get method name used to calculate an operation between types.
@@ -662,17 +668,16 @@ class Expression extends ExpressionItem {
     evalAsInt(options = {}) {
         let value = this.evalAsValue(options);
         if (value instanceof ExpressionItems.NonRuntimeEvaluableItem) {
-            debugger;
             value = this.evalAsValue(options);
         }
         if (Debug.active) {
             console.log(value);
             console.log(this.dump());
         }
-        const res = value.asIntDefault(false);
+        const res = typeof value.asIntDefault === 'function' ? value.asIntDefault(false) : false;
         if (res === false) {
             console.log(value);
-            throw new Error(this.toString() + " isn't a number");
+            throw new Error(this.toString() + " cannot evaluated as a integer");
         }
         return res;
     }

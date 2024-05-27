@@ -1,8 +1,10 @@
 const ValueItem = require("./value_item.js");
 const Types = require('../types.js');
+const Debug = require('../debug.js');
 const assert = require('../assert.js');
 class IntValue extends ValueItem {
     constructor (value = 0n) {
+
         if (value instanceof IntValue) {
             value = value.value;
         }
@@ -122,6 +124,11 @@ class IntValue extends ValueItem {
         return new IntValue(this.asInt()**valueB.asInt());
     }
     operatorEq(valueB) {
+        console.log(this);
+        console.log(valueB);
+        if (valueB && valueB.nonRuntimeEvaluableItem) {
+            return new IntValue(0);
+        }
         return new IntValue(this.asInt() == valueB.asInt() ? 1:0);
     }
 }

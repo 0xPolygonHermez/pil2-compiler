@@ -4,7 +4,8 @@ const Debug = require('../debug.js');
 const assert = require('../assert.js');
 
 class IntVariable extends Variable {
-    constructor (value = 0n) {
+
+    constructor (value = 0n, options) {
         if (typeof value === 'object' && typeof value.asInt === 'function') {
             value = value.asInt();
         }
@@ -12,7 +13,7 @@ class IntVariable extends Variable {
             value = BigInt(value);
         }
         assert.typeOf(value, 'bigint');
-        super(value);
+        super(value, options);
     }
     setValue(value) {
         if (Debug.active) console.log(value);
@@ -22,7 +23,9 @@ class IntVariable extends Variable {
         if (typeof value === 'number') {
             value = BigInt(value);
         }
-        assert.typeOf(value, 'bigint');
+        if (typeof value !== 'bigint') {
+            throw new Error(`invalid type on integer assignation of ${value} to ${this.label}`);
+        }
         super.setValue(value);
     }
     clone() {

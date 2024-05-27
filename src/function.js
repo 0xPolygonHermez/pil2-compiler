@@ -1,6 +1,5 @@
 const util = require('util');
 const {cloneDeep} = require('lodash');
-const {assert, assertLog} = require('./assert.js');
 const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js");
 const Expression = require("./expression.js");
 const ExpressionItems = require("./expression_items.js");
@@ -47,9 +46,6 @@ module.exports = class Function {
             const name = arg.name;
             if (name === '') throw new Error('Invalid argument name');
             if (name in this.args) throw new Error(`Duplicated argument ${name}`);
-            // console.log('## BEGIN ARG DEFINITION ##');
-            // console.log(arg);
-            // console.log('## END ARG DEFINITION ##');
 
             this.args[name] = {type: arg.type, dim: arg.dim};
         }
@@ -123,107 +119,6 @@ module.exports = class Function {
             ++iarg;
         }
     }
-    getArgumentsReferences(args) {
-        EXIT_HERE;
-        let iarg = 0;
-        let extraInfo = '';
-        for (const name in this.args) {
-            try {
-                const arg = this.args[name];
-                if (name === 'cols') debugger;
-                // TODO: arrays and pol references ...
-                let type = arg.type;
-                const argDim = arg.dim ? arg.dim : 0;
-                if (arg.reference) {
-                    assert(false);
-                    // console.log(`${this.name}.MAP-REFERENCE`);
-                    const ref = s.args[iarg].getReference();
-
-                    // special case of col, could be witness, fixed or im
-                    if (type === 'col') {
-                        type = Context.references.getReferenceType(ref.name);
-                    }
-                    const dim = ref.array ? ref.array.dim : 0;
-                    if (dim !== argDim) {
-                        console.log(type);
-                        console.log(ref);
-                        console.log(argDim);
-                        console.log(s.args[iarg].getAloneOperand());
-                        throw new Error(`Invalid array on ${Context.sourceRef}`);
-                    }
-                    Context.processor.declareReference(name, type, ref.array ? ref.array.lengths : []);
-                    Context.references.setReference(name, ref);
-                } else if (arg.type === 'int' || arg.type === 'fe') {
-                    if (argDim) {
-                        s.args[iarg].eval();
-                        const ref = s.args[iarg].getReference();
-                        if (Debug.active) console.log(ref);
-                        if (Debug.active) console.log(ref.name);
-                        const def = Context.references.getDefinition(ref.name);
-                        const dup = def.array.applyIndexes(def, ref.__indexes ?? []);
-
-                        if (dup.array.dim !== argDim) {
-                            console.log(dup.array.dim, argDim);
-                            throw new Error(`Invalid array on ${Context.processor.sourceRef}`);
-                        }
-
-                        Context.processor.declareReference(name, type, dup.array ? dup.array.lengths: [], {});
-                    } else {
-                        if (Debug.active) console.log([name, iarg, s.args.length]);
-                        const value = s.args[iarg].eval();
-                        // TODO: review? no referece?
-                        Context.processor.declareReference(name, type, value.array ? value.array.lengths: [], {}, value);
-                    }
-                } else {
-                    // console.log(`MAP-${arg.type}`);
-                    // TODO: type conversion, mapping in other class
-                    if (Debug.active) console.log(s.args[iarg]);
-                    if (s.args[iarg] instanceof ExpressionItems.ExpressionList) {
-                        // check (argDim === 1 && arg.type === 'expr')
-                        const list = new List(this, s.args[iarg], false);
-                        const values = s.args[iarg].items;
-                        Context.processor.declareReference(name, type, [values.length], {});
-                        let index = 0;
-                        for (const value of list.values) {
-                            extraInfo = index;
-                            if (Debug.active) console.log(value);
-                            Context.references.set(name, [index++], value instanceof Expression ? value.instance() : value);
-                        }
-                    } else if (argDim) {
-                            if (Debug.active) console.log(s.args[iarg].eval());
-                            const ref = s.args[iarg].getReference();
-                            const def = Context.references.getDefinition(ref.name);
-                            const dup = def.array.applyIndexes(def, ref.__indexes ?? []);
-                            Context.processor.declareReference(name, type, dup.array.lengths, {});
-                            Context.processor.assign.assign(name, dup.array.lengths, s.args[iarg]);
-                    } else if (!(s.args[iarg] instanceof Expression)) {
-                        if (Debug.active) console.log(arg);
-                        if (Debug.active) console.log([this.name, iarg, s.args[iarg], s.args.length]);
-                        EXIT_HERE;
-                    } else {
-                        // const value = s.args[iarg].instance().getAloneOperand();
-                        // const value = s.args[iarg].getAloneOperand();
-                        // const value = s.args[iarg].getReference();
-                        if (Debug.active) console.log(util.inspect(s.args[iarg], false, 10, true));
-                        const value = s.args[iarg].evaluateAloneReference();
-                        if (Debug.active) console.log(util.inspect(s.args[iarg].eval(), false, 10, true));
-                        if (Debug.active) console.log(util.inspect(s.args[iarg].instance(), false, 10, true));
-                        const dim = value.array ? value.array.dim : 0;
-                        if (dim !== argDim) {
-                            throw new Error(`Invalid array on ${Context.sourceRef} ${dim} != ${argDim}`);
-                        }
-                        if (Debug.active) console.log(util.inspect(value, false, 10, true));
-                        Context.processor.declareReference(name, type, value.array ? value.array.lengths: [], {}, value);
-                    }
-                }
-                ++iarg;
-            } catch (e) {
-                console.log(`ERROR mapping parameter ${name} ${extraInfo} of function ${this.name} on ${Context.sourceRef}`);
-                throw e;
-            }
-        }
-        return false;
-    }
     declareAndInitializeArguments(eargs) {
         Context.processor.sourceRef = this.sourceRef;
         let iarg = 0;
@@ -245,9 +140,6 @@ module.exports = class Function {
             }
         }
 
-        // console.log(value);
-        // if (value && value.dump) value.dump();
-        // console.log(arg);
         if (value instanceof Expression && value.isAlone()) {
             value = value.getAloneOperand();
         }
@@ -264,91 +156,7 @@ module.exports = class Function {
             console.log(value.dim);
             throw new Error(`Invalid match dimensions on call ${this.name} and parameter ${name} (${lengths.length} !== ${arg.dim})`);
         }
-        if (Debug.active) {
-            console.log(`${this.name}.${name} = ${value.constructor.name}`);
-            console.log('KKK2KKK', name, lengths, value.constructor.name, value.toString());
-        }
         Context.references.declare(name, arg.type, lengths, {sourceRef: this.sourceRef}, value);
-        if (Debug.active && name === '__cols') {
-            console.log(Context.references.get(name, [0]));
-            Context.references.get(name, [0]).value.dump('__cols[0]');
-            console.log(Context.references.get(name, [1]));
-            Context.references.get(name, [1]).value.dump('__cols[1]');
-        }
-
-        // TODO: arrays.
-        /*
-                let type = arg.type;
-                const argDim = arg.dim ? arg.dim : 0;
-                } else if (arg.type === 'int' || arg.type === 'fe') {
-                    if (argDim) {
-                        s.args[iarg].eval();
-                        const ref = s.args[iarg].getReference();
-                        console.log(ref);
-                        console.log(ref.name);
-                        const def = Context.references.getDefinition(ref.name);
-                        const dup = def.array.applyIndexes(def, ref.__indexes ?? []);
-
-                        if (dup.array.dim !== argDim) {
-                            console.log(dup.array.dim, argDim);
-                            throw new Error(`Invalid array on ${Context.processor.sourceRef}`);
-                        }
-
-                        Context.processor.declareReference(name, type, dup.array ? dup.array.lengths: [], {});
-                    } else {
-                        console.log([name, iarg, s.args.length]);
-                        const value = s.args[iarg].eval();
-                        // TODO: review? no referece?
-                        Context.processor.declareReference(name, type, value.array ? value.array.lengths: [], {}, value);
-                    }
-                } else {
-                    // console.log(`MAP-${arg.type}`);
-                    // TODO: type conversion, mapping in other class
-                    console.log(s.args[iarg]);
-                    if (s.args[iarg] instanceof ExpressionItems.ExpressionList) {
-                        // check (argDim === 1 && arg.type === 'expr')
-                        const list = new List(this, s.args[iarg], false);
-                        const values = s.args[iarg].items;
-                        Context.processor.declareReference(name, type, [values.length], {});
-                        let index = 0;
-                        for (const value of list.values) {
-                            extraInfo = index;
-                            console.log(value);
-                            Context.references.set(name, [index++], value instanceof Expression ? value.instance() : value);
-                        }
-                    } else if (argDim) {
-                            console.log(s.args[iarg].eval());
-                            const ref = s.args[iarg].getReference();
-                            const def = Context.references.getDefinition(ref.name);
-                            const dup = def.array.applyIndexes(def, ref.__indexes ?? []);
-                            Context.processor.declareReference(name, type, dup.array.lengths, {});
-                            Context.processor.assign.assign(name, dup.array.lengths, s.args[iarg]);
-                    } else if (!(s.args[iarg] instanceof Expression)) {
-                        console.log(arg);
-                        console.log([this.name, iarg, s.args[iarg], s.args.length]);
-                        EXIT_HERE;
-                    } else {
-                        // const value = s.args[iarg].instance().getAloneOperand();
-                        // const value = s.args[iarg].getAloneOperand();
-                        // const value = s.args[iarg].getReference();
-                        console.log(util.inspect(s.args[iarg], false, 10, true));
-                        const value = s.args[iarg].evaluateAloneReference();
-                        console.log(util.inspect(s.args[iarg].eval(), false, 10, true));
-                        console.log(util.inspect(s.args[iarg].instance(), false, 10, true));
-                        const dim = value.array ? value.array.dim : 0;
-                        if (dim !== argDim) {
-                            throw new Error(`Invalid array on ${Context.sourceRef} ${dim} != ${argDim}`);
-                        }
-                        console.log(util.inspect(value, false, 10, true));
-                        Context.processor.declareReference(name, type, value.array ? value.array.lengths: [], {}, value);
-                    }
-                }
-                ++iarg;
-            } catch (e) {
-                console.log(`ERROR mapping parameter ${name} ${extraInfo} of function ${this.name} on ${Context.sourceRef}`);
-                throw e;
-            }
-        }*/
         return false;
     }
     exec(callInfo, mapInfo) {

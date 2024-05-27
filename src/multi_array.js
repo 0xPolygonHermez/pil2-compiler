@@ -183,6 +183,9 @@ class MultiArray {
     getLength(dim = 0) {
         return this.lengths[dim] ?? 0;
     }
+    getDim() {
+        return this.lengths.length ?? 0;
+    }
     isInitialized(indexes) {
         const offset = this.indexesToOffset(indexes);
         return this.initialized[offset] ?? false;

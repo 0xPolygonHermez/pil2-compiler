@@ -73,8 +73,7 @@ module.exports = class Containers {
             return false;
         }
 
-        // const nameInfo = this.decodeName(name).scope;
-        ;
+        // const nameInfo = this.decodeName(name).scope;    
         this.containers[name] = {scope: this.parent.getNameScope(name), alias, references: {}};
         // console.log(this.containers[name]);
         this.current = name;

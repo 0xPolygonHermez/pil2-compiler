@@ -102,7 +102,7 @@ class Compiler {
             this.$.debug = `${compiler.relativeFileName}:${last.last_line}:${first.first_column}:${last.last_line}:${last.last_column}`;
             // this.$.__debug = `${compiler.relativeFileName} (${first.first_line}, ${first.first_column}) (${last.last_line}, ${last.last_column})`;
             // this.$.__contents = compiler.srcLines[first.first_line - 1].substring(first.first_column + 1, last.last_column);
-            this.$.__yystate = `${yystate} ${yylineno}`
+            this.$.__yystate = `${yystate} ${yylineno}`        
             return result;
         }
         return parser;
@@ -131,7 +131,7 @@ class Compiler {
             sts = parser.parse(src);
             for (let i=0; i<sts.length; i++) {
                 if (sts[i].type !== 'include' && sts[i].type !== 'require') continue;
-                sts[i].contents = this.loadInclude(sts[i].file.asString());
+                sts[i].contents = this.loadInclude(sts[i].file.asString(), {once: sts[i].type === 'require'});
             }
             for (const library of libraries.slice().reverse()) {
                 sts.unshift(library);
@@ -152,7 +152,10 @@ class Compiler {
         console.log(fullFileNameI);
 
         if (this.includedFiles[fullFileNameI]) {
-            return false;
+            // check if only must be load once
+            if (options.once) {
+                return false;
+            }
         }
         this.includedFiles[fullFileNameI] = true;
         const previous = [this.cwd, this.relativeFileName, this.fileDir];

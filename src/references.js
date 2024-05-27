@@ -445,10 +445,10 @@ module.exports = class References {
         }
         return reference;
     }
-    isVisible(def) {
+    isVisible(def) {    
         if (Debug.active) console.log('ISVISIBLE', (def.constructor ?? {name: '_'}).name, def);
-        return !def.scopeId || !this.hasScope(def.type) || ['constant', 'function'].includes(def.type) ||
-                def.scopeId >= this.visibilityScope; // || def.scopeId <= Context.scope.getScopeId('air');
+        return !def.scopeId || def.scopeId === 1 || !this.hasScope(def.type) || def.type === 'function' ||
+                def.scopeId >= this.visibilityScope;
     }
     /**
      *
@@ -499,9 +499,6 @@ module.exports = class References {
 
         // constants are visible inside functions
         if (!nameInfo.absoluteScope && this.isVisible(reference) === false) {
-            console.log(reference);
-            console.log(name);
-            console.log(nameInfo);
             if (typeof defaultValue !== 'undefined') return defaultValue;
             throw new Exceptions.ReferenceNotVisible(names.join(','));
         }

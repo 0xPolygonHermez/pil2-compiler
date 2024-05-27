@@ -1,13 +1,20 @@
-subair Visibility(2**23);
+const int K = 80;
 
+include "visibility_lib.pil"
 
 function sum(int a, int b) : int {
-    return a + b; //  + c;
+    if (defined(K)) println("K visible inside sum");
+    if (defined(K1)) println("K1 visible inside sum");
+    if (defined(K2)) println("K2 visible inside sum");
+    if (defined(c)) println("Kc visible inside sum");
+    return a + b + K; //  + c;
 }
 
-namespace Visibility:: {
+subproof Visibility(2**8) {
 
     int c = 13;
     println(sum(10, 20));
     println(sum(10, c));
+    println(sum2(10, 20));
+    println(sum2(10, c));
 }

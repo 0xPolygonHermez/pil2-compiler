@@ -119,7 +119,7 @@ module.exports = class Processor {
         // this.references.register('im', this.expressions);
 
         this.constraints = new Constraints();
-        this.globalConstraints = new Constraints();
+        this.globalConstraints = new Constraints(this.globalExpressions);
 
         this.assign = new Assign(Fr, this, this.context, this.references, this.expressions);
         this.hints = new Hints(Fr, this.expressions);
@@ -857,7 +857,7 @@ module.exports = class Processor {
             // clearing air scope
             this.subproofProtoOut(subproofId, airId)
 
-            this.constraints = new Constraints(this.Fr, this.expressions);
+            this.constraints = new Constraints();
             if (Context.config.test.onAirEnd) {
                 Context.config.test.onAirEnd(subproof, air);
             }

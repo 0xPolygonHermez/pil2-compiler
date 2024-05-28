@@ -12,7 +12,9 @@ module.exports = class PackedExpressions {
     insert(expr) {
         return this.expressions.push(expr) - 1;
     }
-
+    insertTop() {
+        return this.insert({add: {lhs: this.pop(1)[0], rhs:{constant: {value : 0n}}}});
+    }
     pop(count, operation = false) {
         if (this.values.length < count) {
             throw new Error(`Not enought elements (${this.values.length} vs ${count}) for operation ${operation}`);
@@ -79,6 +81,7 @@ module.exports = class PackedExpressions {
         console.log(util.inspect(this.expressions, false, null, true /* enable colors */));
     }
     exprToString(id, options) {
+        assert.typeOf(id, 'number');
         const expr = this.expressions[id];
         if (!expr) {
             console.log(expr);

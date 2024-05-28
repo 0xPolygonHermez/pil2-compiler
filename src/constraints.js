@@ -2,10 +2,14 @@ const Expression = require('./expression.js');
 const Context = require('./context.js');
 const assert = require('./assert.js');
 module.exports = class Constraints {
-    constructor () {
+    constructor (expressions = false) {
         this.constraints = [];
+        this.expressions = expressions;
     }
 
+    getExpressions() {
+        return this.expressions ? this.expressions : Context.expressions;
+    }
     clone() {
         let cloned = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
         cloned.constraints = [];
@@ -20,7 +24,7 @@ module.exports = class Constraints {
     }
 
     getExpr(id) {
-        return Context.expressions.get(this.constraints[id].exprId);
+        return this.getExpressions().get(this.constraints[id].exprId);
     }
 
     isDefined(id) {
@@ -28,7 +32,7 @@ module.exports = class Constraints {
     }
 
     getPackedExpressionId(id, container, options = {}) {
-        const res = (options.expressions ?? Context.expressions).getPackedExpressionId(id, container, options);
+        const res = (options.expressions ?? this.getExpressions()).getPackedExpressionId(id, container, options);
         return res;
     }
     define(left, right, boundery, sourceRef) {
@@ -55,7 +59,7 @@ module.exports = class Constraints {
         // left.dump(`XXXXXXXXX-${dumpId}-1`)
         // left.instance().dump(`XXXXXXXXX-${dumpId}-2`);
         left.simplify();
-        const exprId = Context.expressions.insert(left);
+        const exprId = this.getExpressions().insert(left);
         // console.log(`DEFINE CONSTRAINT ${sourceRef}`);
         return this.constraints.push({exprId, sourceRef, boundery}) - 1;
     }
@@ -84,15 +88,19 @@ module.exports = class Constraints {
     }
     getDebugInfo(index, packed, options) {
         const constraint = this.constraints[index];
-        const eid = constraint.exprId;
-        // const peid = Context.expressions.getPackedExpressionId(eid);
-        const peid = this.getPackedExpressionId(eid, packed, options);
-        let info = `INFO ${index}: ${eid} ${peid} ${constraint.sourceRef}`
-        options = options ?? {};
+        try {
+            const eid = constraint.exprId;
+            // const peid = this.getExpressions().getPackedExpressionId(eid);
+            const peid = this.getPackedExpressionId(eid, packed, options);
+            let info = `INFO ${index}: ${eid} ${peid} ${constraint.sourceRef}`
+            options = options ?? {};
 
-        if (packed) {
-            info += ' '  + packed.exprToString(peid, {...options, labels: Context.expressions, hideClass: true});
+            if (packed) {
+                info += ' '  + packed.exprToString(peid, {...options, labels: this.getExpressions(), hideClass: true});
+            }
+            return info;
+        } catch (e) {
+            throw new Error(`ERROR generation debug info for constraint ${constraint.sourceRef}: ${e.message}`)
         }
-        return info;
     }
 }

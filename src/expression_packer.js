@@ -27,7 +27,7 @@ module.exports = class ExpressionPacker {
         const st = this.expression.stack[pos];
         if (st.op === false) {
             this.operandPack(st.operands[0], pos, options);
-            return this.container.pop(1)[0];
+            return this.container.insertTop();
         }
         for (const ope of st.operands) {
             this.operandPack(ope, pos, options);

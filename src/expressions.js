@@ -204,7 +204,7 @@ module.exports = class Expressions {
             if (typeof this.packedIds[id] !== 'undefined') continue;    // already packed
             // this.expressions[id].dump('PACK-EXPRESSION ');
             packer.set(container, this.expressions[id]);
-            this.packedIds[id] = packer.pack(options);
+            this.packedIds[id] = assert.returnTypeOf(packer.pack(options), 'number');
             // packedId === false, means directly was a alone term.
         }
     }
@@ -214,7 +214,7 @@ module.exports = class Expressions {
                 debugger;
             }
             const packer = new ExpressionPacker(container, this.expressions[id]);
-            this.packedIds[id] = packer.pack(options);
+            this.packedIds[id] = assert.returnTypeOf(packer.pack(options), 'number');
         }
         return this.packedIds[id];
     }

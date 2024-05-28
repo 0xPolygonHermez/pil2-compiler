@@ -34,6 +34,16 @@ function returnNotInstanceOf(actual, cls, message) {
     _message(message, `value is an instance of ${cls}`, actual);
 }
 
+function returnTypeOf(actual, typename, message) {
+    if (typeof actual === typename) return actual;
+    _message(message, `value (${typeof actual} isn't type ${typename}`, actual);
+}
+
+function returnNotTypeOf(actual, typename, message) {
+    if (typeof actual !== typename) return actual;
+    _message(message, `value (${typeof actual} is type ${typename}`, actual);
+}
+
 function typeOf(actual, typename, message) {
     if (typeof actual === typename) return actual;
     _message(message, `value isn't typeof ${typename}`, actual);
@@ -50,8 +60,10 @@ function _message(message, defaultmsg = false, value = false) {
     }
     if (typeof message === 'object') { 
         console.log(message);
+        debugger;
         throw new Error('ASSERT:' + defaultmsg);
     }
+    debugger;
     throw new Error('ASSERT:' + (message ?? defaultmsg));
 }
 
@@ -107,6 +119,8 @@ const _exports = {
     notInstanceOf : () => {},
     typeOf : () => {},
     notTypeOf : () => {},
+    returnTypeOf : (value) => value,
+    returnNotTypeOf : (value) => value,
     ok : () => {},
 }
 
@@ -127,6 +141,8 @@ function enable(value = true) {
     _exports.typeOf = typeOf;    
     _exports.notTypeOf = notTypeOf;    
     _exports.ok = ok;
+    _exports.returnTypeOf = returnTypeOf;    
+    _exports.returnNotTypeOf = returnNotTypeOf;    
     _showState();
 }
 
@@ -145,6 +161,8 @@ function disable() {
     _exports.typeOf = () => {};
     _exports.notTypeOf = () => {};
     _exports.ok = () => {};
+    _exports.returnTypeOf = (value) => value;
+    _exports.returnNotTypeOf = (value) => value;
     _showState();
 }
 

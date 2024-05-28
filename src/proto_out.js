@@ -185,17 +185,21 @@ module.exports = class ProtoOut {
     }
     _setSymbols(symbols, data = {}) {
         for(const [name, ref] of symbols) {
-            const arrayInfo = ref.array ? ref.array : {dim: 0, lengths: []};
-            const sym2proto = this.symbolType2Proto(ref.type, ref.locator, ref);
-            let payout = {
-                name,
-                dim: arrayInfo.dim,
-                lengths: arrayInfo.lengths,
-                debugLine: (ref.data ?? {}).sourceRef ?? '',
-                ...data,
-                ...sym2proto
-            };
-            this.pilOut.symbols.push(payout);
+            try {
+                const arrayInfo = ref.array ? ref.array : {dim: 0, lengths: []};
+                const sym2proto = this.symbolType2Proto(ref.type, ref.locator, ref);
+                let payout = {
+                    name,
+                    dim: arrayInfo.dim,
+                    lengths: arrayInfo.lengths,
+                    debugLine: (ref.data ?? {}).sourceRef ?? '',
+                    ...data,
+                    ...sym2proto
+                };
+                this.pilOut.symbols.push(payout);
+            } catch (e) {
+                throw new Error(`ERROR exporting proto symbol ${name}: ` + e.message);
+            }
         }
     }
 

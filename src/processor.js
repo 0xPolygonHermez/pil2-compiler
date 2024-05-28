@@ -887,6 +887,7 @@ module.exports = class Processor {
         
         let packed = new PackedExpressions();
         this.proto.setFixedCols(this.fixeds);
+        this.proto.setPeriodicCols(this.fixeds);
         this.proto.setWitnessCols(this.witness);
         // this.expressions.pack(packed, {instances: [air.fixeds, air.witness]});
         this.expressions.pack(packed, {instances: [this.fixeds, this.witness]});

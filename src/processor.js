@@ -167,7 +167,7 @@ module.exports = class Processor {
         // TODO: use a constant
         this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
-        this.references.declare('PRIME', 'int', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('PRIME', 'int', [], { global: true, sourceRef: this.sourceRef }, this.prime);
         this.references.declare('__SUBPROOF__', 'string', [], { global: true, sourceRef: this.sourceRef });
         this.scope.pushInstanceType('proof');
         this.sourceRef = '(execution)';
@@ -823,7 +823,6 @@ module.exports = class Processor {
             // create built-in constants
             this.references.set('N', [], air.rows);
             this.references.set('BITS', [], air.bits);
-            this.references.set('PRIME', [], this.prime);
             this.references.set('__SUBPROOF__', [], subproofName);
             if (Context.config.test.onSubproofBegin && subproof.airs.length === 1) {
                 Context.config.test.onSubproofBegin(subproof);

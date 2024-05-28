@@ -1,4 +1,4 @@
-const int K = 80;
+const int K = (PRIME - 1)/2;
 
 include "visibility_lib.pil"
 

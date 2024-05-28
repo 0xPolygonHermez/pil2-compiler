@@ -1239,7 +1239,8 @@ module.exports = class Processor {
         const compiledTags = this.compiler.parseExpression(codeTags);
 
         // evaluating different init of each tag
-        const stringTags = compiledTags.map(e => e.init[0].eval().asString());
+        // compiledTags.forEach(e => console.log(e.init[0].eval({unroll: true}).toString()));
+        const stringTags = compiledTags.map(e => e.init[0].eval({unroll: true}).toString());
 
         // replace on string each tag for its value
         const evaluatedTemplate = stringTags.map((s, index) => tags[index].pre + s).join('')+lastS;

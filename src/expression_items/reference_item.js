@@ -56,6 +56,6 @@ module.exports = class ReferenceItem extends RuntimeItem {
             console.log(item);
             console.log(item.eval());
         }
-        return item.eval();
+        return item.eval(options);
     }
 }

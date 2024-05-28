@@ -25,6 +25,9 @@ module.exports = class ExpressionReference extends ProofItem {
         if (value.isBaseType) return value;
 
         // if not clone
+        if (options && options.unroll) {
+            return value.clone();
+        }
         return this.clone();
     }
     evalInside(options) {

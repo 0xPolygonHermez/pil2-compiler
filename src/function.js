@@ -13,6 +13,7 @@ module.exports = class Function {
         this.id = id;
         this.initialized = [data.args, data.returns, data.statements, data.funcname].some(x => typeof x !== 'undefined');
         this.name = data.funcname;
+        this.nargs = 0;
         if (data.args) {
             this.defineArguments(data.args);
         }
@@ -44,10 +45,17 @@ module.exports = class Function {
         this.args = {};
         for (const arg of args) {
             const name = arg.name;
+            ++this.nargs;
             if (name === '') throw new Error('Invalid argument name');
             if (name in this.args) throw new Error(`Duplicated argument ${name}`);
 
             this.args[name] = {type: arg.type, dim: arg.dim};
+        }
+    }
+    checkNumberOfArguments(args) {
+        if (this.nargs === false) return;
+        if (argslen < this.nargs) {
+            throw new Error(`Invalid number of arguments calling ${this.name} function, called with ${argslen} arguments, but defined with ${this.nargs} arguments at ${Context.sourceRef}`);
         }
     }
     // evaluate all called arguments on call scope before
@@ -56,18 +64,15 @@ module.exports = class Function {
         let eargs = [];
         let argslen = args.length ?? 0;
         let argnames = Object.keys(this.args);
-        if (argslen < argnames.length) {
-            console.log(eargs);
-            throw new Error(`Invalid number of arguments calling ${this.name} function, called with ${argslen} arguments, but defined with ${argnames.length} arguments at ${Context.sourceRef}`);
-        }
+        this.checkNumberOfArguments(args);
         for (let iarg = 0; iarg < argslen; ++iarg) {
             const argname = argnames[iarg] ?? 'undef';
             if (Debug.active) {
                 console.log(`FUNC.evalArguments ${this.name}.args[${iarg}](${argname})`, this.args[argname]);
             }
             const arg = args[iarg];
-            const _argInstanced = arg.instance({unroll: true});
-            eargs.push(_argInstanced);
+            const value = arg.eval({unroll: true});
+            eargs.push(value);
         }
         if (Debug.active) {
             console.log('ARGUMENTS '+eargs.map(x => x.toString()).join(','));

@@ -44,7 +44,7 @@ class StringValue extends RuntimeItem {
     operatorAdd(valueB) {
         return new StringValue(this.asString() + valueB.asString());
     }
-    eval(options = {}) {
+    evalInside(options = {}) {
         return this.clone();
     }
 }

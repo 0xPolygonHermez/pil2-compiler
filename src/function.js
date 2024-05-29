@@ -59,9 +59,9 @@ module.exports = class Function {
             throw new Error(`Invalid number of arguments calling ${this.name} function, called with ${argslen} arguments, but defined with ${this.nargs} arguments at ${Context.sourceRef}`);
         }
     }
-    // evaluate all called arguments on call scope before
-    // scope changes
-    evalArguments(args) {
+    // instance all called arguments on call scope before
+    // scope changes. Instance, not evaluate because arguments become from compiler
+    instanceArguments(args) {
         let eargs = [];
         let argslen = args.length ?? 0;
         let argnames = Object.keys(this.args);
@@ -69,10 +69,10 @@ module.exports = class Function {
         for (let iarg = 0; iarg < argslen; ++iarg) {
             const argname = argnames[iarg] ?? 'undef';
             if (Debug.active) {
-                console.log(`FUNC.evalArguments ${this.name}.args[${iarg}](${argname})`, this.args[argname]);
+                console.log(`FUNC.instanceArguments ${this.name}.args[${iarg}](${argname})`, this.args[argname]);
             }
             const arg = args[iarg];
-            const value = arg.eval({unroll: true});
+            const value = arg.instance({unroll: true});
             eargs.push(value);
         }
         if (Debug.active) {
@@ -84,7 +84,7 @@ module.exports = class Function {
     // inside function args "values" aren't visible.
     mapArguments(s) {
         if (Debug.active) console.log(s.args);
-        const eargs = this.evalArguments(s.args);
+        const eargs = this.instanceArguments(s.args);
         if (Debug.active) console.log(eargs);
         const scall = this.callToString(eargs);
         if (Debug.active) {

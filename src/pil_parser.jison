@@ -862,40 +862,49 @@ variable_type_declaration
         { $$ = { type: 'variable_declaration', vtype: 'function', items: $2.items } }
 
     | INT variable_declaration_item '=' expression
-        { $$ = { type: 'variable_declaration', vtype: 'int', items: [$2], init: [$4] } }
+        { $$ = { type: 'variable_declaration', vtype: 'int', items: [$2], init: $4 } }
 
     | INT variable_declaration_item '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'int', items: [$2], init: $5 } }
+        { $$ = { type: 'variable_declaration', vtype: 'int', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5) } }
 
     | FE variable_declaration_item '=' expression
-        { $$ = { type: 'variable_declaration', vtype: 'fe', items: [$2], init: [$4] } }
+        { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: false, items: [$2], init: $4 } }
+
+    | FE variable_declaration_item '=' '[' expression_list ']'
+        { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5) } }
 
     | EXPR variable_declaration_item '=' expression
-        { $$ = { type: 'variable_declaration', vtype: 'expr', items: [$2], init: [$4] } }
+        { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: false, items: [$2], init: $4 } }
+
+    | EXPR variable_declaration_item '=' '[' expression_list ']'
+        { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5) } }
 
     | T_STRING variable_declaration_item '=' expression
-        { $$ = { type: 'variable_declaration', vtype: 'string', items: [$2], init: [$4] } }
+        { $$ = { type: 'variable_declaration', vtype: 'string', multiple: false, items: [$2], init: $4 } }
+
+    | T_STRING variable_declaration_item '=' '[' expression_list ']'
+        { $$ = { type: 'variable_declaration', vtype: 'string', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5) } }
 
     | FUNCTION variable_declaration_item '=' expression
-        { $$ = { type: 'variable_declaration', vtype: 'function', items: [$2], init: [$4] } }
+        { $$ = { type: 'variable_declaration', vtype: 'function', multiple: false, items: [$2], init: $4 } }
 
     | CONTAINER variable_declaration_item '=' expression
-        { $$ = { type: 'variable_declaration', vtype: 'container', items: [$2], init: [$4] } }
+        { $$ = { type: 'variable_declaration', vtype: 'container', multiple: false, items: [$2], init: $4 } }
 
     | INT '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'int', items: $3.items, init: $7 } }
+        { $$ = { type: 'variable_declaration', vtype: 'int', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
 
     | FE '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'fe', items: $3.items, init: $7 } }
+        { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
 
     | EXPR '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'expr', items: $3.items, init: $7 } }
+        { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
 
     | T_STRING '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'string', items: $3.items, init: $7 } }
+        { $$ = { type: 'variable_declaration', vtype: 'string', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
 
     | CONTAINER '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'container', items: $3.items, init: $7 } }
+        { $$ = { type: 'variable_declaration', vtype: 'container', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
     ;
 
 variable_declaration_array

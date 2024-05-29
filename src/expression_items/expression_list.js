@@ -21,6 +21,9 @@ class ExpressionList extends ExpressionItem {
         this.array = new MultiArray([this.items.length]);
         this._ns_ = 'ExpressionItem';
     }
+    get length() {
+        return this.indexes[0];
+    }
     dump() {
         return '[' + this.items.map(x => x.toString()).join(',')+']';
     }
@@ -39,7 +42,7 @@ class ExpressionList extends ExpressionItem {
         const index = indexes[0];
         if (index < 0 && index >= this.items.length) {
             throw new Error(`Out of bounds, try to access index ${index} but list only has ${this.items.length} elements`);
-        }
+        }        
         const item = this.items[index];
         if (indexes.length === 1) {
             return item;

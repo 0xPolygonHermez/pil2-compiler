@@ -1147,35 +1147,37 @@ module.exports = class Processor {
     }
     execVariableDeclaration(s) {
         if (Debug.active) console.log('VARIABLE DECLARATION '+Context.sourceRef+' init:'+s.init);
-        const init = typeof s.init !== 'undefined';
+        const initialization = typeof s.init !== 'undefined';
         const count = s.items.length;
-        const inits = (init && s.init.type === 'expression_list') ? s.init.values : s.init;
 
-        if (init && inits.length !== count) {
-            // TODO: could be an array initialization count = 1 init = n
+        if (s.multiple && s.init.length !== count) {
             this.error(s, `Mismatch between len of variables (${count}) and len of their inits (${inits.length})`);
         }
 
         for (let index = 0; index < count; ++index) {
-            // console.log(s.items[index]);
             const [name, lengths] = this.decodeNameAndLengths(s.items[index]);
             const sourceRef = s.debug ?? this.sourceRef;
             const scope = s.scope ?? false;
             let initValue = null;
-            if (init) {
-                if (Debug.active) console.log(name, s.vtype, Context.sourceRef);
-                switch (s.vtype) {
-                    case 'expr':
-                        initValue = inits[index].eval();
-                        break;
-                    case 'int':
-                        initValue = inits[index].eval().asIntItem();
-                        break;
-                    case 'string':
-                        initValue = inits[index].eval().asStringItem();;
-                        break;
+            if (initialization) {
+                const init = s.multiple ? s.init.getItem([index]) : s.init;
+                if (init instanceof ExpressionItems.ExpressionList) {
+                    initValue = init.eval();
+                } else {
+                    if (Debug.active) console.log(name, s.vtype, Context.sourceRef);
+                    switch (s.vtype) {
+                        case 'expr':
+                            initValue = init.eval();
+                            break;
+                        case 'int':
+                            initValue = init.eval().asIntItem();
+                            break;
+                        case 'string':
+                            initValue = init.eval().asStringItem();;
+                            break;
+                    }
+                    if (Debug.active) console.log(name, s.vtype, initValue.toString ? initValue.toString() : initValue);
                 }
-                if (Debug.active) console.log(name, s.vtype, initValue.toString ? initValue.toString() : initValue);
             }
             this.references.declare(name, s.vtype, lengths, { scope, sourceRef, const: s.const ?? false }, initValue);
             if (initValue !== null) {
@@ -1239,8 +1241,7 @@ module.exports = class Processor {
         const compiledTags = this.compiler.parseExpression(codeTags);
 
         // evaluating different init of each tag
-        // compiledTags.forEach(e => console.log(e.init[0].eval({unroll: true}).toString()));
-        const stringTags = compiledTags.map(e => e.init[0].eval({unroll: true}).toString());
+        const stringTags = compiledTags.map(e => e.init.eval({unroll: true}).toString());
 
         // replace on string each tag for its value
         const evaluatedTemplate = stringTags.map((s, index) => tags[index].pre + s).join('')+lastS;

@@ -54,6 +54,7 @@ module.exports = class Function {
     }
     checkNumberOfArguments(args) {
         if (this.nargs === false) return;
+        const argslen = args.length ?? 0;
         if (argslen < this.nargs) {
             throw new Error(`Invalid number of arguments calling ${this.name} function, called with ${argslen} arguments, but defined with ${this.nargs} arguments at ${Context.sourceRef}`);
         }

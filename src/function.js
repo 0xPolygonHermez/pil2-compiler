@@ -41,7 +41,7 @@ module.exports = class Function {
         this.returns = value.returns && Array.isArray(value.returns) ? [...value.returns] : value.returns;
         this.statements = value.statements;
     }
-    defineArguments(args) {
+    defineArguments(args) {        
         this.args = {};
         for (const arg of args) {
             const name = arg.name;
@@ -49,7 +49,7 @@ module.exports = class Function {
             if (name === '') throw new Error('Invalid argument name');
             if (name in this.args) throw new Error(`Duplicated argument ${name}`);
 
-            this.args[name] = {type: arg.type, dim: arg.dim};
+            this.args[name] = {type: arg.type, dim: arg.dim, defaultValue: arg.defaultValue};
         }
     }
     checkNumberOfArguments(args) {
@@ -129,9 +129,16 @@ module.exports = class Function {
         Context.processor.sourceRef = this.sourceRef;
         let iarg = 0;
         for (const name in this.args) {
-            this.setArgument(name, eargs[iarg]);
+            if (typeof eargs[iarg] === 'undefined') {
+                this.setDefaultArgument(name);
+            } else {
+                this.setArgument(name, eargs[iarg]);
+            }
             ++iarg;
         }
+    }
+    setDefaultArgument(name) {
+        this.setArgument(name, this.args[name].defaultValue);
     }
     setArgument(name, value) {
         const arg = this.args[name];

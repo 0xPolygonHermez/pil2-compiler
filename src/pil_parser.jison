@@ -222,8 +222,8 @@ function implicit_scope(statements) {
 %% /* language grammar */
 
 all_top_level_blocks
-    : top_level_blocks lopcs EOF
-        { $$ = $1; return $$; }
+    : statement_list EOF
+        { $$ = $1.statements; return $$; }
     ;
 
 top_level_blocks
@@ -247,7 +247,7 @@ top_level_block
 
     | proof_definition
         { $$ = $1 }
-
+/*
     | function_definition
         { $$ = $1 }
 
@@ -272,9 +272,9 @@ top_level_block
     | subproof_value_declaration
         { $$ = $1 }
 
-/*    | constant_definition
+    | constant_definition
         { $$ = $1 }
-*/
+
     | variable_declaration
         { $$ = $1 }
 
@@ -283,6 +283,8 @@ top_level_block
 
     | PRAGMA
         { $$ = { type: 'pragma', value: $1 }}
+*/
+    | statement_list ';'
     ;
 
 use_directive
@@ -425,6 +427,13 @@ statement_closed
 
     | '{' statement_block '}'
         { $$ = { type: 'scope_definition', ...$2 }; }
+
+    | subproof_definition
+        { $$ = $1 }
+
+    | proof_definition
+        { $$ = $1 }
+
     ;
 
 function
@@ -492,6 +501,24 @@ argument
 
     | basic_type REFERENCE type_array
         { $$ = { type: $1.type, name: $2, reference: true, dim: $3.dim } }
+
+    | basic_type IDENTIFIER '=' expression
+        { $$ = { type: $1.type, name: $2, reference: false, defaultValue: $4, dim: 0 } }
+
+    | basic_type REFERENCE '=' expression
+        { $$ = { type: $1.type, name: $2, reference: true, defaultValue: $4, dim: 0 } }
+
+    | basic_type IDENTIFIER type_array '=' expression
+        { $$ = { type: $1.type, name: $2, reference: false, defaultValue: $5, dim: $3.dim } }
+
+    | basic_type REFERENCE type_array '=' expression
+        { $$ = { type: $1.type, name: $2, reference: true, defaultValue: $5, dim: $3.dim } }
+
+    | basic_type IDENTIFIER type_array '=' '[' expression_list ']'
+        { $$ = { type: $1.type, name: $2, reference: false, defaultValue: $6, dim: $3.dim } }
+
+    | basic_type REFERENCE type_array '=' '[' expression_list ']'
+        { $$ = { type: $1.type, name: $2, reference: true, defaultValue: $6, dim: $3.dim } }
     ;
 
 basic_type
@@ -1119,22 +1146,34 @@ sequence
 
 multiple_expression_list
     : %empty    %prec EMPTY
-        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [], __debug: 0 }); }
+        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [], names: [], __debug: 0 }); }
 
     | multiple_expression_list ',' expression %prec ','
         { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($3)); }
 
+    | multiple_expression_list ',' IDENTIFIER ':' expression %prec ','
+        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($5), $3); }
+
     | multiple_expression_list ',' '[' expression_list ']' %prec ','
         { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($4)); }
+
+    | multiple_expression_list ',' IDENTIFIER ':' '[' expression_list ']' %prec ','
+        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($6), $3); }
 //        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject({ type: 'expression_list', values: $4.values, __debug: 1 })); }
 
     | '[' expression_list ']' %prec NO_EMPTY
         { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values:
-                    [ExpressionFactory.fromObject($2)], __debug: 4}); }
+                    [ExpressionFactory.fromObject($2)], names: [false], __debug: 4}); }
+    | IDENTIFIER ':' '[' expression_list ']' %prec NO_EMPTY
+        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values:
+                    [ExpressionFactory.fromObject($4)], names: [$1], __debug: 4}); }
 //                    [ExpressionFactory.fromObject({ type: 'expression_list', values: [$2.values], __debug: 2})], __debug: 4}); console.log('A',$$) }
 
     | expression
-        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$1], __debug: 3 }); }
+        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$1], names: [false], __debug: 3 }); }
+
+    | IDENTIFIER ':' expression
+        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$3], names: [$1], __debug: 3 }); }
     ;
 
 expression_list
@@ -1258,11 +1297,11 @@ subproof_value_declaration
 
 
 subproof_definition
-    : SUBPROOF AGGREGATE IDENTIFIER '(' expression_list ')'  '{' statement_block '}'
-        { $$ = { type: 'subproof_definition', aggregate: true, name: $3, rows: $5, statements: $8.statements } }
+    : SUBPROOF AGGREGATE IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
+        { $$ = { type: 'subproof_definition', aggregate: true, name: $3, ...$5, statements: $8.statements } }
 
-    | SUBPROOF IDENTIFIER '(' expression_list ')'  '{' statement_block '}'
-        { $$ = { type: 'subproof_definition', aggregate: false, name: $2, rows: $4, statements: $7.statements } }
+    | SUBPROOF IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
+        { $$ = { type: 'subproof_definition', aggregate: false, name: $2, ...$4, statements: $7.statements } }
 
     | SUBPROOF IDENTIFIER '{' statement_block '}'
         { $$ = { type: 'subproof_block', aggregate: false, name: $2, statements: $4.statements } }

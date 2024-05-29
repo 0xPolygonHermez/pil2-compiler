@@ -173,7 +173,7 @@ module.exports = class Processor {
         this.sourceRef = '(execution)';
         this.execute(statements);
         this.sourceRef = '(subproof-execution)';
-        this.executeSubproofs();
+        // this.executeSubproofs();
         this.finalProofScope();
         this.scope.popInstanceType();
         this.generateProtoOut();
@@ -771,7 +771,7 @@ module.exports = class Processor {
     }
     checkRows(rows) {
         for (const row of rows) {
-            if (2n ** BigInt(this.log2(row)) === row) continue;
+            if (2n ** BigInt(this.log2(row)) === BigInt(row)) continue;
             throw new Error(`Invalid row ${row}. Rows must be a power of 2`);
         }
     }
@@ -781,8 +781,13 @@ module.exports = class Processor {
             this.error(s, `subproof not defined correctly`);
         }
 
-        let subproofRows = this.evalExpressionList(s.rows);
+        // let subproofRows = this.evalExpressionList(s.rows);
+        let subproofRows = [2**8];
         this.checkRows(subproofRows);
+
+        let func = new Function(this, {args: s.args, returns: [], statements: s.statements, funcname: subproofName, isSubproofDefinition: true});
+        this.references.declare(subproofName, 'function', [], {sourceRef: Context.sourceRef});
+        this.references.set(subproofName, [], func);
 
         // TODO: Fr inside context
         const subproof = new Subproof(subproofRows, s.statements, s.aggregate ?? false);

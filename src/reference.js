@@ -69,23 +69,22 @@ class Reference {
     setArrayLevel(level, indexes, value, options = {}) {
         if (Debug.active) console.log(`setArrayLevel(${this.name} ${level}, [${indexes.join(',')}] ${Context.sourceRef}`);
         const len = this.array.lengths[level];
+        // indexes is base, over it we fill all value levels.
         for (let index = 0; index < len; ++index) {
             let _indexes = [...indexes];
             _indexes.push(index);
-            // console.log(_indexes);
+            // we are on final now we could set values
             if (level + 1 === this.array.dim) {
                 if (Array.isArray(value)) {
-//                    console.log('native', _indexes[level], _indexes);
                     this.setOneItem(value[_indexes[level]], _indexes, options);
                 } else {    
-                    // console.log(value);
                     if (value.dump) value.dump();
                     const _item = value.getItem(_indexes);
-//                    console.log('getItem', _indexes, _item);
                     this.setOneItem(_item, _indexes, options);
                 }
                 continue;
             }
+            // for each possible index call recursiverly up levels
             this.setArrayLevel(level+1, _indexes, value, options);
         }
     }
@@ -144,11 +143,12 @@ class Reference {
             }
             throw new Error(`Accessing to index, but not an array ${this.name} ${Context.sourceTag}`);
         }
-        if ((this.array.dim + 1) === indexes.length) {
-            return [row, this.getId(indexes).slice(0,-1)];
+        if ((this.array.dim + 1) === indexes.length) {            
+            // return row and the id of indexes without row
+            return [indexes[indexes.length - 1], this.getId(indexes.slice(0,-1))];
         }
         // other cases managed by getId because they aren't row access
-        return [row, this.getId(indexes)];
+        return [false, this.getId(indexes)];
     }
 
     getItem(indexes, options = {}) {

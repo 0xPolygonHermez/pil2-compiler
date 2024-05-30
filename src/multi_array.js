@@ -107,7 +107,8 @@ class MultiArray {
         return dup;
     }
     isFullIndexed(indexes) {
-        return (indexes.length === this.dim);
+        // in case of elements with row-dimension
+        return (indexes.length >= this.dim);
     }
     locatorIndexesApply(locatorId, indexes) {
         if (Debug.active) console.log([locatorId, indexes, this.dim, this.lengths]);

@@ -4,6 +4,7 @@ const Long = require('long');
 const fs = require('fs');
 const util = require('util');
 const assert = require('./assert.js');
+const Context = require('./context.js');
 
 //
 // Legacy Pil Stats
@@ -532,7 +533,9 @@ module.exports = class ProtoOut {
                 value.dump();
             }
         }
-        buf.writeBigInt64BE(value >> 64n*3n, 0);
+        value = Context.Fr.e(value);
+        // TODO: ajust to prime limbs/chunks of 64 bits
+        buf.writeBigUInt64BE(value >> 64n*3n, 0);
         buf.writeBigUInt64BE((value >> 64n*2n) & 0xFFFFFFFFFFFFFFFFn, 8);
         buf.writeBigUInt64BE((value >> 64n)  & 0xFFFFFFFFFFFFFFFFn, 16);
         buf.writeBigUInt64BE(value & 0xFFFFFFFFFFFFFFFFn, 24);

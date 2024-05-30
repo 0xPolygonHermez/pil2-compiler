@@ -19,6 +19,9 @@ module.exports = class Context {
             this.config.test.onContextInit(Context, this);
         }
     }
+    static get Fr() {
+        return this._instance.Fr;
+    }
     static get config() {
         return this._instance.config;
     }

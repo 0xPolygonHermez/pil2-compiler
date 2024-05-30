@@ -75,7 +75,7 @@ class Reference {
         const valueLen = isArray ? value.length : value.getLevelLength(indexes);
         
         if (len !== valueLen) {
-            throw new Error(`Mismatch con array length (${len} vs ${valueLen}) on ${this.name}[${indexes.join('],[')}]`);
+            throw new Error(`Mismatch con array length (${len} vs ${valueLen}) on ${this.name}[${indexes.join('],[')}] at ${Context.sourceRef}`);
         }
 
         for (let index = 0; index < len; ++index) {

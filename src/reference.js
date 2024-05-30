@@ -69,14 +69,22 @@ class Reference {
     setArrayLevel(level, indexes, value, options = {}) {
         if (Debug.active) console.log(`setArrayLevel(${this.name} ${level}, [${indexes.join(',')}] ${Context.sourceRef}`);
         const len = this.array.lengths[level];
+
         // indexes is base, over it we fill all value levels.
+        const isArray = Array.isArray(value);
+        const valueLen = isArray ? value.length : value.getLevelLength(indexes);
+        
+        if (len !== valueLen) {
+            throw new Error(`Mismatch con array length (${len} vs ${valueLen}) on ${this.name}[${indexes.join('],[')}]`);
+        }
+
         for (let index = 0; index < len; ++index) {
             let _indexes = [...indexes];
             _indexes.push(index);
             // we are on final now we could set values
             if (level + 1 === this.array.dim) {
-                if (Array.isArray(value)) {
-                    this.setOneItem(value[_indexes[level]], _indexes, options);
+                if (isArray) {
+                    this.setOneItem(value[index], _indexes, options);
                 } else {    
                     if (value.dump) value.dump();
                     const _item = value.getItem(_indexes);
@@ -85,7 +93,7 @@ class Reference {
                 continue;
             }
             // for each possible index call recursiverly up levels
-            this.setArrayLevel(level+1, _indexes, value, options);
+            this.setArrayLevel(level+1, _indexes, isArray ? value[index] : value, options);
         }
     }
     // setting by only one element

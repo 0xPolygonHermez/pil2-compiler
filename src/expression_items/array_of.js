@@ -44,6 +44,9 @@ module.exports = class ArrayOf extends RuntimeItem {
         const offset = this._array.indexesToOffset(indexes);
         return this.instance.getItem(offset);
     }
+    getValue(indexes) {
+        return this.getItem(indexes).getValue();
+    }
     toArrays(indexes = []) {        
         let level = indexes.length;
         if (level >= this._array.dim) {

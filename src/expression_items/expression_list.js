@@ -24,6 +24,13 @@ class ExpressionList extends ExpressionItem {
     get length() {
         return this.indexes[0];
     }
+    getLevelLength(indexes) {
+        if (indexes.length === 0) {
+            return this.items.length;
+        }
+        
+        return this.items[indexes[0]].getLevelLength(indexes.slice(1));       
+    }
     dump() {
         return '[' + this.items.map(x => x.toString()).join(',')+']';
     }

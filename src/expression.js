@@ -336,12 +336,10 @@ class Expression extends ExpressionItem {
     }
     isArray() {
         // only a reference could be and array.
-        if (!this.isReference() || this.stack[0].operands[0].rowOffset) return false;
-
-        let ref = this.getReference();
-        if (Debug.active) console.log(ref);
-        EXIT_HERE;
-
+        if (!this.isAlone()) return false;
+        const operand = this.getAloneOperand();
+        if (operand.rowOffset) return false;
+        return operand.isArray();
     }
     // stackResults[pos][0] contains result of this stack position,
     // in stackResults[pos][1] contains a results array of this stack position operands

@@ -60,7 +60,7 @@ class Reference {
     set (value, indexes = [], options = {}) {
         if (Debug.active) console.stdebug(`set(${this.name}, [${indexes.join(',')}]`);
         assert.notStrictEqual(value, null); // to detect obsolete legacy uses
-        if (!this.array || this.array.isFullIndexed(indexes)) {
+        if (!this.instance.runtimeRows && (!this.array || this.array.isFullIndexed(indexes))) {
             return this.setOneItem(value, indexes, options);
         }
         this.setArrayLevel(0, indexes, value, options);

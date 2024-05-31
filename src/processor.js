@@ -948,35 +948,14 @@ module.exports = class Processor {
             let init = s.sequence ?? null;
             let seq = null;
             if (init) {
-                // console.log('###################################################');
-                // console.log('###################################################');
-                // console.log('###################################################');
-                // console.log('###################################################');
-                // console.log('###################################################');
                 seq = new Sequence(this, init, ExpressionItems.IntValue.castTo(this.references.get('N')));
-                // console.log('##################################################');
-                // console.log('##### ############################################');
-                // console.log('####  ############################################');
-                // console.log('###                                             ##');
-                // console.log('##                                              ##');
-                // console.log('###                                             ##');
-                // console.log('####  ############################################');
-                // console.log('##### ############################################');
-                // console.log('##################################################');
-                // console.log(`Extending fixed col ${colname} ...`);
                 if (Context.config.fixed !== false) seq.extend();
-                // console.log('SEQ:'+seq.values.join(','));
-                // console.log('##################################################');
-                // console.log('############################################ #####');
-                // console.log('############################################  ####');
-                // console.log('##                                             ###');
-                // console.log('##                                              ##');
-                // console.log('##                                             ###');
-                // console.log('############################################  ####');
-                // console.log('############################################ #####');
-                // console.log('##################################################');
+            } else if (s.init) {
+                seq = s.init.instance();
+                if (seq.dump) seq.dump();
+                else console.log(seq);
             }
-            this.declareFullReference(colname, 'fixed', lengths, {global}, seq);
+            console.log(this.declareFullReference(colname, 'fixed', lengths, {global}, seq));
         }
     }
     execDebugger(s) {

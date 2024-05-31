@@ -468,17 +468,14 @@ class Expression extends ExpressionItem {
         } else {
             // values.forEach(x => {if (x.dump) x.dump()});
             value = this.applyOperation(st.op, values);
+        }
+
+        if (value !== null && !(value instanceof ExpressionItems.NonRuntimeEvaluableItem)) {
             if (!value.isAlone()) {
                 value = ExpressionItems.NonRuntimeEvaluableItem.get();
             } else {
                 value = value.getAloneOperand();
-                if (Debug.active) {
-                    console.log(`evaluateStackPos/applyOperation ${_debugLabel} `);
-                    console.log(util.inspect(values, false, null, true));
-                    console.log(util.inspect(value, false, null, true));
-                }
                 if (options.instance) {
-                    // console.log(st);
                     st.op = false;
                     st.operands = [value];            
                 }
@@ -487,8 +484,14 @@ class Expression extends ExpressionItem {
         return (results[0] = value);
     }
     evalNonRuntimeOperands(operation, values) {
-        if ((operation === 'eq' || operation === 'ne') && values.some(value => value.isRuntimeEvaluable())) {
-            return new ExpressionItems.IntValue(operation === 'ne' ? 1n:0n);
+        // a runtime-evaluable item was always different of non-runtime-evaluable on compilation-time
+        // check if at least one value is runtime-evaluable. 
+        if (operation === 'eq' || operation === 'ne') {
+            if (values.some(value => value.isRuntimeEvaluable())) {
+                return new ExpressionItems.IntValue(operation === 'ne' ? 1n:0n);
+            }
+            return this.applyOperation(operation, values);
+
         }
         return ExpressionItems.NonRuntimeEvaluableItem.get();
     }
@@ -511,7 +514,7 @@ class Expression extends ExpressionItem {
      * @param {string} operation - operation to apply on operators
      * @param {string[]|false} values - array of ExpressionItems
      * */
-    applyOperation(operation, values) {
+    applyOperation(operation, values, options = {}) {
         if (Debug.active) console.log([operation, ...values]);
         if (operation === 'if') {
             return this.applyOperationIf(values);
@@ -528,71 +531,84 @@ class Expression extends ExpressionItem {
             throw new Error(`Invalid number of arguments on operation ${operation}, received ${values.length} values but was expected ${operationInfo.args}`);
         }
 
-        // assert all values must be an ExpressionItem
-        if (assert.isEnabled) {
-            values.forEach(value => assert.instanceOf(value, ExpressionItem));
-        }
 
-        let types = values.map(x => x.constructor.name);
-
-        // if number of values was less than 2 (means 1, always was equals)
-        const equals = values.length < 2 ? true : types.every(x => x === types[0]);
-        let reversed = false;
+        let types = [];
         let methods = [];
-        const onlyOneLoop = equals || !operationInfo.commutative || operationInfo.args != 2;
-
-        // In this block try to found and operator method using types without transformations.
-        // First search on class of first operand, if not found search on class of second operand (*)
-        // (*) only if two operands and operation is commutative
-
-        while (true) {
-            const method = this.operatorToMethod(operation,  (equals ? false : types));
-            methods.push(`${types[0]}.${method}`);
-            const [executed, result] = this.applyOperatorMethod(method, values);
-            if (executed) {
-                return result;
-            }
-            if (onlyOneLoop) {
-                break;
-            }
-            // onlyOneLoop === false => two loops, on second loop applies reverse again to
-            // restore original values and types, also restore value of reversed
-            values = values.reverse();
-            types = types.reverse();
-            reversed = !reversed;
-            if (reversed == false) {
-                break;
-            }
-        }
-
-        // If not equals, in this block try to cast second operand to class of first operand, after that
-        // First search on class of first operand, if not found, try to cast first operand to class of second
-        // operand and search on class of second operand (*)
-        // (*) only if two operands and operation is commutative
-        let iarg = 0;
-        while (!equals && operationInfo.args == 2 && iarg < operationInfo.args) {
-            const casting = this.castingItemMethod(types[iarg]);
-            methods.push(casting);
-            const icasting = iarg ? 0:1;
-            if (typeof values[icasting][casting] === 'function') {
-                const method = this.operatorToMethod(operation);
-                methods.push(`> ${types[iarg]}.${method}`);
-                try {
-                    const [executed, result] = this.applyOperatorMethod(method, values.map((x, index) => index === icasting ? x[casting](): x));
-                    if (executed) {
-                        return result;
-                    }
+        for (let round = 0; round < 2; ++round) {
+            if (round === 1) {
+                values = values.map(value => value.eval({unroll: true}));
+                /* TODO: detect value not change after unroll
+                const _types = types;
+                types = values.map(x => x.constructor.name);
+                if (types.every((t,i) => _types[i] === t)) {
+                    continue;
                 }
-                catch (e) {
-                    if (e instanceof Exceptions.CannotBeCastToType === false) {
-                        throw e;
-                    }
+                */
+            }
+            // assert all values must be an ExpressionItem
+            if (assert.isEnabled) {
+                values.forEach(value => assert.instanceOf(value, ExpressionItem));
+            }
+    
+            types = values.map(x => x.constructor.name);
+
+            // if number of values was less than 2 (means 1, always was equals)
+            const equals = values.length < 2 ? true : types.every(x => x === types[0]);
+            let reversed = false;
+            const onlyOneLoop = equals || !operationInfo.commutative || operationInfo.args != 2;
+
+            // In this block try to found and operator method using types without transformations.
+            // First search on class of first operand, if not found search on class of second operand (*)
+            // (*) only if two operands and operation is commutative
+
+            while (true) {
+                const method = this.operatorToMethod(operation,  (equals ? false : types));
+                methods.push(`#${round} ${types[0]}.${method}`);
+                const [executed, result] = this.applyOperatorMethod(method, values);
+                if (executed) {
+                    return result;
+                }
+                if (onlyOneLoop) {
+                    break;
+                }
+                // onlyOneLoop === false => two loops, on second loop applies reverse again to
+                // restore original values and types, also restore value of reversed
+                values = values.reverse();
+                types = types.reverse();
+                reversed = !reversed;
+                if (reversed == false) {
+                    break;
                 }
             }
-            ++iarg;
+
+            // If not equals, in this block try to cast second operand to class of first operand, after that
+            // First search on class of first operand, if not found, try to cast first operand to class of second
+            // operand and search on class of second operand (*)
+            // (*) only if two operands and operation is commutative
+            let iarg = 0;
+            while (!equals && operationInfo.args == 2 && iarg < operationInfo.args) {
+                const casting = this.castingItemMethod(types[iarg]);
+                methods.push(casting);
+                const icasting = iarg ? 0:1;
+                if (typeof values[icasting][casting] === 'function') {
+                    const method = this.operatorToMethod(operation);
+                    methods.push(`> ${types[iarg]}.${method}`);
+                    try {
+                        const [executed, result] = this.applyOperatorMethod(method, values.map((x, index) => index === icasting ? x[casting](): x));
+                        if (executed) {
+                            return result;
+                        }
+                    }
+                    catch (e) {
+                        if (e instanceof Exceptions.CannotBeCastToType === false) {
+                            throw e;
+                        }
+                    }
+                }
+                ++iarg;
+            }            
         }
-        
-        throw new Error(`Operation ${operation} not was defined by types ${types.join(',')} [${methods.join(', ')}]`);
+        throw new Error(`Operation ${operation} not was defined by types ${types.join(',')} [${methods.join(', ')}] at ${Context.sourceRef}`);
     }
     applyOperationIf(values) {
         if (values.length !== 3) {
@@ -608,13 +624,17 @@ class Expression extends ExpressionItem {
         return 'as'+type+'Item';
     }
     applyOperatorMethod (method, values) {
-        if (Debug.active) console.log(`########### (${values[0].constructor.name}) METHOD ${method} ###########`);
+        let res = null;
+        // console.log(`\x1B[1;36m########### (${values[0].constructor.name}) METHOD ${method} ###########\x1B[0m`);
         if (typeof values[0][method] === 'function') {
             // instance call, first value (operand) is "this", arguments rest of values (operands)
-            return [true, values[0][method](...values.slice(1))];
-        } else if (values[0].constructor.operators && typeof values[0].constructor.operators[method] === 'function') {
+            res = values[0][method](...values.slice(1));
+            if (res !== null) return [true, res];        
+        } 
+        if (values[0].constructor.operators && typeof values[0].constructor.operators[method] === 'function') {
             // static call with all values (operands)
-            return [true, values[0].constructor.operators[method](...values)];
+            res = values[0][method](...values.slice(1));
+            if (res !== null) return [true,res];
         }
         return [false, false];
     }
@@ -750,7 +770,6 @@ class Expression extends ExpressionItem {
             }
         }
         if (Debug.active) {
-            this.dump('KKKKSKSKSK');
             console.log("\n", this.stackResultsToString(stackResults));
         }
         return stackResults;

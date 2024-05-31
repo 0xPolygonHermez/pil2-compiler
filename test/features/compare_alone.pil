@@ -1,0 +1,73 @@
+subproof CompareAlone(2**23) {
+    col witness a,b,c;
+
+    
+    println("expr:");
+
+    expr a1 = a;
+    expr b1 = b;
+    expr c1 = c;
+    expr a2 = a;
+    expr b2 = b;
+    expr c2 = c;
+
+    if (a1 == a2) {
+        println("a1==a2");
+    } else {
+        println("a1!=a2");
+    }
+
+    if (a1 == c2) {
+        println("a1?=c2");
+    } else {
+        println("a1!=c2");
+    }
+    println("const expr:");
+
+    const expr const_a1 = a;
+    const expr const_b1 = b;
+    const expr const_c1 = c;
+    const expr const_a2 = a;
+    const expr const_b2 = b;
+    const expr const_c2 = c;
+
+    if (const_a1 == const_a2) {
+        println("const_a1 == const_a2");
+    } else {
+        println("const_a1 != const_a2");
+    }
+
+    if (const_a1 == const_c2) {
+        println("const_a1 == const_c2");
+
+    } else {
+        println("const_a1 != const_c2");
+    }
+
+    if (const_a1 == a2) {
+        println("const_a1 == a2");
+    } else {
+        println("const_a1 != a2");
+    }
+
+    if (const_a1 == c2) {
+        println("const_a1 == c2");
+
+    } else {
+        println("const_a1 != c2");
+    }
+
+    if (const_a1 == a) {
+        println("const_a1 == a");
+    } else {
+        println("const_a1 != a");
+    }
+
+    if (const_a1 == c) {
+        println("const_a1 == c");
+
+    } else {
+        println("const_a1 != c");
+    }
+
+}

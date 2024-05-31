@@ -434,8 +434,10 @@ module.exports = class Processor {
             }
             if (Debug.active) console.log(cond);
 
-            if (typeof cond.expression !== 'undefined' && cond.expression.evalAsBool() !== true) {
-                continue;
+            if (typeof cond.expression !== 'undefined') {
+                if (cond.expression.evalAsBool() !== true) {
+                    continue;
+                }
             }
             this.scope.push();
             const res = this.execute(cond.statements, `IF ${this.sourceRef}`);

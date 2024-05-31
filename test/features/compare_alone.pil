@@ -1,7 +1,7 @@
 subproof CompareAlone(2**23) {
     col witness a,b,c;
 
-    
+/*    
     println("expr:");
 
     expr a1 = a;
@@ -69,5 +69,59 @@ subproof CompareAlone(2**23) {
     } else {
         println("const_a1 != c");
     }
+*/
+    connection_init(1, [a,b,c]);
+    int res = find_col_index(1, a);
+    println("===> find_col_index(1, a)", res);
+    res = find_col_index(1, b);
+    println("===> find_col_index(1, b)", res);
+    res = find_col_index(1, c);
+    println("===> find_col_index(1, c)", res);
+}
 
+function connection_init(int opid, expr cols[]) {
+    const int cols_count = length(cols);
+
+    container air.std.connect alias conn {
+        int opids_count = 0;
+        int opids[100];
+    }
+
+    container air.std.connect.`id${opid}` alias connid {
+        int closed;
+        int cols_num = 0;
+        expr map_cols[100];
+        col fixed PERs[100];
+    }
+
+    if (connid.cols_num == 0) {
+        connid.closed = 0;
+        connid.cols_num = cols_count;
+        conn.opids[conn.opids_count] = opid;
+        conn.opids_count = conn.opids_count + 1;
+    } else {
+        error(`Init of connect #${opid} has already been called`);
+    }
+
+    for (int i = 0; i < cols_count; i = i + 1) {
+        // Create a mapping of indexes to set a specific order of the columns the first time it is called
+        connid.map_cols[i] = cols[i];
+    }
+}
+
+function find_col_index(int opid, expr column): int {
+    println(opid,column);
+    use air.std.connect.`id${opid}`;
+
+    for (int i = 0; i < cols_num; i = i + 1) {
+        println("HEY",i,map_cols[i], column);
+        if (map_cols[i] == column) {
+            println("FOUND", i);
+            return i;
+            println("FOUND2", i);
+        }
+        println("LOOP", i);
+    }
+
+    error(`Column ${column} has not been found in connect #${opid}`);
 }

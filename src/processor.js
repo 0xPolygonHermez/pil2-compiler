@@ -347,7 +347,10 @@ module.exports = class Processor {
             ++this.functionDeep;
             this.scope.push();
             this.references.pushVisibilityScope();
-            const res = func.exec(callinfo, mapInfo);
+            let res = func.exec(callinfo, mapInfo);
+            if (res instanceof ReturnCmd) {
+                res = res.reset();            
+            }
             this.references.popVisibilityScope();
             this.scope.pop();
             --this.functionDeep;
@@ -523,7 +526,10 @@ module.exports = class Processor {
             result = this.execute(s.statements, `WHILE ${this.sourceRef} I:${index}`);
             ++index;
             this.scope.pop();
-            if (result instanceof BreakCmd) break;
+            if (this.abortInsideLoop(result)) {
+                result = result.getResult();
+                break;
+            }
         }
         return result;
     }
@@ -570,12 +576,26 @@ module.exports = class Processor {
             // if more than one statement, means a scope_definition => scope creation
             result = this.execute(s.statements, `FOR ${this.sourceRef} I:${index}`);
             ++index;
-            if (result instanceof BreakCmd) break;
+            if (this.abortInsideLoop(result)) {
+                result = result.getResult();
+                break;
+            }
             if (Debug.active) console.log('INCREMENT', s.increment);
             this.execute(s.increment);
         }
         this.scope.pop();
         return result;
+    }
+    abortInsideLoop(result) {
+        if (result instanceof BreakCmd) {
+            // reset FlowAbortCmd because we arrive on loop
+            result.reset();
+            return true;
+        }
+        if (result instanceof ReturnCmd) {
+            return true;
+        }
+        return false;
     }
     execForIn(s) {
         if (Debug.active) console.log(s);
@@ -585,7 +605,7 @@ module.exports = class Processor {
         return this.execForInExpression(s);
     }
     execForInList(s) {
-        let result;
+        let result = false;
         this.scope.push();
         this.execute(s.init, `FOR-IN-LIST ${this.sourceRef} INIT`);
         // if (s.init.items[0].reference) {
@@ -607,11 +627,17 @@ module.exports = class Processor {
             // if more than one statement, means a scope_definition => scope creation
             result = this.execute(s.statements, `FOR-IN-LIST ${this.sourceRef} I:${index}`);
             ++index;
-            if (result instanceof BreakCmd) break;
+            if (this.abortInsideLoop(result)) {
+                result = result.getResult();
+                break;
+            }
         }
         this.scope.pop();
+        return result;
     }
     execForInListValues(s) {
+        let result = false;
+        this.scope.push();
         const list = new List(this, s.list);
         let index = 0;
         for (const value of list.values) {
@@ -621,10 +647,17 @@ module.exports = class Processor {
             // if more than one statement, means a scope_definition => scope creation
             result = this.execute(s.statements,`FOR-IN-LIST-VALUES ${this.sourceRef} I:${index}`);
             ++index;
-            if (result instanceof BreakCmd) break;
+            if (this.abortInsideLoop(result)) {
+                result = result.getResult();
+                break;
+            }
         }
+        this.scope.pop();
+        return result;
     }
     execForInListReferences(s) {
+        let result = false;
+        this.scope.push();
         const name = s.init.items[0].name;
         assert.ok(!s.init.items[0].indexes);
         let index = 0;
@@ -635,8 +668,13 @@ module.exports = class Processor {
             // if more than one statement, means a scope_definition => scope creation
             result = this.execute(s.statements,`FOR-IN-LIST-REFERENCES ${this.sourceRef} I:${index}`);
             ++index;
-            if (result instanceof BreakCmd) break;
+            if (this.abortInsideLoop(result)) {
+                result = result.getResult();
+                break;
+            }
         }
+        this.scope.pop();
+        return result;
     }
     execForInExpression(s) {
         // s.list.expr.dump();
@@ -645,7 +683,7 @@ module.exports = class Processor {
         let it = new Iterator(s.list);
         this.scope.push();
         this.execute(s.init,`FOR-IN-EXPRESSION ${this.sourceRef} INIT`);
-        let result;
+        let result = false;
         let index = 0;
         const isReference = s.init.items[0].reference ?? false;
         const name = s.init.items[0].name;
@@ -658,9 +696,14 @@ module.exports = class Processor {
             }
             result = this.execute(s.statements,`FOR-IN-EXPRESSION ${this.sourceRef} I:${index}`);
             ++index;
-            if (result instanceof BreakCmd) break;
+            if (this.abortInsideLoop(result)) {
+                result = result.getResult();
+                break;
+            }
         }
         this.scope.pop();
+        return result;
+
         // this.decodeArrayReference(s.list);
         // [ref, indexs, length] = this.references.getArrayReference(s.list.expr)
         //

@@ -348,9 +348,6 @@ module.exports = class Processor {
             this.scope.push();
             this.references.pushVisibilityScope();
             let res = func.exec(callinfo, mapInfo);
-            if (res instanceof ReturnCmd) {
-                res = res.reset();            
-            }
             this.references.popVisibilityScope();
             this.scope.pop();
             --this.functionDeep;
@@ -382,17 +379,19 @@ module.exports = class Processor {
             EXIT_HERE;
         }
         if (Debug.active) console.log(st.value);
-        const expr2 = st.value.instance();
+        const assignedValue = st.value.instance();
         if (st.name.reference) {
-            assert.strictEqual(indexes.length, 0);
-            const assignedValue = st.value.instance();
+            // REVIEW
+            EXIT_HERE
+            // assert.strictEqual(indexes.length, 0);
+            // const assignedValue = st.value.instance();
             if (Debug.active) console.log(assignedValue);
             this.assign.assignReference(names, assignedValue);
             return;
         }
-        if (Debug.active) console.log(st.value);
-        this.assign.assign(names, indexes, st.value);
-        if (Debug.active) console.log(`ASSIGN ${st.name.name} = ${st.value.toString()} \x1B[0;90m[${Context.sourceTag}]\x1B[0m`);
+        if (Debug.active) console.log(assignedValue);
+        this.assign.assign(names, indexes, assignedValue);
+        if (Debug.active) console.log(`ASSIGN ${st.name.name} = ${assignedValue.toString()} \x1B[0;90m[${Context.sourceTag}]\x1B[0m`);
         // this.references.set(st.name.name, [], this.expressions.eval(st.value));
     }
     execHint(s) {

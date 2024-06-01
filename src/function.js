@@ -171,8 +171,7 @@ module.exports = class Function {
         let res = Context.processor.execute(this.statements, `FUNCTION ${this.name}`);
         if (res instanceof ReturnCmd) {
             Context.processor.traceLog('[TRACE-BROKE-RETURN]', '38;5;75;48;5;16');
-            const resvalue = res.value.eval();
-            return resvalue;
+            return res.reset();
         }
         return res;
     }

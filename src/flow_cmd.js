@@ -14,7 +14,7 @@ class FlowAbortCmd {
     }
     reset() {
         this.active = false;
-        return this.value;
+        return this.value ? this.value.eval() : this.value;
     }
 };
 class BreakCmd extends FlowAbortCmd {};

@@ -347,7 +347,7 @@ module.exports = class Processor {
             ++this.functionDeep;
             this.scope.push();
             this.references.pushVisibilityScope();
-            const res = func.exec(callinfo, mapInfo);
+            let res = func.exec(callinfo, mapInfo);
             this.references.popVisibilityScope();
             this.scope.pop();
             --this.functionDeep;
@@ -379,17 +379,19 @@ module.exports = class Processor {
             EXIT_HERE;
         }
         if (Debug.active) console.log(st.value);
-        const expr2 = st.value.instance();
+        const assignedValue = st.value.instance();
         if (st.name.reference) {
-            assert.strictEqual(indexes.length, 0);
-            const assignedValue = st.value.instance();
+            // REVIEW
+            EXIT_HERE
+            // assert.strictEqual(indexes.length, 0);
+            // const assignedValue = st.value.instance();
             if (Debug.active) console.log(assignedValue);
             this.assign.assignReference(names, assignedValue);
             return;
         }
-        if (Debug.active) console.log(st.value);
-        this.assign.assign(names, indexes, st.value);
-        if (Debug.active) console.log(`ASSIGN ${st.name.name} = ${st.value.toString()} \x1B[0;90m[${Context.sourceTag}]\x1B[0m`);
+        if (Debug.active) console.log(assignedValue);
+        this.assign.assign(names, indexes, assignedValue);
+        if (Debug.active) console.log(`ASSIGN ${st.name.name} = ${assignedValue.toString()} \x1B[0;90m[${Context.sourceTag}]\x1B[0m`);
         // this.references.set(st.name.name, [], this.expressions.eval(st.value));
     }
     execHint(s) {
@@ -434,8 +436,10 @@ module.exports = class Processor {
             }
             if (Debug.active) console.log(cond);
 
-            if (typeof cond.expression !== 'undefined' && cond.expression.evalAsBool() !== true) {
-                continue;
+            if (typeof cond.expression !== 'undefined') {
+                if (cond.expression.evalAsBool() !== true) {
+                    continue;
+                }
             }
             this.scope.push();
             const res = this.execute(cond.statements, `IF ${this.sourceRef}`);
@@ -521,7 +525,10 @@ module.exports = class Processor {
             result = this.execute(s.statements, `WHILE ${this.sourceRef} I:${index}`);
             ++index;
             this.scope.pop();
-            if (result instanceof BreakCmd) break;
+            if (this.abortInsideLoop(result)) {
+                result = result.getResult();
+                break;
+            }
         }
         return result;
     }
@@ -568,12 +575,26 @@ module.exports = class Processor {
             // if more than one statement, means a scope_definition => scope creation
             result = this.execute(s.statements, `FOR ${this.sourceRef} I:${index}`);
             ++index;
-            if (result instanceof BreakCmd) break;
+            if (this.abortInsideLoop(result)) {
+                result = result.getResult();
+                break;
+            }
             if (Debug.active) console.log('INCREMENT', s.increment);
             this.execute(s.increment);
         }
         this.scope.pop();
         return result;
+    }
+    abortInsideLoop(result) {
+        if (result instanceof BreakCmd) {
+            // reset FlowAbortCmd because we arrive on loop
+            result.reset();
+            return true;
+        }
+        if (result instanceof ReturnCmd) {
+            return true;
+        }
+        return false;
     }
     execForIn(s) {
         if (Debug.active) console.log(s);
@@ -583,7 +604,7 @@ module.exports = class Processor {
         return this.execForInExpression(s);
     }
     execForInList(s) {
-        let result;
+        let result = false;
         this.scope.push();
         this.execute(s.init, `FOR-IN-LIST ${this.sourceRef} INIT`);
         // if (s.init.items[0].reference) {
@@ -605,11 +626,17 @@ module.exports = class Processor {
             // if more than one statement, means a scope_definition => scope creation
             result = this.execute(s.statements, `FOR-IN-LIST ${this.sourceRef} I:${index}`);
             ++index;
-            if (result instanceof BreakCmd) break;
+            if (this.abortInsideLoop(result)) {
+                result = result.getResult();
+                break;
+            }
         }
         this.scope.pop();
+        return result;
     }
     execForInListValues(s) {
+        let result = false;
+        this.scope.push();
         const list = new List(this, s.list);
         let index = 0;
         for (const value of list.values) {
@@ -619,10 +646,17 @@ module.exports = class Processor {
             // if more than one statement, means a scope_definition => scope creation
             result = this.execute(s.statements,`FOR-IN-LIST-VALUES ${this.sourceRef} I:${index}`);
             ++index;
-            if (result instanceof BreakCmd) break;
+            if (this.abortInsideLoop(result)) {
+                result = result.getResult();
+                break;
+            }
         }
+        this.scope.pop();
+        return result;
     }
     execForInListReferences(s) {
+        let result = false;
+        this.scope.push();
         const name = s.init.items[0].name;
         assert.ok(!s.init.items[0].indexes);
         let index = 0;
@@ -633,8 +667,13 @@ module.exports = class Processor {
             // if more than one statement, means a scope_definition => scope creation
             result = this.execute(s.statements,`FOR-IN-LIST-REFERENCES ${this.sourceRef} I:${index}`);
             ++index;
-            if (result instanceof BreakCmd) break;
+            if (this.abortInsideLoop(result)) {
+                result = result.getResult();
+                break;
+            }
         }
+        this.scope.pop();
+        return result;
     }
     execForInExpression(s) {
         // s.list.expr.dump();
@@ -643,7 +682,7 @@ module.exports = class Processor {
         let it = new Iterator(s.list);
         this.scope.push();
         this.execute(s.init,`FOR-IN-EXPRESSION ${this.sourceRef} INIT`);
-        let result;
+        let result = false;
         let index = 0;
         const isReference = s.init.items[0].reference ?? false;
         const name = s.init.items[0].name;
@@ -656,9 +695,14 @@ module.exports = class Processor {
             }
             result = this.execute(s.statements,`FOR-IN-EXPRESSION ${this.sourceRef} I:${index}`);
             ++index;
-            if (result instanceof BreakCmd) break;
+            if (this.abortInsideLoop(result)) {
+                result = result.getResult();
+                break;
+            }
         }
         this.scope.pop();
+        return result;
+
         // this.decodeArrayReference(s.list);
         // [ref, indexs, length] = this.references.getArrayReference(s.list.expr)
         //
@@ -953,35 +997,14 @@ module.exports = class Processor {
             let init = s.sequence ?? null;
             let seq = null;
             if (init) {
-                // console.log('###################################################');
-                // console.log('###################################################');
-                // console.log('###################################################');
-                // console.log('###################################################');
-                // console.log('###################################################');
                 seq = new Sequence(this, init, ExpressionItems.IntValue.castTo(this.references.get('N')));
-                // console.log('##################################################');
-                // console.log('##### ############################################');
-                // console.log('####  ############################################');
-                // console.log('###                                             ##');
-                // console.log('##                                              ##');
-                // console.log('###                                             ##');
-                // console.log('####  ############################################');
-                // console.log('##### ############################################');
-                // console.log('##################################################');
-                // console.log(`Extending fixed col ${colname} ...`);
                 if (Context.config.fixed !== false) seq.extend();
-                // console.log('SEQ:'+seq.values.join(','));
-                // console.log('##################################################');
-                // console.log('############################################ #####');
-                // console.log('############################################  ####');
-                // console.log('##                                             ###');
-                // console.log('##                                              ##');
-                // console.log('##                                             ###');
-                // console.log('############################################  ####');
-                // console.log('############################################ #####');
-                // console.log('##################################################');
+            } else if (s.init) {
+                seq = s.init.instance();
+                if (seq.dump) seq.dump();
+                else console.log(seq);
             }
-            this.declareFullReference(colname, 'fixed', lengths, {global}, seq);
+            console.log(this.declareFullReference(colname, 'fixed', lengths, {global}, seq));
         }
     }
     execDebugger(s) {
@@ -1152,35 +1175,37 @@ module.exports = class Processor {
     }
     execVariableDeclaration(s) {
         if (Debug.active) console.log('VARIABLE DECLARATION '+Context.sourceRef+' init:'+s.init);
-        const init = typeof s.init !== 'undefined';
+        const initialization = typeof s.init !== 'undefined';
         const count = s.items.length;
-        const inits = (init && s.init.type === 'expression_list') ? s.init.values : s.init;
 
-        if (init && inits.length !== count) {
-            // TODO: could be an array initialization count = 1 init = n
+        if (s.multiple && s.init.length !== count) {
             this.error(s, `Mismatch between len of variables (${count}) and len of their inits (${inits.length})`);
         }
 
         for (let index = 0; index < count; ++index) {
-            // console.log(s.items[index]);
             const [name, lengths] = this.decodeNameAndLengths(s.items[index]);
             const sourceRef = s.debug ?? this.sourceRef;
             const scope = s.scope ?? false;
             let initValue = null;
-            if (init) {
-                if (Debug.active) console.log(name, s.vtype, Context.sourceRef);
-                switch (s.vtype) {
-                    case 'expr':
-                        initValue = inits[index].eval();
-                        break;
-                    case 'int':
-                        initValue = inits[index].eval().asIntItem();
-                        break;
-                    case 'string':
-                        initValue = inits[index].eval().asStringItem();;
-                        break;
+            if (initialization) {
+                const init = s.multiple ? s.init.getItem([index]) : s.init;
+                if (init instanceof ExpressionItems.ExpressionList) {
+                    initValue = init.eval();
+                } else {
+                    if (Debug.active) console.log(name, s.vtype, Context.sourceRef);
+                    switch (s.vtype) {
+                        case 'expr':
+                            initValue = init.eval();
+                            break;
+                        case 'int':
+                            initValue = init.eval().asIntItem();
+                            break;
+                        case 'string':
+                            initValue = init.eval().asStringItem();;
+                            break;
+                    }
+                    if (Debug.active) console.log(name, s.vtype, initValue.toString ? initValue.toString() : initValue);
                 }
-                if (Debug.active) console.log(name, s.vtype, initValue.toString ? initValue.toString() : initValue);
             }
             this.references.declare(name, s.vtype, lengths, { scope, sourceRef, const: s.const ?? false }, initValue);
             if (initValue !== null) {
@@ -1244,8 +1269,7 @@ module.exports = class Processor {
         const compiledTags = this.compiler.parseExpression(codeTags);
 
         // evaluating different init of each tag
-        // compiledTags.forEach(e => console.log(e.init[0].eval({unroll: true}).toString()));
-        const stringTags = compiledTags.map(e => e.init[0].eval({unroll: true}).toString());
+        const stringTags = compiledTags.map(e => e.init.eval({unroll: true}).toString());
 
         // replace on string each tag for its value
         const evaluatedTemplate = stringTags.map((s, index) => tags[index].pre + s).join('')+lastS;

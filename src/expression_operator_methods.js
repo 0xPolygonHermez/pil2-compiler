@@ -29,4 +29,10 @@ module.exports = class ExpressionOperatorMethods {
         let res = valueA.eval();
         return new ExpressionItem.IntValue(res.asInt() === valueB.asInt() ? 1n : 0n);
     }
+    static operatorEq(valueA, valueB) {
+        if (!valueA.isAlone() || !valueB.isAlone()) {
+            throw new Error(`Comparing not alone operators ....`);
+        }
+        EXIT_HERE;
+    }
 }

@@ -1,4 +1,6 @@
 const ExpressionItem = require("./expression_item.js");
+const IntValue = require('./int_value.js');
+
 module.exports = class ProofItem extends ExpressionItem {
     static createWithId = true;
     constructor (id) {
@@ -43,6 +45,9 @@ module.exports = class ProofItem extends ExpressionItem {
             label = this.getTag() + '@' + this.id;
         }
         return next + label + prior;
+    }
+    operatorEq(b) {
+        return new IntValue(this.id === b.id ? 1:0);
     }
 }
 

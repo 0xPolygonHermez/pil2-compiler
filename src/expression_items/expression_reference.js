@@ -1,4 +1,5 @@
 const ProofItem = require("./proof_item.js");
+const IntValue = require('./int_value.js');
 const assert = require('../assert.js');
 module.exports = class ExpressionReference extends ProofItem {
     constructor (id, instance, options = {}) {
@@ -35,5 +36,11 @@ module.exports = class ExpressionReference extends ProofItem {
     }
     isRuntimeEvaluable() {
         return false;
+    }
+    operatorEq(value) {
+        if (value.instance === this.instance && value.id == this.id && this.indexes === false && value.indexes === false) {
+            return new IntValue(1);
+        }
+        return null;
     }
 }

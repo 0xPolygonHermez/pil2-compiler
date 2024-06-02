@@ -4,17 +4,7 @@ const Long = require('long');
 const fs = require('fs');
 const util = require('util');
 const assert = require('./assert.js');
-
-//
-// Legacy Pil Stats
-//
-// 12213 expression "operations" in 2313 indexable expressions
-// 631 constraints
-// 393 imC
-// 218 fixed
-// 665 witness
-// 317 nQ
-// 44 publics
+const Context = require('./context.js');
 
 const MAX_CHALLENGE = 200;
 const MAX_STAGE = 20;
@@ -532,10 +522,25 @@ module.exports = class ProtoOut {
                 value.dump();
             }
         }
-        buf.writeBigInt64BE(value >> 64n*3n, 0);
-        buf.writeBigUInt64BE((value >> 64n*2n) & 0xFFFFFFFFFFFFFFFFn, 8);
-        buf.writeBigUInt64BE((value >> 64n)  & 0xFFFFFFFFFFFFFFFFn, 16);
-        buf.writeBigUInt64BE(value & 0xFFFFFFFFFFFFFFFFn, 24);
+        value = Context.Fr.e(value);
+
+        // first divide in chunks to calculate how many chunks in 
+        // big endian are used.
+        let chunks = [];
+        while (value > 0n) {
+            chunks.push(value & 0xFFFFFFFFFFFFFFFFn)
+            value = value >> 64n;
+        }
+        if (chunks.length === 0) {
+            chunks.push(0n);
+        }
+
+        // write precalculated chunks
+        const lastIndex = chunks.length - 1;
+        for (let index = 0; index <= lastIndex; ++index) {
+            buf.writeBigUInt64BE(chunks[lastIndex - index], index);
+        }
+
         if (bytes === 0 && this.varbytes) {
             const firstByte = buf[0];
             let index = 0;

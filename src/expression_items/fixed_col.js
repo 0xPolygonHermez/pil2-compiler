@@ -25,6 +25,8 @@ module.exports = class FixedCol extends ProofItem {
     }
     set(value) {
         // REVIEW: cyclic references
+        if (value.dump) value.dump('set');
+        else console.log(value);
         if (value instanceof Object) {
             if (this.sequence !== null) {
                 EXIT_HERE;

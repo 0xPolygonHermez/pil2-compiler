@@ -751,7 +751,7 @@ module.exports = class Processor {
         }    
     }
     execFunctionDefinition(s) {
-        if (Debug.active) console.log('FUNCTION '+s.funcname);
+        if (Debug.active) console.log('FUNCTION '+s.name);
         let func = new Function(this, s);
         this.references.declare(func.name, 'function', [], {sourceRef: Context.sourceRef});
         this.references.set(func.name, [], func);
@@ -829,11 +829,10 @@ module.exports = class Processor {
         let subproofRows = [2**8];
         this.checkRows(subproofRows);
 
-        let func = new Function(this, {args: s.args, returns: [], statements: s.statements, funcname: subproofName, isSubproofDefinition: true});
+        let func = new Function(this, {args: s.args, returns: [], statements: s.statements, name: subproofName, isSubproofDefinition: true});
         this.references.declare(subproofName, 'function', [], {sourceRef: Context.sourceRef});
         this.references.set(subproofName, [], func);
 
-        // TODO: Fr inside context
         const subproof = new Subproof(subproofRows, s.statements, s.aggregate ?? false);
         this.subproofs.define(subproofName, subproof, `subproof ${subproofName} has been defined previously on ${this.context.sourceRef}`);
     }
@@ -881,11 +880,6 @@ module.exports = class Processor {
                 Context.config.test.onAirBegin(subproof, air);
             }
 
-
-/*            this.references.set('N', [], new ExpressionItems.IntValue(air.rows));
-            this.references.set('BITS', [], new ExpressionItems.IntValue(air.bits));
-            this.references.set('__SUBPROOF__', [], new ExpressionItems.StringValue(subproofName));*/
-
             this.context.push(false, subproofName);
             this.scope.pushInstanceType('air');
             subproof.airStart();
@@ -901,9 +895,6 @@ module.exports = class Processor {
             // pilout generation
             // setting id of proofitems used, be carefull with challenge (stage not defined)
 
-            // const subproof = this.subproofs.get(subproofName);
-            // proto.setSubproof(subproofName, subproof.aggregate);
-            // clearing air scope
             this.subproofProtoOut(subproofId, airId)
 
             this.constraints = new Constraints();

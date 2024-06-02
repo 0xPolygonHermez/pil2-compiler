@@ -3,7 +3,7 @@ const Context = require('../context.js');
 const ExpressionItems = require('../expression_items.js')
 module.exports = class Dump extends Function {
     constructor (parent) {
-        super(parent, {funcname: 'dump'});
+        super(parent, {name: 'dump'});
     }
     mapArguments(s) {
         if (s.args.length !== 1) {

@@ -4,7 +4,7 @@ const Context = require('../context.js');
 
 module.exports = class Error extends Function {
     constructor (parent) {
-        super(parent, {funcname: 'error', args: [], returns: [] });
+        super(parent, {name: 'error', args: [], returns: [] });
     }
     mapArguments(s) {
         let texts = [];

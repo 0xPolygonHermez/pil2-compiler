@@ -168,10 +168,10 @@ case 47:
  this.$ = { type: 'scope_definition', ...$$[$0-1] }; 
 break;
 case 50: case 52:
- this.$ = {private: false, public: true, funcname: $$[$0]} 
+ this.$ = {private: false, public: true, name: $$[$0]} 
 break;
 case 51:
- this.$ = {private: true, public: false, funcname: $$[$0]} 
+ this.$ = {private: true, public: false, name: $$[$0]} 
 break;
 case 53:
  this.$ = { ...$$[$0-10], type: 'function_definition', final: false, ...$$[$0-8], returns: $$[$0-4], ...$$[$0-1] }

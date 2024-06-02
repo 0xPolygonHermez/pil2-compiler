@@ -4,7 +4,7 @@ const Expression = require('../expression.js');
 
 module.exports = class Cast extends Function {
     constructor (parent) {
-        super(parent, {funcname: 'cast'});
+        super(parent, {name: 'cast'});
     }
     mapArguments(s) {
         console.log('############### CAST (prepare) ########################');

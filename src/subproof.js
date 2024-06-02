@@ -2,20 +2,22 @@ const Definitions = require("./definitions.js");
 const Airs = require("./airs.js");
 const Air = require("./air.js")
 const Context = require('./context.js');
-module.exports = class Subproof {
+const Function = require('./function.js');
+module.exports = class Subproof extends Function {
 
-    constructor (rows, statements, aggregate) {
-        this.rows = rows;   // array of rows
-        this.blocks = [statements];
+    constructor (id, data = {}) {
+        // TODO: when instance a subproof return an integer (as a handler id)
+        super(id, data);
+        // rows, statements, aggregate
         this.airs = new Airs(this);
-        this.aggregate = aggregate;
+        this.aggregate = data.aggregate ? true : false;
         this.insideFirstAir = false;
         this.spvDeclaredInFirstAir = {};
         this.spvDeclaredInsideThisAir = {};
         this.insideAir = false;
     }
     addBlock(statements) {
-        this.blocks.push(statements);
+        this.statements = [...this.statemens, ...statements];
     }
     airStart() {
         this.insideAir = true;
@@ -45,13 +47,8 @@ module.exports = class Subproof {
         }
         if (this.insideFirstAir) {
             // this.colDeclaration(s, 'subproofvalue', true, false, {aggregateType: s.aggregateType});
-            // console.log(['SUBPROOFVALUE', name,lengths, data]);
             const res = Context.references.declare(name, 'subproofvalue', lengths, data);
-            // console.log(Context.references.getNameScope(name));
-            // console.log(Context.references.containers.getCurrent())
-            // console.log(Context.references.containers.get(Context.references.containers.getCurrent()));
             this.spvDeclaredInFirstAir[name] = {res, lengths: [...lengths]};
-            // console.log(res);
             return res;
         }
 

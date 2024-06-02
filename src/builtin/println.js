@@ -2,7 +2,7 @@ const Function = require("../function.js");
 const IntValue = require('../expression_items/int_value.js');
 module.exports = class Println extends Function {
     constructor (parent) {
-        super(parent, {funcname: 'println', args: [], returns: [] });
+        super(parent, {name: 'println', args: [], returns: [] });
         this.nargs = false;
     }
     exec(s, mapInfo) {

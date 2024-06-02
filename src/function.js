@@ -11,8 +11,8 @@ const {ArrayOf} = require('./expression_items.js')
 module.exports = class Function {
     constructor (id, data = {}) {
         this.id = id;
-        this.initialized = [data.args, data.returns, data.statements, data.funcname].some(x => typeof x !== 'undefined');
-        this.name = data.funcname;
+        this.initialized = [data.args, data.returns, data.statements, data.name].some(x => typeof x !== 'undefined');
+        this.name = data.name;
         this.nargs = 0;
         if (data.args) {
             this.defineArguments(data.args);

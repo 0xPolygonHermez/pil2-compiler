@@ -5,7 +5,7 @@ const Exceptions = require('../exceptions.js');
 
 module.exports = class Defined extends Function {
     constructor (parent) {
-        super(parent, {funcname: 'defined'});
+        super(parent, {name: 'defined'});
     }
     mapArguments(s) {
         if (s.args.length !== 1) {

@@ -5,7 +5,7 @@ const IntValue = require('../expression_items/int_value.js');
 const assert = require('../assert.js');
 module.exports = class AssertEq extends Function {
     constructor () {
-        super(999999, {funcname: 'assert_eq'});
+        super(999999, {name: 'assert_eq'});
     }
     mapArguments(s) {
         if (s.args.length !== 2) {

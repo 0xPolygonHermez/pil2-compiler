@@ -438,13 +438,13 @@ statement_closed
 
 function
     : FUNCTION IDENTIFIER
-        { $$ = {private: false, public: true, funcname: $2} }
+        { $$ = {private: false, public: true, name: $2} }
 
     | PRIVATE FUNCTION IDENTIFIER
-        { $$ = {private: true, public: false, funcname: $3} }
+        { $$ = {private: true, public: false, name: $3} }
 
     | PUBLIC FUNCTION IDENTIFIER
-        { $$ = {private: false, public: true, funcname: $3} }
+        { $$ = {private: false, public: true, name: $3} }
     ;
 
 function_definition

@@ -3,7 +3,7 @@ const Context = require('../context.js');
 const ExpressionItems = require('../expression_items.js')
 module.exports = class Assert extends Function {
     constructor (parent) {
-        super(parent, {funcname: 'assert'});
+        super(parent, {name: 'assert'});
     }
     mapArguments(s) {
         console.log('############### ASSERT (prepare) ########################');

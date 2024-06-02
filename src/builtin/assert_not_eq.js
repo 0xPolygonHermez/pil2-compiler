@@ -3,7 +3,7 @@ const IntValue = require('../expression_items/int_value.js');
 
 module.exports = class AssertNotEq extends Function {
     constructor (parent) {
-        super(parent, {funcname: 'assert_not_eq'});
+        super(parent, {name: 'assert_not_eq'});
     }
     mapArguments(s) {
         if (s.args.length !== 2) {

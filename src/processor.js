@@ -165,7 +165,7 @@ module.exports = class Processor {
     startExecution(statements) {
         this.sourceRef = '(start-execution)';
         // TODO: use a constant
-        this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
+        // this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('PRIME', 'int', [], { global: true, sourceRef: this.sourceRef }, this.prime);
         this.references.declare('__SUBPROOF__', 'string', [], { global: true, sourceRef: this.sourceRef });

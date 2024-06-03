@@ -114,6 +114,9 @@ module.exports = class Context {
             console.log(name);
             throw new Error(`getFullName invalid argument`);
         }
+        if (this._processor.references.insideContainer) {
+            return name;
+        }
 
         const parts = name.split('.');
         if (parts.length === 1 && this.subproof !== false && this.subproof !== '') {

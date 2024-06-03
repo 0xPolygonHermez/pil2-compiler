@@ -15,6 +15,7 @@ module.exports = class References {
         this.visibilityScope = 0;
         this.visibilityStack = [];
         this.containers = new Containers(this);
+        this.insideContainer = false;
     }
     getDefinitionByItem(item, options = {}) {
         let instance = null;
@@ -51,10 +52,12 @@ module.exports = class References {
         return nameInfo.scope;
     }
     createContainer(name, alias = false) {
+        this.insideContainer = true;
         return this.containers.create(name, alias);
     }
     closeContainer() {
         this.containers.close();
+        this.insideContainer = false;
     }
     pushVisibilityScope() {
         this.visibilityStack.push(this.visibilityScope);
@@ -493,7 +496,7 @@ module.exports = class References {
             if (reference) break;
         }
         if (!reference) {
-             if (typeof defaultValue !== 'undefined') return defaultValue;
+            if (typeof defaultValue !== 'undefined') return defaultValue;
             throw new Exceptions.ReferenceNotFound(names.join(','));
         }
 

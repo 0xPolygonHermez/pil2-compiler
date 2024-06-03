@@ -999,7 +999,7 @@ module.exports = class Processor {
                 if (seq.dump) seq.dump();
                 else console.log(seq);
             }
-            console.log(this.declareFullReference(colname, 'fixed', lengths, {global}, seq));
+            this.declareFullReference(colname, 'fixed', lengths, {global}, seq);
         }
     }
     execDebugger(s) {

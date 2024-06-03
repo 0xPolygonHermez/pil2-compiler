@@ -435,7 +435,8 @@ class Expression extends ExpressionItem {
 
         let values = results[1].slice(0, st.operands.length);
         for (let operandIndex = 0; operandIndex < st.operands.length; ++operandIndex) {
-            const _operandDebugLabel = `${_debugLabel} ${operandIndex}]`;
+            // const _operandDebugLabel = `${_debugLabel} ${operandIndex}]`;
+            // console.log(_operandDebugLabel, operandIndex, st.operands)
             const operand = st.operands[operandIndex];
             if (assert.isEnabled) {
                 assert.instanceOf(operand, ExpressionItem, [st.op, st.operands.length, operand]);
@@ -474,7 +475,7 @@ class Expression extends ExpressionItem {
             if (!value.isAlone()) {
                 value = ExpressionItems.NonRuntimeEvaluableItem.get();
             } else {
-                value = value.getAloneOperand();
+                value = this.assertExpressionItem(value.getAloneOperand());
                 if (options.instance) {
                     st.op = false;
                     st.operands = [value];            
@@ -515,20 +516,21 @@ class Expression extends ExpressionItem {
      * @param {string[]|false} values - array of ExpressionItems
      * */
     applyOperation(operation, values, options = {}) {
-        if (Debug.active) console.log([operation, ...values]);
+        let _values = values;
+        if (Debug.active) console.log([operation, ..._values]);
         if (operation === 'if') {
-            return this.applyOperationIf(values);
+            return this.applyOperationIf(_values);
         }
     
         const operationInfo = ExpressionOperationsInfo.get(operation);
 
         if (operationInfo === false) {
-            console.log(values);
+            console.log(_values);
             throw new Error(`Operation ${operation} not was defined`);
         }
 
-        if (operationInfo.args !== values.length) {
-            throw new Error(`Invalid number of arguments on operation ${operation}, received ${values.length} values but was expected ${operationInfo.args}`);
+        if (operationInfo.args !== _values.length) {
+            throw new Error(`Invalid number of arguments on operation ${operation}, received ${_values.length} values but was expected ${operationInfo.args}`);
         }
 
 
@@ -536,7 +538,7 @@ class Expression extends ExpressionItem {
         let methods = [];
         for (let round = 0; round < 2; ++round) {
             if (round === 1) {
-                values = values.map(value => value.eval({unroll: true}));
+                _values = _values.map(value => this.assertExpressionItem(value.eval({unroll: true})));
                 /* TODO: detect value not change after unroll
                 const _types = types;
                 types = values.map(x => x.constructor.name);
@@ -547,13 +549,13 @@ class Expression extends ExpressionItem {
             }
             // assert all values must be an ExpressionItem
             if (assert.isEnabled) {
-                values.forEach(value => assert.instanceOf(value, ExpressionItem));
+                _values.forEach(value => assert.instanceOf(value, ExpressionItem));
             }
     
-            types = values.map(x => x.constructor.name);
+            types = _values.map(x => x.constructor.name);
 
             // if number of values was less than 2 (means 1, always was equals)
-            const equals = values.length < 2 ? true : types.every(x => x === types[0]);
+            const equals = _values.length < 2 ? true : types.every(x => x === types[0]);
             let reversed = false;
             const onlyOneLoop = equals || !operationInfo.commutative || operationInfo.args != 2;
 
@@ -564,7 +566,7 @@ class Expression extends ExpressionItem {
             while (true) {
                 const method = this.operatorToMethod(operation,  (equals ? false : types));
                 methods.push(`#${round} ${types[0]}.${method}`);
-                const [executed, result] = this.applyOperatorMethod(method, values);
+                const [executed, result] = this.applyOperatorMethod(method, _values);
                 if (executed) {
                     return result;
                 }
@@ -573,7 +575,7 @@ class Expression extends ExpressionItem {
                 }
                 // onlyOneLoop === false => two loops, on second loop applies reverse again to
                 // restore original values and types, also restore value of reversed
-                values = values.reverse();
+                _values = _values.reverse();
                 types = types.reverse();
                 reversed = !reversed;
                 if (reversed == false) {
@@ -590,11 +592,11 @@ class Expression extends ExpressionItem {
                 const casting = this.castingItemMethod(types[iarg]);
                 methods.push(casting);
                 const icasting = iarg ? 0:1;
-                if (typeof values[icasting][casting] === 'function') {
+                if (typeof _values[icasting][casting] === 'function') {
                     const method = this.operatorToMethod(operation);
                     methods.push(`> ${types[iarg]}.${method}`);
                     try {
-                        const [executed, result] = this.applyOperatorMethod(method, values.map((x, index) => index === icasting ? x[casting](): x));
+                        const [executed, result] = this.applyOperatorMethod(method, _values.map((x, index) => index === icasting ? x[casting](): x));
                         if (executed) {
                             return result;
                         }

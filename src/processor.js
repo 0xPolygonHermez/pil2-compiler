@@ -1193,7 +1193,8 @@ module.exports = class Processor {
                             initValue = init.eval();
                             break;
                         case 'int':
-                            initValue = init.eval().asIntItem();
+                            initValue = (s.multiple ? init.eval() : init.instance()).asIntItem();
+                            // if (initValue.dump) initValue.dump(); else console.log(initValue);
                             break;
                         case 'string':
                             initValue = init.eval().asStringItem();;

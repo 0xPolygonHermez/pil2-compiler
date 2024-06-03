@@ -172,6 +172,7 @@ class Reference {
         let evaluatedIndexes = [];
         let fromIndex = false;
         let toIndex = false;
+
         if (Array.isArray(indexes) && indexes.length > 0) {
             for (let index = 0; index < indexes.length; ++index) {
                 if (indexes[index].isInstanceOf && indexes[index].isInstanceOf(RangeIndex)) {
@@ -198,8 +199,14 @@ class Reference {
 
         // if array is defined
         let res = false;
+        let runtimeRow = false;
         if (this.array) {
-            if (this.array.isFullIndexed(evaluatedIndexes)) {
+            // check if row access in case of fixed
+            if (this.instance.runtimeRows && this.array.isFullIndexed(evaluatedIndexes.slice(0, -1))) {
+                locator = this.array.locatorIndexesApply(this.locator, evaluatedIndexes.slice(0, -1));
+                runtimeRow = evaluatedIndexes[evaluatedIndexes.length - 1];
+            }
+            else if (this.array.isFullIndexed(evaluatedIndexes)) {
                 // full access => result an item (non subarray)
                 locator = this.array.locatorIndexesApply(this.locator, evaluatedIndexes);
             } else {
@@ -228,6 +235,9 @@ class Reference {
             res.setLabel(label);
         } else res.setLabel('___');
 
+        if (runtimeRow !== false) {
+            return res.getRowItem(runtimeRow);
+        }
         return res;
     }
 }

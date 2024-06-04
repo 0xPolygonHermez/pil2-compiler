@@ -2,6 +2,7 @@ const Function = require("../function.js");
 const MultiArray = require("../multi_array.js");
 const {IntValue} = require('../expression_items.js');
 const Exceptions = require('../exceptions.js');
+const Context = require('../context.js');
 
 module.exports = class Defined extends Function {
     constructor (parent) {
@@ -14,7 +15,11 @@ module.exports = class Defined extends Function {
         const arg0 = s.args[0];
         let value = false;
         try {
-            if (arg0) {
+            const reference = arg0.reference;
+            if (reference) {
+                value = Context.references.isContainerDefined(Context.applyTemplates(reference.name));
+            } 
+            if (!value && arg0) {
                 value = arg0.eval();
             }
             // if (arg0 && arg0.isReference()) {

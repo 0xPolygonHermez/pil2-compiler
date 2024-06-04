@@ -16,6 +16,9 @@ module.exports = class References {
         this.visibilityStack = [];
         this.containers = new Containers(this);
     }
+    isContainerDefined(name) {
+        return this.containers.isDefined(name);
+    }
     get insideContainer() {
         return this.containers.getCurrent() !== false;
     }

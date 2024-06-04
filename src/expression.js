@@ -54,6 +54,11 @@ class Expression extends ExpressionItem {
             this.assertExpressionItem = (value) => value;
         }
     }
+    get reference() {
+        if (!this.isAlone()) return false;
+        const operand = this.getAloneOperand();
+        return operand instanceof ExpressionItems.ReferenceItem ? operand : false;
+    }
     _assertExpressionItem(value, info) {
         assert.strictEqual(value instanceof ExpressionList, false);
         return assert.returnInstanceOf(value, ExpressionItem, info);

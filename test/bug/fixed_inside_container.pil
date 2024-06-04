@@ -6,16 +6,18 @@ subproof FixedInsideContainer(2**6) {
 }
 
 function callme() {
-    container air.myfirtcon {
+    int opid = 10;
+    container air.myfirstcon.`id${opid}` {
         col fixed L2;
         col fixed M2[3];
     }
 }
 
 function fillme() {
-    use air.myfirtcon;
+    int opid = 10;
+    use air.myfirstcon.`id${opid}`;
 
-
+    col fixed `colid${opid}` = [0,1]...;
     for (int i = 0; i < N; ++i) {
         L2[i] = i;
         M2[0][i] = i;
@@ -25,5 +27,6 @@ function fillme() {
 
     int _a = L2[10];
     int a = M2[1][3];
-    println(_a, a);
+    println(_a, a, L2[10]);
+    println(air.myfirstcon.`id${opid}`.L2[10]);
 }

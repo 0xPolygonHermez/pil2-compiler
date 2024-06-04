@@ -464,7 +464,7 @@ module.exports = class References {
         // if more than one name is sent, use the first one (mainName). Always first name it's directly
         // name defined on source code, second optionally could be name with subproof, because as symbol is
         // stored with full name.
-        const mainName = Array.isArray(name) ? name[0]:name;
+        const mainName = Array.isArray(name) ? name[0]:Context.applyTemplates(name);
         const nameInfo = this.decodeName(mainName);
         let names = false;
 

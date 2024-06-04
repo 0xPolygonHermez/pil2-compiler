@@ -221,6 +221,7 @@ module.exports = class Processor {
                 return result;
             }
         }
+        return false;
     }
     executeStatement(st) {
         const __executeStatementCounter = this.executeStatementCounter++;
@@ -586,6 +587,8 @@ module.exports = class Processor {
         return result;
     }
     abortInsideLoop(result) {
+        // continue not need to do anything, because produce an
+        // exit of statements inside for.
         if (result instanceof BreakCmd) {
             // reset FlowAbortCmd because we arrive on loop
             result.reset();

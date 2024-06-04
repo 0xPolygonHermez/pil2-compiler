@@ -24,11 +24,9 @@ module.exports = class FixedCol extends ProofItem {
         this.definition.setValue(value);
     }
     cloneInstance() {
-        console.log('CLONE_INSTANCE #'+this.id);
         return new FixedCol(this.id);
     }
     cloneUpdate(source) {
-        console.log('CLONE_UPDATE #'+this.id);
         this.definition = source.definition;
     }
 }

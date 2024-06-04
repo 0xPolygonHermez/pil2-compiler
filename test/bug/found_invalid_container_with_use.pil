@@ -1,0 +1,29 @@
+subproof FoundInvalidContainerWithUse(2**6) {
+    callme();
+    testme();
+}
+
+function callme() {
+    int opid = 10;
+    container air.myfirstcon {
+        int L = 30;        
+        col witness l;
+    }
+    container air.myfirstcon.`id${opid}` {
+        int L = 1030;
+        col witness l2;
+        int L2 = 20;
+    }
+}
+
+function testme() {
+    int opid = 10;
+    int L2 = 23;
+    use air.myfirstcon.`id${opid}`;
+
+    println("HELLO");
+    println(L2, air.myfirstcon.`id${opid}`.L2, air.myfirstcon.id10.L2);
+    println(L, air.myfirstcon.`id${opid}`.L, air.myfirstcon.id10.L, air.myfirstcon.L);
+    println(l2);
+    // println(air.myfirstcon.L2);
+}

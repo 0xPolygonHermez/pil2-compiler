@@ -425,7 +425,7 @@ module.exports = class References {
         let reference = false;
         if (!explicitContainer) {
             reference = this.containers.getReferenceInsideCurrent(lname, false);
-        } else {
+        } else {            
             if (['proof', 'subproof', 'air'].includes(explicitContainer)) {
                 const scopeId = Context.scope.getScopeId(explicitContainer);
                 if (scopeId === false) {
@@ -447,7 +447,7 @@ module.exports = class References {
             reference = this.references[name] ?? false;
         }
         if (!reference) {
-            this.containers.getReference(name, false);
+            reference = this.containers.getReference(name, false);
         }
         return reference;
     }

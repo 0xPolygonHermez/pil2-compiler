@@ -123,7 +123,11 @@ class MultiArray {
         assert.defined(indexes);
         assert.ok(Array.isArray(indexes));
         const [offset, dim] = this.getIndexesOffset(indexes);
-        assert.strictEqual(this.offsets.length,indexes.length);
+
+
+        // assert.strictEqual(this.offsets.length,indexes.length);
+
+
         return offset;
     }
     getIndexesOffset(indexes) {

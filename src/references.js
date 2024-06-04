@@ -15,7 +15,9 @@ module.exports = class References {
         this.visibilityScope = 0;
         this.visibilityStack = [];
         this.containers = new Containers(this);
-        this.insideContainer = false;
+    }
+    get insideContainer() {
+        return this.containers.getCurrent() !== false;
     }
     getDefinitionByItem(item, options = {}) {
         let instance = null;
@@ -52,12 +54,10 @@ module.exports = class References {
         return nameInfo.scope;
     }
     createContainer(name, alias = false) {
-        this.insideContainer = true;
         return this.containers.create(name, alias);
     }
     closeContainer() {
         this.containers.close();
-        this.insideContainer = false;
     }
     pushVisibilityScope() {
         this.visibilityStack.push(this.visibilityScope);

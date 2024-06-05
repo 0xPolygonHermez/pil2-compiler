@@ -43,6 +43,7 @@ module.exports = class ProtoOut {
         this.options = options;
         this.bigIntType = options.bigIntType ?? 'Buffer';
         this.toBaseField = this.mapBigIntType();
+
         this.buildTypes();
     }
     mapBigIntType() {
@@ -107,7 +108,7 @@ module.exports = class ProtoOut {
     setupPilOut(name) {
         this.pilOut = {
             name,
-            baseField: this.toBaseField(this.Fr.p),
+            baseField: this.toBaseField(this.Fr.p, 0, false),
             blowupFactor: 3,
             subproofs: [],
             numChallenges: [],
@@ -505,7 +506,7 @@ module.exports = class ProtoOut {
     bint2bint(value, bytes = 0) {
         return BigInt(value);
     }
-    bint2buf(value, bytes = 0) {
+    bint2buf(value, bytes = 0, useFr = true) {
         if (value && typeof value.asInt === 'function') {
             value = value.asInt();
         }
@@ -516,13 +517,14 @@ module.exports = class ProtoOut {
             return Buffer.alloc(0);
         }
 
-        const buf = Buffer.alloc(32);
         if (typeof value !== 'bigint') {
             if (value && value.dump) {
                 value.dump();
             }
         }
-        value = Context.Fr.e(value);
+        if (useFr) {
+            value = Context.Fr.e(value);
+        }
 
         // first divide in chunks to calculate how many chunks in 
         // big endian are used.
@@ -536,19 +538,15 @@ module.exports = class ProtoOut {
         }
 
         // write precalculated chunks
+        const buf = Buffer.alloc(chunks.length * 8);
         const lastIndex = chunks.length - 1;
         for (let index = 0; index <= lastIndex; ++index) {
             buf.writeBigUInt64BE(chunks[lastIndex - index], index);
         }
-
         if (bytes === 0 && this.varbytes) {
-            const firstByte = buf[0];
             let index = 0;
-            if (firstByte == 0x00 || firstByte == 0xFF) {
-                while (buf[++index] === firstByte && index < 32);
-            }
-            if (firstByte == 0xFF && buf[index] & 0x80 == 0x00) {
-                --index;
+            if (buf[0] == 0) {
+                while (buf[++index] == 0 && index < 32);
             }
             return buf.subarray(index);
         }

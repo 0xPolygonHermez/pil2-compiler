@@ -354,7 +354,7 @@ module.exports = class Processor {
             --this.functionDeep;
             this.callstack.pop();
             if (Debug.active) console.log(`END CALL ${name}`, res);
-            return typeof res === 'undefined' ? new ExpressionItems.IntValue() : res;
+            return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
         }
         this.error({}, `Undefined function ${name}`);
     }

@@ -440,7 +440,7 @@ class Expression extends ExpressionItem {
 
         let values = results[1].slice(0, st.operands.length);
         for (let operandIndex = 0; operandIndex < st.operands.length; ++operandIndex) {
-            // const _operandDebugLabel = `${_debugLabel} ${operandIndex}]`;
+            const _operandDebugLabel = `${_debugLabel} ${operandIndex}]`;
             // console.log(_operandDebugLabel, operandIndex, st.operands)
             const operand = st.operands[operandIndex];
             if (assert.isEnabled) {
@@ -477,7 +477,7 @@ class Expression extends ExpressionItem {
         }
 
         if (value !== null && !(value instanceof ExpressionItems.NonRuntimeEvaluableItem)) {
-            if (!value.isAlone()) {
+            if (value instanceof Expression && !value.isAlone()) {
                 value = ExpressionItems.NonRuntimeEvaluableItem.get();
             } else {
                 value = this.assertExpressionItem(value.getAloneOperand());

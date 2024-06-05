@@ -171,9 +171,9 @@ module.exports = class Function {
         let res = Context.processor.execute(this.statements, `FUNCTION ${this.name}`);
         if (res instanceof ReturnCmd) {
             Context.processor.traceLog('[TRACE-BROKE-RETURN]', '38;5;75;48;5;16');
-            return res.reset();
+            res = res.reset();
         }
-        return res;
+        return res === false ? new ExpressionItems.IntValue(0) : res;
     }
     toString() {
         return `[Function ${this.name}${this.args ? '(' + Object.keys(this.args).join(',') + ')': ''}]`;

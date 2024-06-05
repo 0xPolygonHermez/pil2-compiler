@@ -1,0 +1,7 @@
+subproof ArrayAsign(2**16) {
+    col witness a,b,c,d;
+
+    expr conn[2][4];
+    conn[0] = [b,3,c,0];
+    conn[1] = [a,1,c,0];
+}

@@ -531,7 +531,7 @@ module.exports = class Processor {
                 break;
             }
         }
-        return result;
+        return this.clearLoopAbort(result);
     }
     execUse(s) {
         const name = this.expandTemplates(s.name);
@@ -584,6 +584,12 @@ module.exports = class Processor {
             this.execute(s.increment);
         }
         this.scope.pop();
+        return this.clearLoopAbort(result);
+    }
+    clearLoopAbort(result) {
+        if (result instanceof BreakCmd || result instanceof ContinueCmd) {
+            return false;
+        }
         return result;
     }
     abortInsideLoop(result) {
@@ -596,7 +602,7 @@ module.exports = class Processor {
         }
         if (result instanceof ReturnCmd) {
             return true;
-        }
+        }   
         return false;
     }
     execForIn(s) {
@@ -635,7 +641,7 @@ module.exports = class Processor {
             }
         }
         this.scope.pop();
-        return result;
+        return this.clearLoopAbort(result);
     }
     execForInListValues(s) {
         let result = false;
@@ -655,7 +661,7 @@ module.exports = class Processor {
             }
         }
         this.scope.pop();
-        return result;
+        return this.clearLoopAbort(result);
     }
     execForInListReferences(s) {
         let result = false;
@@ -676,7 +682,7 @@ module.exports = class Processor {
             }
         }
         this.scope.pop();
-        return result;
+        return this.clearLoopAbort(result);
     }
     execForInExpression(s) {
         // s.list.expr.dump();
@@ -704,7 +710,7 @@ module.exports = class Processor {
             }
         }
         this.scope.pop();
-        return result;
+        return this.clearLoopAbort(result);
 
         // this.decodeArrayReference(s.list);
         // [ref, indexs, length] = this.references.getArrayReference(s.list.expr)

@@ -7,10 +7,14 @@ subproof FixedInsideContainer(2**6) {
 
 function callme() {
     int opid = 10;
+    int GEN[20] = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19];
     container air.myfirstcon.`id${opid}` {
         col fixed L2;
         col fixed M2[3];
+        col fixed P = [1,GEN[BITS]..*..]
     }
+    use air.myfirstcon.`id${opid}`;
+    println(P[0],P[1],P[2],P[3]);
 }
 
 function fillme() {

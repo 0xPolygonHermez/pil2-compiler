@@ -13,12 +13,16 @@ module.exports = class Assign {
             console.log(util.inspect(value, false, 200, true));
             console.log(indexes);
         }
+        console.log(value);
         value = this.getValue(value);
         if (Debug.active) console.log(util.inspect(value, false, 200, true));
         assert.notStrictEqual(value, null);
         return this.#assign(name, indexes, value);
     }
     getValue(value) {
+        if (typeof value.eval !== 'function') {
+            return value;
+        }
         const _value = value.eval();
         if (typeof _value !== 'undefined' && _value !== null && (_value instanceof NonRuntimeEvaluableItem) === false) {
             return _value;

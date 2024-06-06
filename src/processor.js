@@ -24,10 +24,7 @@ const SubproofValues = require("./subproof_values.js");
 const Iterator = require("./iterator.js");
 const Context = require("./context.js");
 const Runtime = require("./runtime.js");
-// const FunctionCall = require("./function_call.js");
 const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js")
-// const {ReferenceItem, ExpressionItem, FeValue, IntValue, ProofItem, Proofval, Subproofval, Challenge, Public, ProofStageItem,
-//       ExpressionReference, StringValue, FixedCol, WitnessCol } = require("./expression_items.js");
 
 const ExpressionItems = require("./expression_items.js");
 const ExpressionItem = ExpressionItems.ExpressionItem;
@@ -76,9 +73,6 @@ module.exports = class Processor {
         this.exprs = new Variables('expr', DefinitionItems.ExpressionVariable, Expression, {constClass: ExpressionItems.ExpressionReference});
         this.references.register('expr', this.exprs);
 
-        // this.lexprs = new Variables('lexpr', Expression);
-        // this.references.register('lexpr', this.lexprs);
-
         this.fixeds = new FixedCols();
         ExpressionItem.setManager(ExpressionItems.FixedCol, this.fixeds);
         this.fixeds.runtimeRows = true;
@@ -87,9 +81,6 @@ module.exports = class Processor {
         this.witness = new WitnessCols();
         ExpressionItem.setManager(ExpressionItems.WitnessCol, this.witness);
         this.references.register('witness', this.witness);
-
-//        this.constants = new Indexable('constant', IntValue);
-//        this.references.register('constant', this.constants);
 
         this.publics = new Indexable('public', DefinitionItems.Public, ExpressionItems.Public);
         ExpressionItem.setManager(ExpressionItems.Public, this.publics);
@@ -115,8 +106,6 @@ module.exports = class Processor {
 
         this.expressions = new Expressions();
         this.globalExpressions = new Expressions();
-
-        // this.references.register('im', this.expressions);
 
         this.constraints = new Constraints();
         this.globalConstraints = new Constraints(this.globalExpressions);
@@ -164,6 +153,7 @@ module.exports = class Processor {
     }
     startExecution(statements) {
         this.sourceRef = '(start-execution)';
+
         // TODO: use a constant
         this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
@@ -371,16 +361,19 @@ module.exports = class Processor {
         // TODO: move to assign class
         const indexes = this.decodeIndexes(st.name.indexes)
         const names = this.context.getNames(st.name.name);
-//        if (st.value.type === 'sequence') {
+        let assignedValue = false;
         if (st.value instanceof ExpressionItems.ExpressionList) {
-            const sequence = new Sequence(this, st.value, ExpressionItems.IntValue.castTo(this.references.get('N')));
+            const sequence = new Sequence(st.value, ExpressionItems.IntValue.castTo(this.references.get('N')));
             sequence.extend();
             if (Debug.active) console.log(sequence.size);
             if (Debug.active) console.log(sequence.toString());
-            EXIT_HERE;
+            assignedValue = st.value.instance();
+        } else if (st.sequence) {
+            assignedValue = new Sequence(st.sequence, ExpressionItems.IntValue.castTo(this.references.get('N')));
+            assignedValue.extend();
+        } else {
+            assignedValue = st.value.instance();
         }
-        if (Debug.active) console.log(st.value);
-        const assignedValue = st.value.instance();
         if (st.name.reference) {
             // REVIEW
             EXIT_HERE
@@ -390,7 +383,7 @@ module.exports = class Processor {
             this.assign.assignReference(names, assignedValue);
             return;
         }
-        if (Debug.active) console.log(assignedValue);
+        console.log(assignedValue);
         this.assign.assign(names, indexes, assignedValue);
         if (Debug.active) console.log(`ASSIGN ${st.name.name} = ${assignedValue.toString()} \x1B[0;90m[${Context.sourceTag}]\x1B[0m`);
         // this.references.set(st.name.name, [], this.expressions.eval(st.value));
@@ -1001,7 +994,7 @@ module.exports = class Processor {
             let init = s.sequence ?? null;
             let seq = null;
             if (init) {
-                seq = new Sequence(this, init, ExpressionItems.IntValue.castTo(this.references.get('N')));
+                seq = new Sequence(init, ExpressionItems.IntValue.castTo(this.references.get('N')));
                 if (Context.config.fixed !== false) seq.extend();
             } else if (s.init) {
                 seq = s.init.instance();
@@ -1218,30 +1211,6 @@ module.exports = class Processor {
                 if (Debug.active) console.log(`ASSIGN(DECL) ${name} = ${initValueText} \x1B[0;90m[${Context.sourceTag}]\x1B[0m`);
                 // this.references.set(name, [], initValue);
             }
-        }
-    }
-    execConstantDefinition(s) {
-        if (s.sequence) {
-            const lengths = this.decodeLengths(s);
-            this.references.declare(s.name, 'constant', lengths, { sourceRef: this.sourceRef });
-            const def = this.references.getDefinition(s.name);
-            // TODO: SEQUENCE_ARRAY_LENGTHS
-            const seq = new Sequence(this, s.sequence);
-            const asize = def.array.getSize();
-            const ssize = seq.size;
-            if (ssize !== asize) {
-                throw new Error(`Array size mismatch on initialization ${asize} vs ${ssize}`);
-            }
-            // TODO, check sizes before extends
-            seq.extend();
-            const seqSize = seq.getSize();
-            for (let index = 0; index < seqSize; ++index) {
-                this.references.set(s.name, def.array.offsetToIndexes(index), seq.getValue(index));
-            }
-        } else {
-            this.references.declare(s.name, 'constant', [], { sourceRef: this.sourceRef });
-            const value = this.getExprNumber(s.value, s, `constant ${s.name} definition`);
-            this.references.set(s.name, [], value);
         }
     }
     expandTemplates(text) {

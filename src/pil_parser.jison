@@ -272,9 +272,6 @@ top_level_block
     | subproof_value_declaration
         { $$ = $1 }
 
-/*    | constant_definition
-        { $$ = $1 }
-*/
     | variable_declaration
         { $$ = $1 }
 
@@ -598,9 +595,6 @@ declare_item
     | subproof_value_declaration
         { $$ = $1 }
 
-/*    | constant_definition
-        { $$ = $1 }
-*/
     | variable_declaration
         { $$ = $1 }
     ;
@@ -637,9 +631,6 @@ statement_no_closed
         { $$ = $1 }
 
     | subproof_value_declaration
-        { $$ = $1 }
-
-    | constant_definition
         { $$ = $1 }
 
     | no_closed_container_definition
@@ -995,7 +986,7 @@ variable_assignment
         { $$ = { type: 'assign', assign: $2.type, name: $1, value: $3 } }
 
     | name_id '=' sequence_definition
-        { $$ = { type: 'assign', name: $1, value: $3 } }
+        { $$ = { type: 'assign', name: $1, sequence: $3 } }
     ;
 
 
@@ -1277,18 +1268,6 @@ subproof_definition
         { $$ = { type: 'subproof_block', aggregate: false, name: $2, statements: $4.statements } }
     ;
 
-constant_definition
-    : CONSTANT IDENTIFIER '=' expression
-        { $$ = { type: 'constant_definition', name: $2, value: $4 } }
-
-//    | CONSTANT IDENTIFIER '[' expression ']' '=' sequence_definition
-//        { $$ = { type: "constant_definition", name: $2, dim:1, lengths: [$4], sequence: $7 } }
-    | CONSTANT IDENTIFIER declaration_array '=' sequence_definition
-        { $$ = { type: "constant_definition", name: $2, sequence: $5, ...$3 } }
-    ;
-
-
-/* */
 expression
     : expression EQ expression
         { $$ = $1.insert('eq', ExpressionFactory.fromObject($3)) }

@@ -13,7 +13,6 @@ module.exports = class Assign {
             console.log(util.inspect(value, false, 200, true));
             console.log(indexes);
         }
-        console.log(value);
         value = this.getValue(value);
         if (Debug.active) console.log(util.inspect(value, false, 200, true));
         assert.notStrictEqual(value, null);

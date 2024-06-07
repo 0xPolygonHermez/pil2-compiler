@@ -142,7 +142,6 @@ module.exports = class SequenceBase {
         const _delta = Number(delta);
         if (fromValue >= Number.MIN_SAFE_INTEGER && fromValue <= Number.MAX_SAFE_INTEGER && 
             toValue >= Number.MIN_SAFE_INTEGER && toValue <= Number.MAX_SAFE_INTEGER) {
-            console.log({fromValue, toValue, delta, _delta});
             if (toValue > fromValue) {
                 assert.ok(Number(toValue/fromValue) > 0);
                 return Math.floor(Math.log(Number(toValue/fromValue))/Math.log(_delta)) + 1;

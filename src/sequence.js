@@ -7,6 +7,7 @@ const Context = require('./context.js');
 const SequenceSizeOf = require('./sequence/size_of.js');
 const SequenceCodeGen = require('./sequence/code_gen.js');
 const SequenceExtend = require('./sequence/extend.js');
+const IntValue = require('./expression_items/int_value.js');
 
 const MAX_ELEMS_GEOMETRIC_SEQUENCE = 300;
 class SequencePadding {
@@ -53,7 +54,7 @@ module.exports = class Sequence {
         return cloned;
     }
     getValue(index) {
-        return this.#values.getValue(index);
+        return new IntValue(this.#values.getValue(index));
     }
     #setValue(index, value) {
         ++this.valueCounter;

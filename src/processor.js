@@ -383,7 +383,6 @@ module.exports = class Processor {
             this.assign.assignReference(names, assignedValue);
             return;
         }
-        console.log(assignedValue);
         this.assign.assign(names, indexes, assignedValue);
         if (Debug.active) console.log(`ASSIGN ${st.name.name} = ${assignedValue.toString()} \x1B[0;90m[${Context.sourceTag}]\x1B[0m`);
         // this.references.set(st.name.name, [], this.expressions.eval(st.value));

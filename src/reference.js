@@ -64,10 +64,17 @@ class Reference {
         if (!this.array || this.array.isFullIndexed(indexes)) {
             return this.setOneItem(value, indexes, options);
         }
-        console.log(indexes);
         this.setArrayLevel(indexes.length, indexes, [], value, options);
         // At this point, it's a array initilization
     }
+    /**
+     * Set value for all array elements (multidimensional)
+     * @param {number} level - level of reference to set, for example: a (level=0), b[2] (level=1), b[2][1] (level=2)
+     * @param {number[]} indexes - current indexes of set, for example: a (indexes=[]), b[2] (indexes=[2]), b[2][1] (indexes=[2][1])
+     * @param {number[]} vindexes - current indexes of value to assign, for example: a (indexes=[]), b[2] (indexes=[2]), b[2][1] (indexes=[2][1])
+     * @param {ExpressionItem} value - value to set
+     * @param {Object} options
+     */
     setArrayLevel(level, indexes, vindexes, value, options = {}) {
         if (Debug.active) console.log(`setArrayLevel(${this.name} ${level}, [${indexes.join(',')}], [${vindexes.join(',')}]) ${Context.sourceRef}`);
         const len = this.array.lengths[level];

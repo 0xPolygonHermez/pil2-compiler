@@ -370,7 +370,11 @@ module.exports = class Processor {
             assignedValue = st.value.instance();
         } else if (st.sequence) {
             assignedValue = new Sequence(st.sequence, ExpressionItems.IntValue.castTo(this.references.get('N')));
-            assignedValue.extend();
+            if (assignedValue.isList) {
+                assignedValue = assignedValue.toList();
+            } else {
+                assignedValue.extend();
+            }
         } else {
             assignedValue = st.value.instance();
         }

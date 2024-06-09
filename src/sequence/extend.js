@@ -22,7 +22,7 @@ module.exports = class SequenceExtend extends SequenceBase {
         let value = t1;
         while (this.extendPos < finalExtendPos) {
             for (let itimes = 0; itimes < times && this.extendPos < finalExtendPos; ++itimes) {
-                this.set(this.extendPos++,value);
+                this.pushValue(value);
             }
             value = value + delta;
         }
@@ -69,7 +69,7 @@ module.exports = class SequenceExtend extends SequenceBase {
         assert.ok(times > 0);
         while (value <= toValue) {
             for (let itimes = 0; itimes < times; ++itimes) {
-                this.set(this.extendPos++, value);
+                this.pushValue(value);
             }
             value = (value + delta) * ratio;
         }
@@ -84,6 +84,9 @@ module.exports = class SequenceExtend extends SequenceBase {
     }
     sequence(e) {
         return this.seqList(e);
+    }
+    pushValue(value) {
+        this.set(this.extendPos++, value);
     }
     paddingSeq(e) {        
         let from = this.extendPos;
@@ -102,7 +105,7 @@ module.exports = class SequenceExtend extends SequenceBase {
             let upto = remaingValues >= seqSize ? seqSize : remaingValues;
             // console.log(`SETTING UPTO ${upto} ${remaingValues} ${seqSize}`);
             for (let index = 0; index < upto; ++index) {
-                this.set(this.extendPos++, this.get(from + index));
+                this.pushValue(this.get(from + index));
             }
             remaingValues = remaingValues - upto;
         }
@@ -110,7 +113,7 @@ module.exports = class SequenceExtend extends SequenceBase {
     }
     expr(e) {        
         const num = this.e2num(e);
-        this.set(this.extendPos++, num);
+        this.pushValue(num);
         return 1;
     }
     repeatSeq(e) {

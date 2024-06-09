@@ -7,7 +7,10 @@ const Context = require('./context.js');
 const SequenceSizeOf = require('./sequence/size_of.js');
 const SequenceCodeGen = require('./sequence/code_gen.js');
 const SequenceExtend = require('./sequence/extend.js');
+const SequenceToList = require('./sequence/to_list.js');
+const SequenceTypeOf = require('./sequence/type_of.js');
 const IntValue = require('./expression_items/int_value.js');
+const ExpressionList = require('./expression_items/expression_list.js');
 
 const MAX_ELEMS_GEOMETRIC_SEQUENCE = 300;
 class SequencePadding {
@@ -42,9 +45,18 @@ module.exports = class Sequence {
         this.engines = {
             sizeOf: new SequenceSizeOf(this, 'sizeOf'),
             codeGen: new SequenceCodeGen(this, 'codeGen'),
-            extend: new SequenceExtend(this, 'extend', options)
+            extend: new SequenceExtend(this, 'extend', options),
+            toList: new SequenceToList(this, 'toList', options),
+            typeOf: new SequenceTypeOf(this, 'typeOf')
         };
-        this.sizeOf(expression);
+        this.engines.typeOf.execute(this.expression);
+        this.sizeOf(this.expression);
+    }
+    get isSequence () {
+        return this.engines.typeOf.isSequence;
+    }
+    get isList () {
+        return this.engines.typeOf.isList;
     }
     clone() {
         let cloned = new Sequence(this.expression, this.maxSize);
@@ -88,6 +100,10 @@ module.exports = class Sequence {
         }
         if (Debug.active) console.log(['SIZE', this.size]);
         return this.size;
+    }
+    toList() {
+        this.engines.toList.execute(this.expression);
+        return new ExpressionList(this.#values.getValues());
     }
     setPaddingSize(size) {
         if (this.maxSize === false) {

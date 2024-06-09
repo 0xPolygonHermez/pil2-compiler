@@ -28,7 +28,7 @@ class ExpressionList extends ExpressionItem {
         if (indexes.length === 0) {
             return this.items.length;
         }
-        
+        console.log(indexes, this.items, this.items[indexes[0]]);
         return this.items[indexes[0]].getLevelLength(indexes.slice(1));       
     }
     dump() {
@@ -54,6 +54,7 @@ class ExpressionList extends ExpressionItem {
         if (indexes.length === 1) {
             return item;
         }
+        console.log(indexes, item);
         return item.getItem(indexes.slice(1));
     }
     instance(options) {

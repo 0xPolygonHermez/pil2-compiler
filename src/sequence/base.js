@@ -58,7 +58,7 @@ module.exports = class SequenceBase {
         if (typeof e === 'bigint' || typeof e === 'number') {
             return e;
         }
-        return Context.processor.getExprNumber(e);
+        return e.asInt();
     }
     toNumber(value) {
         let nvalue = Number(value);

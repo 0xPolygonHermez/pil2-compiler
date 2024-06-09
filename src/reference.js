@@ -64,37 +64,39 @@ class Reference {
         if (!this.array || this.array.isFullIndexed(indexes)) {
             return this.setOneItem(value, indexes, options);
         }
-        this.setArrayLevel(0, indexes, value, options);
+        console.log(indexes);
+        this.setArrayLevel(indexes.length, indexes, [], value, options);
         // At this point, it's a array initilization
     }
-    setArrayLevel(level, indexes, value, options = {}) {
-        if (Debug.active) console.log(`setArrayLevel(${this.name} ${level}, [${indexes.join(',')}] ${Context.sourceRef}`);
+    setArrayLevel(level, indexes, vindexes, value, options = {}) {
+        if (Debug.active) console.log(`setArrayLevel(${this.name} ${level}, [${indexes.join(',')}], [${vindexes.join(',')}]) ${Context.sourceRef}`);
         const len = this.array.lengths[level];
 
         // indexes is base, over it we fill all value levels.
         const isArray = Array.isArray(value);
-        const valueLen = isArray ? value.length : value.getLevelLength(indexes);
+        const valueLen = isArray ? value.length : value.getLevelLength(vindexes);
         
         if (len !== valueLen) {
-            throw new Error(`Mismatch con array length (${len} vs ${valueLen}) on ${this.name}[${indexes.join('],[')}] at ${Context.sourceRef}`);
+            throw new Error(`Mismatch con array length (${len} vs ${valueLen}) on ${this.name}[${indexes.join('],[')}] level:${level} at ${Context.sourceRef}`);
         }
 
         for (let index = 0; index < len; ++index) {
-            let _indexes = [...indexes];
-            _indexes.push(index);
+            const _indexes = [...indexes, index];
+            const _vindexes = [...vindexes, index];
+    
             // we are on final now we could set values
             if (level + 1 === this.array.dim) {
                 if (isArray) {
                     this.setOneItem(value[index], _indexes, options);
                 } else {    
                     if (value.dump) value.dump();
-                    const _item = value.getItem(_indexes);
+                    const _item = value.getItem(_vindexes);
                     this.setOneItem(_item, _indexes, options);
                 }
                 continue;
             }
             // for each possible index call recursiverly up levels
-            this.setArrayLevel(level+1, _indexes, isArray ? value[index] : value, options);
+            this.setArrayLevel(level+1, _indexes, _vindexes, isArray ? value[index] : value, options);
         }
     }
     // setting by only one element

@@ -675,7 +675,7 @@ data_array
     ;
 
 function_call
-    : name_optional_index '(' multiple_expression_list ')'
+    : name_optional_index '(' optional_sequence_list ')'
         { $$ = { type: 'call', function: $1, args: $3 } }
     ;
 
@@ -698,7 +698,7 @@ defined_scopes
 
 
 delayed_function_call
-    : ON delayed_function_event defined_scopes name_optional_index '(' multiple_expression_list ')'
+    : ON delayed_function_event defined_scopes name_optional_index '(' optional_sequence_list ')'
         { $$ = { type: 'delayed_function_call', event: $2, scope: $3, function: $4, args: $6 } }
     ;
 
@@ -727,7 +727,7 @@ in_expression
     : expression
         { $$ = $1 }
 
-    | '[' expression_list ']'
+    | '[' sequence_list ']'
         { $$ = $2 }
     ;
 
@@ -855,26 +855,26 @@ variable_type_declaration
     | INT variable_declaration_item '=' expression
         { $$ = { type: 'variable_declaration', vtype: 'int', items: [$2], init: $4 } }
 
-    | INT variable_declaration_item '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'int', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5) } }
+    | INT variable_declaration_item '=' sequence_definition
+        { $$ = { type: 'variable_declaration', vtype: 'int', multiple: false, items: [$2], init: ExpressionFactory.fromObject($4) } }
 
     | FE variable_declaration_item '=' expression
         { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: false, items: [$2], init: $4 } }
 
-    | FE variable_declaration_item '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5) } }
+    | FE variable_declaration_item '=' sequence_definition
+        { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: false, items: [$2], init: ExpressionFactory.fromObject($4) } }
 
     | EXPR variable_declaration_item '=' expression
         { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: false, items: [$2], init: $4 } }
 
-    | EXPR variable_declaration_item '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5) } }
+    | EXPR variable_declaration_item '=' sequence_definition
+        { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: false, items: [$2], init: ExpressionFactory.fromObject($4) } }
 
     | T_STRING variable_declaration_item '=' expression
         { $$ = { type: 'variable_declaration', vtype: 'string', multiple: false, items: [$2], init: $4 } }
 
-    | T_STRING variable_declaration_item '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'string', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5) } }
+    | T_STRING variable_declaration_item '=' sequence_definition
+        { $$ = { type: 'variable_declaration', vtype: 'string', multiple: false, items: [$2], init: ExpressionFactory.fromObject($4) } }
 
     | FUNCTION variable_declaration_item '=' expression
         { $$ = { type: 'variable_declaration', vtype: 'function', multiple: false, items: [$2], init: $4 } }
@@ -882,20 +882,20 @@ variable_type_declaration
     | CONTAINER variable_declaration_item '=' expression
         { $$ = { type: 'variable_declaration', vtype: 'container', multiple: false, items: [$2], init: $4 } }
 
-    | INT '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'int', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
+    | INT '[' variable_declaration_list ']' '=' sequence_definition
+        { $$ = { type: 'variable_declaration', vtype: 'int', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($6) } }
 
-    | FE '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
+    | FE '[' variable_declaration_list ']' '=' sequence_definition
+        { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($6) } }
 
-    | EXPR '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
+    | EXPR '[' variable_declaration_list ']' '=' sequence_definition
+        { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($6) } }
 
-    | T_STRING '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'string', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
+    | T_STRING '[' variable_declaration_list ']' '=' sequence_definition
+        { $$ = { type: 'variable_declaration', vtype: 'string', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($6) } }
 
-    | CONTAINER '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'container', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
+    | CONTAINER '[' variable_declaration_list ']' '=' sequence_definition
+        { $$ = { type: 'variable_declaration', vtype: 'container', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($6) } }
     ;
 
 variable_declaration_array
@@ -935,7 +935,7 @@ return_statement
     | RETURN expression
         { $$ = { type: 'return', value: $2 } }
 
-    | RETURN '[' expression_list ']'
+    | RETURN sequence_definition
         { $$ = { type: 'return', values: $3 } }
 
     ;
@@ -977,7 +977,7 @@ variable_multiple_assignment
     : left_variable_multiple_assignment '=' function_call
         { $$ = {type: 'assign', name: $1, value: $3 }  }
 
-    | left_variable_multiple_assignment '=' '[' expression_list ']'
+    | left_variable_multiple_assignment '=' sequence_definition
         { $$ = {type: 'assign', name: $1, value: $3 } }
     ;
 
@@ -1044,7 +1044,15 @@ sequence_definition
         { $$ = {type: 'sequence', values: [{type: 'padding_seq', value: {type: 'repeat_seq', value: $2, times: $5}}]} }
     ;
 
+optional_sequence_list
+    : %empty EMPTY
+        { $$ = {type: 'sequence', values: []} }
 
+    | sequence_list
+        { $$ = {type: 'sequence', values: $1.values} }
+    ;
+
+    
 sequence_list
     : sequence_list ',' sequence
         { $$ = $1; $$.values.push($3) }
@@ -1115,8 +1123,11 @@ sequence
 
     | expression %prec EMPTY
         { $$ = $1 }
-    ;
 
+    | DOTS_FILL expression %prec ','
+        { $$ = {type: 'spread', value: $2}; }
+    ;
+/*
 multiple_expression_list
     : %empty    %prec EMPTY
         { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [], __debug: 0 }); }
@@ -1136,7 +1147,7 @@ multiple_expression_list
     | expression
         { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$1], __debug: 3 }); }
     ;
-
+*/
 expression_list
     : expression_list ',' DOTS_FILL expression %prec ','
 //        { $$ = $1; $$.values.push({ type: 'append', value: $4 }) }
@@ -1239,7 +1250,7 @@ public_declaration
     ;
 
 public_table_declaration
-    : PUBLIC_TABLE AGGREGATE '(' IDENTIFIER ',' IDENTIFIER ',' expression_list ')' IDENTIFIER '[' expression ']' '[' expression ']'
+    : PUBLIC_TABLE AGGREGATE '(' IDENTIFIER ',' IDENTIFIER ',' optional_sequence_list ')' IDENTIFIER '[' expression ']' '[' expression ']'
         { $$ = { type: 'public_table_declaration', aggregateType: $4, aggregateFunction: $6, name: $10, args: $8, cols: $12, rows: $15} }
 
     | PUBLIC_TABLE AGGREGATE '(' IDENTIFIER ',' IDENTIFIER ')' IDENTIFIER '[' expression ']' '[' expression ']'

@@ -85,6 +85,7 @@ module.exports = class Function {
     // inside function args "values" aren't visible.
     mapArguments(s) {
         if (Debug.active) console.log(s.args);
+        console.log(s);
         const eargs = this.instanceArguments(s.args);
         if (Debug.active) console.log(eargs);
         const scall = this.callToString(eargs);

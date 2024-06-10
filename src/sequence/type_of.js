@@ -25,6 +25,9 @@ module.exports = class SequenceTypeOf extends SequenceBase {
     checkNumericValues(values) {
         for (const value of values) {
             if (typeof value === 'bigint' || typeof value === 'number') continue;
+            if (!value || typeof value.asInt !== 'method') {
+                console.log(value, values);
+            }
             if (value.asInt(false) === false) { 
                 this.isSequence = false;
                 this.isList = false;
@@ -38,7 +41,10 @@ module.exports = class SequenceTypeOf extends SequenceBase {
         return this.arithSeq(e);
     }
     rangeSeq(e) {
-        return this.checkNumValues([e.from, e.to, e.times, e.toTimes]);
+        let values = [e.from, e.to];
+        if (e.times) values.push(e.times);
+        if (e.toTimes) values.push(e.toTimes);
+        return this.checkNumericValues(values);
     }
     seqList(e) {
         for (const value of e.values) {

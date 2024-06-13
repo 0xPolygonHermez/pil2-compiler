@@ -130,17 +130,22 @@ module.exports = class ProtoOut {
     saveToFile(filename) {
         fs.writeFileSync(filename, this.data);
     }
-    setAir(name, rows) {
-        const airId = this.currentSubproof.airs.length;
-        this.currentAir = {name, numRows: Number(rows)};
+    setAir(airId, name, rows) {
+        assert.equal(airId === this.currentSubproof.airs.length);
+        this.currentAir = {name, numRows: Number(rows), airId};
         this.currentSubproof.airs.push(this.currentAir);
-        return airId;
     }
-    setSubproof(name, aggregable = false) { // TODO: Add subproof value
-        this.currentSubproof = {name, aggregable, airs: []};
-        const subproofId = this.pilOut.subproofs.length;
+    useSubproof(name, aggregable = false) { // TODO: Add subproof value
+        // check if exist a subproof with this name, if not create it.
+        const subproof = this.pilOut.subproofs.find(sp => sp.name === name);
+        if (subproof) return subproof.subproofId;
+        return this.createSubproof(name, aggregable);
+    }
+    setSubproof(subproofId, name, aggregable = false) { // TODO: Add subproof value
+        // check if exist a subproof with this name, if not create it.
+        assert.equal(airId === this.pilOut.subproofs.length);
+        this.currentSubproof = {name, aggregable, airs: [], subproofId };
         this.pilOut.subproofs.push(this.currentSubproof);
-        return subproofId;
     }
     setSubproofValues(aggregations) {
         // this.currentSubproof.subproofvalues = this.spvId2Proto.filter(value => value[2] === subproofId).map(value => { return {aggType: SPV_AGGREGATIONS.indexOf(value[1])}});

@@ -61,6 +61,8 @@ module.exports = class Processor {
         this.delayedCalls = {};
         this.timers = {};
 
+        this.lastSubproofId = -1;
+        this.lastAirId = -1;
         this.airId = 0;
         this.subproofId = 0;
 
@@ -162,26 +164,24 @@ module.exports = class Processor {
     insideFunction() {
         return this.functionDeep > 0;
     }
+    declareBuiltInConstants() {
+        this.references.declare('PRIME', 'int', [], { global: true, sourceRef: this.sourceRef, const: true }, this.prime);
+        this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('SUBPROOF', 'string', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('SUBPROOF_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('AIR_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
+    }
     startExecution(statements) {
         this.sourceRef = '(start-execution)';
-        // TODO: use a constant
-        // this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
-        this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
-        this.references.declare('PRIME', 'int', [], { global: true, sourceRef: this.sourceRef }, this.prime);
-        this.references.declare('__SUBPROOF__', 'string', [], { global: true, sourceRef: this.sourceRef });
+
         this.scope.pushInstanceType('proof');
         this.sourceRef = '(execution)';
         this.execute(statements);
         this.sourceRef = '(subproof-execution)';
-        // this.executeSubproofs();
+        this.finalClosingSubproofs();
         this.finalProofScope();
         this.scope.popInstanceType();
         this.generateProtoOut();
-    }
-    executeSubproofs() {
-        for (const name of this.subproofs) {
-            this.executeSubproof(name, this.subproofs.get(name));
-        }
     }
     generateProtoOut()
     {        
@@ -331,6 +331,22 @@ module.exports = class Processor {
         this.execute(st.statements);
         this.scope.popInstanceType();
     }
+    prepareFunctionCall(func, callinfo) {
+        const mapInfo = func.mapArguments(callinfo);
+        // console.log(mapInfo);
+        // console.log(func.constructor.name);
+        // callinfo.dumpArgs(mapInfo.eargs, 'CALLINFO');
+        this.callstack.push(mapInfo.scall ?? func.name);
+        ++this.functionDeep;
+        this.scope.push();
+        return mapInfo;
+    }
+    finishFunctionCall(func) {
+        this.scope.pop();
+        --this.functionDeep;
+        this.callstack.pop();
+        if (Debug.active) console.log(`END CALL ${func.name}`, res);
+    }
     executeFunctionCall(name, callinfo) {
         const func = this.builtIn[name] ?? this.references.get(name);
         if (Debug.active) {
@@ -339,21 +355,12 @@ module.exports = class Processor {
         }
 
         if (func) {
-            const mapInfo = func.mapArguments(callinfo);
-            // console.log(mapInfo);
-            // console.log(func.constructor.name);
-            // callinfo.dumpArgs(mapInfo.eargs, 'CALLINFO');
-            this.callstack.push(mapInfo.scall ?? name);
-            ++this.functionDeep;
-            this.scope.push();
+            const mapInfo = this.prepareFunctionCall(func, callinfo);
             this.references.pushVisibilityScope();
             let res = func.exec(callinfo, mapInfo);
             this.references.popVisibilityScope();
-            this.scope.pop();
-            --this.functionDeep;
-            this.callstack.pop();
-            if (Debug.active) console.log(`END CALL ${name}`, res);
-            return typeof res === 'undefined' ? new ExpressionItems.IntValue() : res;
+            this.finishFunctionCall(func);
+            return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
         }
         this.error({}, `Undefined function ${name}`);
     }
@@ -847,80 +854,122 @@ module.exports = class Processor {
         }
         subproof.addBlock(s.statements);
     }
-    executeSubproof(subproofName, subproof) {
+    /**
+     * method to return id of subproof, if this id not defined yet, use lastSubproofId to set it
+     * @param {Subproof} subproof 
+     * @returns {number}
+     */
+    getSubproofId(subproof) {    
+        const subproofId = subproof.getId();
+        if (subproofId !== false) {
+            return subproofId;
+        }
+        ++this.lastSubproofId;
+        subproof.setId(this.lastSubproofId);
+        return this.lastSubproofId;
+    }
+    /**
+     * Open or reopen a subproof with name subproofName, this means that 
+     * start to executing inside subproof scope
+     * @param {string} subproofName 
+     * @param {Subproof} subproof 
+     */
+    openSubproof(subproof) {
         this.currentSubproof = subproof;
         this.scope.pushInstanceType('subproof');
-        this.context.subproofName = subproofName;
-        // proto.setSubproofvalues(this.subproofvalues.getPropertyValues(['id', 'aggregateType', 'subproofId']));
-        const subproofId = this.proto.setSubproof(subproofName, subproof.aggregate);
+        this.context.subproofName = subproof.name;
+        console.log(subproof);
+        this.subproofId = subproof.getId();
+        this.proto.setSubproof(this.subproofId, subproof.name, subproof.aggregate);
         Context.subproofId = this.subproofId;
-        for (const airRows of subproof.rows) {
-            console.log(`BEGIN AIR ${subproofName} (${airRows})`); //  #${this.airId}`);
-            this.rows = airRows;
-
-            // TODO: context is global?
-            const air = new Air(this.Fr, this.context, airRows);
-
-            const airName = subproofName + (subproof.rows.length > 1 ? `_${air.bits}`:'');
-            const airId = this.proto.setAir(airName, airRows);
-            Context.airId = airId;
-            Context.airName = airName;
-            
-            subproof.airs.define(airName, air);
-
-            // create built-in constants
-            this.references.set('N', [], air.rows);
-            this.references.set('BITS', [], air.bits);
-            this.references.set('__SUBPROOF__', [], subproofName);
-            if (Context.config.test.onSubproofBegin && subproof.airs.length === 1) {
-                Context.config.test.onSubproofBegin(subproof);
-            }
-
-            if (Context.config.test.onAirBegin) {
-                Context.config.test.onAirBegin(subproof, air);
-            }
-
-            this.context.push(false, subproofName);
-            this.scope.pushInstanceType('air');
-            subproof.airStart();
-            for (const statements of subproof.blocks) {
-                // REVIEW: clear uses and regular expressions
-                // this.scope.push();
-                this.execute(statements, `SUBPROOF ${subproofName}`);
-                // this.scope.pop();
-            }
-            this.finalAirScope();
-            subproof.airEnd();
-
-            // pilout generation
-            // setting id of proofitems used, be carefull with challenge (stage not defined)
-
-            this.subproofProtoOut(subproofId, airId)
-
-            this.constraints = new Constraints();
-            if (Context.config.test.onAirEnd) {
-                Context.config.test.onAirEnd(subproof, air);
-            }
-            if (Context.config.test.onSubproofEnd && subproof.airs.length === 1) {
-                Context.config.test.onSubproofEnd(subproof);
-            }
-            this.clearAirScope(airName);
-            this.scope.popInstanceType(['witness', 'fixed', 'im']);
-            this.context.pop();
-            console.log(`END AIR ${subproofName} (${airRows}) #${this.airId}`);
-            Context.airId = false;
-            Context.airName = false;
-            ++this.airId;
-        }
+    }    
+    /**
+    * close current subproof and call defered funcions, clear scope of subproof
+    */
+    closeCurrentSubproof() {
+        this.suspendCurrentSubproof();
+        this.references.clearScope('subproof');
         this.finalSubproofScope();
-        if (Context.config.protoOut === false) {
-            this.proto.setSubproofValues(this.subproofvalues.getAggreationTypesBySubproofId(subproofId));
-        }
+        if (proto) this.proto.setSubproofValues(this.subproofvalues.getAggreationTypesBySubproofId(this.subproofId));
+    }
+    /**
+    * "suspend" current because this subproof could be opened again
+    */
+    suspendCurrentSubproof() {
         this.scope.popInstanceType();
         this.currentSubproof = false;
-        Context.subproofName = false;
-        this.references.clearScope('subproof');
-        ++this.subproofId;
+        this.subproofId = false;
+        Context.subproofId = false;
+    }
+    /**
+    * create a new air on current subproof, take number of rows of N parameter of subproof
+    * if this parameter doesn't exists an error was produced
+    */
+    createAir(subproof) {
+        this.rows = this.references.get('N').asIntDefault(false);
+        if (this.rows === false) {
+            throw new Error(`Parameter N must be declared as subproof argument`);
+        }
+
+        const air = subproof.createAir(this.rows);        
+        if (proto) this.proto.setAir(air.id, air.name, this.rows);
+        Context.airId = air.id
+        Context.airName = air.name;
+        return air;
+    }
+    closeAir() {
+        console.log(`END AIR ${subproofName} (${airRows}) #${this.airId}`);
+        Context.airId = false;
+        Context.airName = false;
+    }
+    setBuiltIntConstants(subproof, air) {
+        // create built-in constants
+        this.references.set('BITS', [], air.bits);
+        this.references.set('SUBPROOF', [], subproof.name);  
+        this.references.set('SUBPROOF_ID', [], new IntValue(subproof.id));  
+        this.references.set('AIR_ID', [], new IntValue(air.id));  
+    }
+    executeSubproof(subproof, callinfo) {
+        // proto.setSubproofvalues(this.subproofvalues.getPropertyValues(['id', 'aggregateType', 'subproofId']));
+
+        this.openSubproof(subproof);
+
+        // subproof was a function derivated class
+        const mapinfo = this.prepareFunctionCall(subproof, callinfo);
+        subproof.prepare(airName ,callinfo);
+
+        const air = this.createAir(subproof);
+
+        this.setBuiltIntConstants(subproof, air);
+        this.context.push(false, subproof.name);
+        this.scope.pushInstanceType('air');
+        subproof.airStart();
+        let res = subproof.exec(air.name ,callinfo);
+        this.finalAirScope();
+        subproof.airEnd();
+
+        if (proto) this.subproofProtoOut(subproofId, airId)
+
+        this.constraints = new Constraints();
+
+        this.clearAirScope(air.name);
+        this.scope.popInstanceType(['witness', 'fixed', 'im']);
+        this.context.pop();
+        this.closeAir(air);
+
+        // closing subproof but no closing final        
+        this.suspendCurrentSubproof(false);
+
+        this.finishFunctionCall(subproof);
+
+        return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
+    }
+    finalClosingSubproofs() {
+       for (const subproof of this.subproofs.values()) {
+            if (subproof.id === false) continue;
+            this.openSubproof(subproof);
+            this.closeCurrentSubproof();
+        }
     }
     subproofProtoOut(subproofId, airId) {
         if (Context.config.protoOut === false) return;

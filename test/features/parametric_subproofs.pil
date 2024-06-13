@@ -1,0 +1,6 @@
+subproof ParametricSubproofs(int N = 0) {
+    col witness w;
+    int values[12][20];
+}
+
+ParametricSubproofs(2**8);

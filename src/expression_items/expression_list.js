@@ -23,6 +23,7 @@ class ExpressionList extends ExpressionItem {
                 this.names.push(options.names[index]);
             }
         }
+        console.log(this.names);
         this.array = new MultiArray([this.items.length]);
         this._ns_ = 'ExpressionItem';
     }
@@ -40,9 +41,15 @@ class ExpressionList extends ExpressionItem {
         return '[' + this.items.map(x => x.toString()).join(',')+']';
     }
     cloneInstance() {
-        return new ExpressionList(this.items, this.debug);
+        let instance = new ExpressionList(this.items, this.debug);
+        instance.names = [...this.names];
     }
     pushItem(item, name = false) {
+        if (name !== false) {
+            console.log('==================> NAME:' + name);
+            console.log(this.names);
+            console.log(this.constructor.name);
+        }
         assert.instanceOf(item, ExpressionItem);
         this.items.push(item.clone());
         if (this.names !== false) this.names.push(name);

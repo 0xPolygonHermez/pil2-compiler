@@ -91,7 +91,14 @@ module.exports = class ExpressionFactory {
     static _fromExpressionList(obj) {
         if (Debug.active) console.log(obj.values);
         if (Debug.active) console.log(obj.__debug);
-        const elist = new ExpressionList(this._fromObjects(obj.values, {elist: true, names: obj.names ?? false}));
+        if (obj.names) {
+            console.log('=====================> NAMES', obj.names);
+        }
+        let options = {};
+        if (obj.names) {
+            options.names = obj.names;
+        }
+        const elist = new ExpressionList(this._fromObjects(obj.values, {elist: true}), options);
         if (Debug.active) console.log(elist);
         delete obj.values;
         delete obj.names;
@@ -141,10 +148,11 @@ module.exports = class ExpressionFactory {
         return res;
     }
     static _fromCall(obj) {
+        console.log(obj);
         // console.log(`##### CALL ${obj.function.name} ${obj.debug}`);
         // console.log(util.inspect(obj, false, 10, true));
         let res = new FunctionCall(obj.function.name, obj.args ?? [], obj.indexes ?? [], {
-            name: obj.function.name.debug, names: obj.names ?? false});
+            name: obj.function.name.debug});
         // console.log(res);
         delete obj.function;
         delete obj.indexes;

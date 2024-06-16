@@ -1,6 +1,10 @@
-subproof ParametricSubproofs(int N = 0) {
+subproof ParametricSubproofs(int N = 2**11, int chunks = 16, int loops = 3) {
     col witness w;
     int values[12][20];
+    println(N, chunks, loops);
 }
 
-ParametricSubproofs(2**8);
+ParametricSubproofs();
+ParametricSubproofs(2**10, loops: 2**8);
+ParametricSubproofs(loops: 2**16);
+ParametricSubproofs(N:1 , chunks: 2, loops: 3);

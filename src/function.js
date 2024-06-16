@@ -14,12 +14,16 @@ module.exports = class Function {
         this.initialized = [data.args, data.returns, data.statements, data.name].some(x => typeof x !== 'undefined');
         this.name = data.name;
         this.nargs = 0;
+        
         if (data.args) {
             this.defineArguments(data.args);
+        } else {
+            this.argnames = [];
         }
         this.returns = data.returns ?? []
         this.statements = data.statements ?? [];
         this.sourceRef = data.sourceRef;
+        this.isBridge = false;
     }
     setValue(value) {
         if (Debug.active) {
@@ -43,76 +47,95 @@ module.exports = class Function {
     }
     defineArguments(args) {        
         this.args = {};
+        let iarg = 0;
         for (const arg of args) {
             const name = arg.name;
-            ++this.nargs;
             if (name === '') throw new Error('Invalid argument name');
             if (name in this.args) throw new Error(`Duplicated argument ${name}`);
 
-            this.args[name] = {type: arg.type, dim: arg.dim, defaultValue: arg.defaultValue};
+            // default values must be defined when define function
+            const defaultValue = typeof arg.defaultValue === 'undefined' ? arg.defaultValue : arg.defaultValue.instance();
+            this.args[name] = {type: arg.type, dim: arg.dim, defaultValue, index: iarg};
+            ++iarg;
         }
+        this.nargs = iarg;
+        this.argnames = Object.keys(this.args);
     }
     checkNumberOfArguments(args) {
         if (this.nargs === false) return;
         const argslen = args.length ?? 0;
         if (argslen < this.nargs) {
+            console.log(this.args);
             throw new Error(`Invalid number of arguments calling ${this.name} function, called with ${argslen} arguments, but defined with ${this.nargs} arguments at ${Context.sourceRef}`);
         }
     }
     // instance all called arguments on call scope before
     // scope changes. Instance, not evaluate because arguments become from compiler
-    instanceArguments(args) {
+    buildCallArguments(args, namedargs = []) {
         let eargs = [];
         let argslen = args.length ?? 0;
-        let argnames = Object.keys(this.args);
-        this.checkNumberOfArguments(args);
-        for (let iarg = 0; iarg < argslen; ++iarg) {
-            const argname = argnames[iarg] ?? 'undef';
-            if (Debug.active) {
-                console.log(`FUNC.instanceArguments ${this.name}.args[${iarg}](${argname})`, this.args[argname]);
+        let _namedargs = [];
+        let iarg = 0;
+
+        // loop for first non namedargs
+        while (iarg < argslen && (namedargs[iarg] === false || typeof namedargs[iarg] === 'undefined')) {
+            // instance when check type
+            eargs.push(args[iarg]);
+            _namedargs.push(false);
+            ++iarg;
+        }
+        // how many first n arguments are indexed-args, they aren't namedargs.
+        const indexedArgs = iarg;
+
+        // console.log(iarg, namedargs, args);
+        while (iarg < argslen) {
+            const name = namedargs[iarg] ?? false;
+            if (name === false) {
+                throw new Error(`Used a non-namedarg on position #${iarg} calling ${this.name}`);
             }
-            const arg = args[iarg];
-            const value = arg.instance({unroll: true});
-            eargs.push(value);
+            const arg = this.args[name];
+            if (typeof arg === 'undefined') {
+                throw new Error(`Not found argument named ${name} on position #${iarg} calling ${this.name}`);                
+            }
+            if (arg.index < indexedArgs) {
+                throw new Error(`Argument ${name} on position #${iarg} is called with and without name calling ${this.name}`);                
+            }
+            if (typeof _namedargs[arg.index] !== 'undefined') {
+                throw new Error(`Argument ${name} is used more than once (position #${iarg}) calling ${this.name}`);                
+            }
+            _namedargs[arg.index] = name;
+            eargs[arg.index] = args[iarg];
+            ++iarg;
         }
-        if (Debug.active) {
-            console.log('ARGUMENTS '+eargs.map(x => x.toString()).join(','));
-        }
-        return eargs;
+        return [_namedargs, eargs];
     }
     // mapArgument was called before enter on function visibility scope because
     // inside function args "values" aren't visible.
     mapArguments(s) {
-        if (Debug.active) console.log(s.args);
-        const eargs = this.instanceArguments(s.args);
-        if (Debug.active) console.log(eargs);
-        const scall = this.callToString(eargs);
-        if (Debug.active) {
-            console.log(`FUNCTION.mapArguments(s.args) ${this.name}`);
-            console.log(util.inspect(s.args, false, null, true));
-            console.log(`FUNCTION.mapArguments ${this.name}`);
-            console.log(util.inspect(eargs, false, null, true));
-        }
-        this.checkArgumentsTypes(eargs);
+        const [namedargs, eargs] = this.buildCallArguments(s.args, s.namedargs);
+        const scall = this.callToString(namedargs, eargs);
+        this.instanceArgumentsTypes(eargs);
         return {eargs, scall};
     }
     // calculate a string to debug, with function name and list of arguments
     // with its values
-    callToString(eargs) {
-        let iarg = 0;
+    callToString(namedargs, eargs) {
         let textArgs = [];
-        for (const name in this.args) {
-            textArgs.push(name + ((eargs[iarg] && typeof eargs[iarg].toString === 'function') ? ': ' + eargs[iarg].toString():''));
-            ++iarg;
+        for (let iarg = 0; iarg < eargs.length; ++iarg) {
+            const namedarg = namedargs[iarg] ?? false;
+            const value = eargs[iarg];
+            textArgs.push((namedarg !== false ? `${namedarg}:` : '') + ((value && typeof value.toString === 'function') ? value.toString():''));
         }
         return this.name + '(' + textArgs.join(', ') + ')';
     }
 
-    // to check arguments used in call, checks if its types and dimensions match with
+    // to instance and check arguments used in call, checks if its types and dimensions match with
     // the arguments defined on function
-    checkArgumentsTypes(args) {
-        let iarg = 0;
-        for (const name in this.args) {
+    instanceArgumentsTypes(eargs) {
+        for (let iarg = 0; iarg < eargs.length; ++iarg) {
+            // default values are ignored
+            if (typeof eargs[iarg] === 'undefined') continue;
+            eargs[iarg] = eargs[iarg].eval({unroll: true});
             // TODO: checking types and dims
             /*
             if (Array.isArray(args[iarg])) {
@@ -122,10 +145,9 @@ module.exports = class Function {
             } else {
                 args[iarg].dump();
             }*/
-            ++iarg;
         }
     }
-    declareAndInitializeArguments(eargs) {
+    declareAndInitializeArguments(eargs) {        
         Context.processor.sourceRef = this.sourceRef;
         let iarg = 0;
         for (const name in this.args) {

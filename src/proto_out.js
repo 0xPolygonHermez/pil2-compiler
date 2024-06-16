@@ -131,7 +131,7 @@ module.exports = class ProtoOut {
         fs.writeFileSync(filename, this.data);
     }
     setAir(airId, name, rows) {
-        assert.equal(airId === this.currentSubproof.airs.length);
+        assert.equal(airId, this.currentSubproof.airs.length);
         this.currentAir = {name, numRows: Number(rows), airId};
         this.currentSubproof.airs.push(this.currentAir);
     }
@@ -143,7 +143,7 @@ module.exports = class ProtoOut {
     }
     setSubproof(subproofId, name, aggregable = false) { // TODO: Add subproof value
         // check if exist a subproof with this name, if not create it.
-        assert.equal(airId === this.pilOut.subproofs.length);
+        assert.equal(subproofId, this.pilOut.subproofs.length);
         this.currentSubproof = {name, aggregable, airs: [], subproofId };
         this.pilOut.subproofs.push(this.currentSubproof);
     }

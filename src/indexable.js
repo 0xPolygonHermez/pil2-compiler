@@ -13,6 +13,7 @@ module.exports = class Indexable {
         this.type = type;
         this.options = options ?? {}
         this.rtype = this.options.rtype ?? type;
+        this.const = options.const ?? false;
         assert.instanceOf(this.expressionItemClass.prototype, ExpressionItem);
         this.labelRanges = new LabelRanges();
         this.debug = false;
@@ -58,8 +59,11 @@ module.exports = class Indexable {
         for (let index = 0; index < count; ++index) {
             const absoluteIndex = index + id;
             const _label = label + (multiarray ? multiarray.offsetToIndexesString(index) : '');
-            this.values[absoluteIndex] = this.getEmptyValue(absoluteIndex, {...data, label: _label});
-            this.values[absoluteIndex].sourceRef = Context.sourceRef;
+            const initialValue = this.const ? null : this.getEmptyValue(absoluteIndex, {...data, label: _label});
+            this.values[absoluteIndex] = initialValue;
+            if (initialValue !== null) {
+                this.values[absoluteIndex].sourceRef = Context.sourceRef;
+            }
             if (this.debug) {
                 console.log(`INIT ${this.constructor.name}.${this.type} @${absoluteIndex} (${id}+${index}) ${this.values[absoluteIndex]} LABEL:${label}`);
             }
@@ -117,7 +121,7 @@ module.exports = class Indexable {
     }
 
     isDefined(id) {
-        return (typeof this.values[id] != 'undefined')
+        return (typeof this.values[id] !== 'undefined' && (!this.const || this.values[id] !== null));
     }
 
     define(id, value) {
@@ -133,6 +137,14 @@ module.exports = class Indexable {
         return this.values.length;
     }
     set(id, value) {
+        const defined = this.isDefined(id);
+        if (defined && this.const) {
+            throw new Error(`Invalid assignation at ${Context.sourceRef} to const indexable element [${id}]`);
+        }
+        if (!defined && this.const) {
+            this.values[id] = value;
+            return;
+        }
         const item = this.get(id);
         if (assert.isEnabled) assert.ok(item, {type: this.type, definition: this.definitionClass, id, item});
         if (typeof item.setValue !== 'function') {

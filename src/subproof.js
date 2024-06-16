@@ -2,19 +2,15 @@ const Definitions = require("./definitions.js");
 // const Airs = require("./airs.js");
 const Air = require("./air.js")
 const Context = require('./context.js');
-const Function = require('./function.js');
-module.exports = class Subproof extends Function {
-
-    // constructor (statements, aggregate, options = {}) {
-    constructor (id, data = {}) {
+const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js");
+const ExpressionItems = require('./expression_items.js');
+module.exports = class Subproof {
+    constructor (name, statements, aggregate) {
         // TODO: when instance a subproof return an integer (as a handler id)
-        super(id, data);
-        // rows, statements, aggregate
-        // this.airs = new Airs(this);
-        this.airs = [];
-        this.aggregate = data.aggregate ? true : false;
         this.id = false;
-        this.name = options.name;
+        this.airs = [];
+        this.aggregate = aggregate;
+        this.name = name;
         this.blocks = [statements];
 
         this.insideFirstAir = false;
@@ -29,14 +25,14 @@ module.exports = class Subproof extends Function {
         this.id = id;
     }
     createAir(rows, options = {}) {
-        const id = this.airs.lengths;
+        const id = this.airs.length;
         const name = options.name ??  (this.name + (id ? `_${id}`:''));
         const air = new Air(id, rows, {...options, name});
         this.airs.push(air);
         return air;
     }
     addBlock(statements) {
-        this.statements = [...this.statemens, ...statements];
+        this.statements = [...this.statements, ...statements];
     }
     airStart() {
         this.insideAir = true;
@@ -86,21 +82,18 @@ module.exports = class Subproof extends Function {
 
         return this.spvDeclaredInFirstAir[name].res;
     }
-    prepare(callInfo, mapInfo) {
-        this.declareAndInitializeArguments(mapInfo.eargs);
-    }
-
     exec(callInfo, mapInfo) {
-        for (const statements of subproof.blocks) {
+        let res = false;
+        for (const statements of this.blocks) {
             // REVIEW: clear uses and regular expressions
             // this.scope.push();
-            let res = Context.processor.execute(statements, `SUBPROOF ${this.name}`);
+            res = Context.processor.execute(statements, `SUBPROOF ${this.name}`);
             if (res instanceof FlowAbortCmd) {
                 assert.instanceOf(res, ReturnCmd);
                 Context.processor.traceLog('[TRACE-BROKE-RETURN]', '38;5;75;48;5;16');
                 res = res.reset();
             }
         }
-        return res === false ? new ExpressionItems.IntValue(0) : res;
-    }    
+        return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue(0) : res;
+    }   
 }

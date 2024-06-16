@@ -53,7 +53,6 @@ when                                        { return 'WHEN' }
 aggregate                                   { return 'AGGREGATE' }
 stage                                       { return 'STAGE' }
 
-once                                        { return 'ONCE' }
 on                                          { return 'ON' }
 private                                     { return 'PRIVATE' }
 final                                       { return 'FINAL' }
@@ -782,9 +781,6 @@ codeblock_closed
 
     | DO statement_no_closed WHILE '(' expression ')'
         { $$ = { type: 'do', condition: $5, statements: $2 } }
-
-    | ONCE defined_scopes non_delimited_statement
-        { $$ = { ...$2, type: 'once', statements: $3 } }
 
     | SWITCH '(' expression ')' case_body
         { $$ = { type: 'switch', value: $3, cases: $5.cases } }

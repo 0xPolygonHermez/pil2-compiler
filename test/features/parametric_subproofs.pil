@@ -1,10 +1,29 @@
-subproof ParametricSubproofs(int N = 2**11, int chunks = 16, int loops = 3) {
+
+subproof PSA(int N = 2**11, int chunks = 16, int loops = 3) {
+    container subproof.ps {
+        int k = 100;
+    }
     col witness w;
     int values[12][20];
-    println(N, chunks, loops);
+    subproof.ps.k = subproof.ps.k + 1;
+    println("PBA", N, chunks, loops, subproof.ps.k);
 }
 
-ParametricSubproofs();
-ParametricSubproofs(2**10, loops: 2**8);
-ParametricSubproofs(loops: 2**16);
-ParametricSubproofs(N:1 , chunks: 2, loops: 3);
+subproof PSB(int N = 2**11, int chunks = 16, int loops = 3) {
+    container subproof.ps {
+        int k = 200;
+    }
+    col witness w;
+    int values[12][20];
+    subproof.ps.k = subproof.ps.k + 1;
+    println("PBA", N, chunks, loops, subproof.ps.k);
+}
+
+PSA();
+PSB();
+PSA(2**10, loops: 2**8);
+PSB(2**10, loops: 2**8);
+PSA(loops: 2**16);
+PSA(N:1 , chunks: 2, loops: 3);
+PSB(loops: 2**16);
+PSB(N:1 , chunks: 2, loops: 3);

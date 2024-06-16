@@ -870,7 +870,7 @@ module.exports = class Processor {
         }
         ++this.lastSubproofId;
         subproof.setId(this.lastSubproofId);
-        this.proto.setSubproof(this.subproofId, subproof.name, subproof.aggregate);
+        this.proto.setSubproof(this.lastSubproofId, subproof.name, subproof.aggregate);
         return this.lastSubproofId;
     }
     /**
@@ -1172,13 +1172,6 @@ module.exports = class Processor {
     }
     execCode(s) {
         return this.execute(s.statements,`CODE ${this.sourceRef}`);
-    }
-    execOnce(s) {
-        if (!s.executed) {
-            s.executed = true;
-            return this.execute(s.statements,`CODE ${this.sourceRef}`);
-        }
-        if (Debug.active) console.log(`Ignore once section because it has already executed ${s.debug}`);
     }
     execConstraint(s) {
         const scopeType = this.scope.getInstanceType();

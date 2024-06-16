@@ -91,9 +91,6 @@ module.exports = class ExpressionFactory {
     static _fromExpressionList(obj) {
         if (Debug.active) console.log(obj.values);
         if (Debug.active) console.log(obj.__debug);
-        if (obj.names) {
-            console.log('=====================> NAMES', obj.names);
-        }
         let options = {};
         if (obj.names) {
             options.names = obj.names;
@@ -148,7 +145,6 @@ module.exports = class ExpressionFactory {
         return res;
     }
     static _fromCall(obj) {
-        console.log(obj);
         // console.log(`##### CALL ${obj.function.name} ${obj.debug}`);
         // console.log(util.inspect(obj, false, 10, true));
         let res = new FunctionCall(obj.function.name, obj.args ?? [], obj.indexes ?? [], {

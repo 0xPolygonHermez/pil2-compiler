@@ -135,11 +135,13 @@ module.exports = class ProtoOut {
         this.currentAir = {name, numRows: Number(rows), airId};
         this.currentSubproof.airs.push(this.currentAir);
     }
-    useSubproof(name, aggregable = false) { // TODO: Add subproof value
+    useSubproof(subproofId) { // TODO: Add subproof value
         // check if exist a subproof with this name, if not create it.
-        const subproof = this.pilOut.subproofs.find(sp => sp.name === name);
-        if (subproof) return subproof.subproofId;
-        return this.createSubproof(name, aggregable);
+        const subproof = this.pilOut.subproofs.find(sp => sp.subproofId === subproofId);
+        if (typeof subproof === 'undefined') {
+            throw new Error(`Using subproofId ${subproofId} not found on proto`);
+        }
+        this.currentSubproof = subproof;
     }
     setSubproof(subproofId, name, aggregable = false) { // TODO: Add subproof value
         // check if exist a subproof with this name, if not create it.

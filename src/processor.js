@@ -866,6 +866,7 @@ module.exports = class Processor {
     getSubproofId(subproof) {    
         const subproofId = subproof.getId();
         if (subproofId !== false) {
+            this.proto.useSubproof(subproofId);
             return subproofId;
         }
         ++this.lastSubproofId;
@@ -883,7 +884,7 @@ module.exports = class Processor {
         this.currentSubproof = subproof;
         this.scope.pushInstanceType('subproof');
         this.context.subproofName = subproof.name;
-        this.subproofId = this.getSubproofId(subproof);
+        this.subproofId = this.getSubproofId(subproof);        
         Context.subproofId = this.subproofId;
     }    
     /**

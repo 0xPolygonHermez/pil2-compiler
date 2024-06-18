@@ -20,6 +20,7 @@ module.exports = class ExpressionVariable extends Variable {
             return;
         }
         if (Debug.active) console.log(value);
+        console.log(value.constructor.name);
         this.value = value.clone();
         /*
         if (value instanceof ExpressionClass || value instanceof ValueItem) {

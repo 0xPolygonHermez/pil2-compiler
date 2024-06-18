@@ -8,7 +8,7 @@ const assert = require('./assert.js');
 module.exports = class Assign {
     constructor () {
     }
-    assign (name, indexes, value) {
+    assign (name, indexes, value, operation) {
         if (Debug.active) {
             console.log(util.inspect(value, false, 200, true));
             console.log(indexes);
@@ -16,7 +16,7 @@ module.exports = class Assign {
         value = this.getValue(value);
         if (Debug.active) console.log(util.inspect(value, false, 200, true));
         assert.notStrictEqual(value, null);
-        return this.#assign(name, indexes, value);
+        return this.#assign(name, indexes, value, operation);
     }
     getValue(value) {
         if (typeof value.eval !== 'function') {
@@ -28,19 +28,11 @@ module.exports = class Assign {
         }
         return value;
     }
-    #assign (name, indexes, value) {
+    #assign (name, indexes, value, operation) {
         // console.log(`ASSIGN(${name})[#${indexes.length ?? 0}] = ${value.constructor ? (value.constructor.name ?? typeof value):typeof value}`);
         // const array = Context.references.getArray(name, indexes);
         const reference = Context.references.getReference(name);
         return reference.set(value, indexes);
-        /*
-        const dim = array.dim ?? 0;
-        if (dim > 0) {
-            // array asignation as array or subarray copy
-            return this.assignArray(name, indexes, value, array);
-        }
-        console.log(value);
-        return Context.references.set(name, indexes, value);*/
     }
     assignType(type, name, indexes, value) {
         if (Debug.active) console.log(type);

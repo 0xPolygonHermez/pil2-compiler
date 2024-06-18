@@ -20,7 +20,12 @@ module.exports = class SubproofFunction extends Function {
         const res = Context.processor.executeSubproof(this.subproof, this, callInfo);
         return res === false ? new ExpressionItems.IntValue(0) : res;
     }    
-
+    declareArgument(name, type, lengths, options, value) {
+        if (name !== 'N') {
+            return super.declareArgument(name, type, lengths, options, value);
+        }
+        Context.references.set('N', [], value);
+    }
     toString() {
         return `[Subproof(func) ${this.name}${this.args ? '(' + Object.keys(this.args).join(',') + ')': ''}]`;
     }

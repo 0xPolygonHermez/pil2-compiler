@@ -9,6 +9,8 @@ air PSA(int N = 2**11, int chunks = 16, int loops = 3) {
     int values[12][20];
     pepa.k = pepa.k + 1;
     println("PBA", N, chunks, loops, pepa.k);
+    on final subproof finalPSA();
+    on final air finalAirPSA();
 }
 
 air PSB(int N = 2**11, int chunks = 16, int loops = 3) {
@@ -21,8 +23,22 @@ air PSB(int N = 2**11, int chunks = 16, int loops = 3) {
     int values[12][20];
     pepa.k = pepa.k + 1;
     println("PBA", N, chunks, loops, pepa.k);
+    on final subproof finalPSB();
+    on final air finalAirPSB();
 }
 
+function finalAirPSA() {
+    println("finalAirPSA");
+}
+function finalAirPSB() {
+    println("finalAirPSB");
+}
+function finalPSA() {
+    println("finalPSA");
+}
+function finalPSB() {
+    println("finalPSB");
+}
 function me(int k) {
     container subproof.k alias pepe {
         int counter = k;
@@ -31,7 +47,7 @@ function me(int k) {
     println("ME.PEPE", pepe.counter);
 }
 
-PSA();
+println(PSA());
 PSB();
 PSA(2**10, loops: 2**8);
 PSB(2**10, loops: 2**8);

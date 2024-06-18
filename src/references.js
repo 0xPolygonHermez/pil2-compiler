@@ -441,7 +441,7 @@ module.exports = class References {
             reference = this.references[name] ?? false;
         }
         if (!reference) {
-            this.containers.getReference(name, false);
+            reference = this.containers.getReference(name, false);
         }
         return reference;
     }
@@ -493,7 +493,7 @@ module.exports = class References {
             if (reference) break;
         }
         if (!reference) {
-             if (typeof defaultValue !== 'undefined') return defaultValue;
+            if (typeof defaultValue !== 'undefined') return defaultValue;
             throw new Exceptions.ReferenceNotFound(names.join(','));
         }
 

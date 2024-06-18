@@ -41,7 +41,8 @@ class ExpressionList extends ExpressionItem {
     }
     cloneInstance() {
         let instance = new ExpressionList(this.items, this.debug);
-        instance.names = [...this.names];
+        instance.names = this.names === false ? false : [...this.names];
+        return instance;
     }
     pushItem(item, name = false) {
         assert.instanceOf(item, ExpressionItem);

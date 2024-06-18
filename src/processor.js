@@ -167,6 +167,7 @@ module.exports = class Processor {
     }
     declareBuiltInConstants() {
         this.references.declare('PRIME', 'int', [], { global: true, sourceRef: this.sourceRef, const: true }, this.prime);
+        this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('SUBPROOF', 'string', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('SUBPROOF_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
@@ -741,7 +742,7 @@ module.exports = class Processor {
         if (!s.contents) {
             // to support dynamic includes, add some internal statements need to compile inside subproof
             // but after take compiled statements. TODO: analyze use current subproof name
-            const sts = this.compiler.loadInclude(s.file.asString(), {preSrc: 'subproof __(2**2) {\n', postSrc: '\n};\n'});
+            const sts = this.compiler.loadInclude(s.file.asString(), {preSrc: 'air __(int N=2**2) {\n', postSrc: '\n};\n'});
             if (sts === false) {
                 throw new Error(`ERROR loading include ${s.file.asString()}`);
             }
@@ -753,7 +754,7 @@ module.exports = class Processor {
         const requireId = s.file.asString();
         if (!s.contents) {
             // TODO: check if sense use dynamic requires
-            const sts = this.compiler.loadInclude(requireId, {preSrc: 'subproof __(2**2) {\n', postSrc: '\n};\n'});
+            const sts = this.compiler.loadInclude(requireId, {preSrc: 'air __(int N=2**2) {\n', postSrc: '\n};\n'});
             if (sts === false) {
                 return;
             }
@@ -834,27 +835,27 @@ module.exports = class Processor {
             throw new Error(`Invalid N ${rows}. N must be a power of 2`);
         }
     }
-    execSubproofDefinition(s) {
+    execAirDefinition(s) {
         const subproofName = s.name ?? false;
         if (subproofName === false) {
-            this.error(s, `subproof not defined correctly`);
+            this.error(s, `air not defined correctly`);
         }
 
         const subproof = new Subproof(subproofName, s.statements, s.aggregate ?? false);
-        this.subproofs.define(subproofName, subproof, `subproof ${subproofName} has been defined previously on ${this.context.sourceRef}`);
+        this.subproofs.define(subproofName, subproof, `air ${subproofName} has been defined previously on ${this.context.sourceRef}`);
 
         const id = this.references.declare(subproofName, 'function', [], {sourceRef: Context.sourceRef});
         const subproofFunc = new SubproofFunction(id, {args: s.args, name: subproofName, subproof, sourceRef: Context.sourceRef});
         this.references.set(subproofName, [], subproofFunc);
     }
-    execSubproofBlock(s) {
+    execAirBlock(s) {
         const subproofName = s.name ?? false;
         if (subproofName === false) {
-            this.error(s, `subproof not defined correctly`);
+            this.error(s, `air not defined correctly`);
         }
         const subproof = this.subproofs.get(subproofName);
         if (!subproof) {
-            throw new Error(`Subproof definition ${subproofName} hasn't been defined before subproof block`);
+            throw new Error(`Air definition ${subproofName} hasn't been defined before air block`);
         }
         subproof.addBlock(s.statements);
     }
@@ -891,9 +892,9 @@ module.exports = class Processor {
     * close current subproof and call defered funcions, clear scope of subproof
     */
     closeCurrentSubproof() {
+        this.finalSubproofScope();
         this.suspendCurrentSubproof();
         this.references.clearScope('subproof');
-        this.finalSubproofScope();
         if (this.proto) this.proto.setSubproofValues(this.subproofvalues.getAggreationTypesBySubproofId(this.subproofId));
     }
     /**
@@ -1023,14 +1024,15 @@ module.exports = class Processor {
     }
     callDelayedFunctions(scope, event) {
         if (Debug.active) console.log(this.delayedCalls);
-        if (typeof this.delayedCalls[scope] === 'undefined' || typeof this.delayedCalls[scope][event] === 'undefined') {
+        const _scope = scope === 'subproof' ? `subproof#${Context.subproofId}` : scope;
+        if (typeof this.delayedCalls[_scope] === 'undefined' || typeof this.delayedCalls[_scope][event] === 'undefined') {
             return false;
         }
-        for (const fname in this.delayedCalls[scope][event]) {
-            if (Debug.active) console.log(`CALL DELAYED(${scope},${event}) FUNCTION ${fname}`);
+        for (const fname in this.delayedCalls[_scope][event]) {
+            if (Debug.active) console.log(`CALL DELAYED(${_scope},${event}) FUNCTION ${fname}`);
             this.execCall({ op: 'call', function: {name: fname}, args: [] });
         }
-        this.delayedCalls[scope][event] = {};
+        this.delayedCalls[_scope][event] = {};
     }
     execWitnessColDeclaration(s) {
         this.colDeclaration(s, 'witness', false, true, {stage: s.stage ? Number(s.stage):0 });
@@ -1051,7 +1053,7 @@ module.exports = class Processor {
                 if (seq.dump) seq.dump();
                 else console.log(seq);
             }
-            console.log(this.declareFullReference(colname, 'fixed', lengths, {global}, seq));
+            this.declareFullReference(colname, 'fixed', lengths, {global}, seq);
         }
     }
     execDebugger(s) {
@@ -1115,16 +1117,19 @@ module.exports = class Processor {
         if (['proof', 'subproof', 'air'].includes(scope) === false) {
             throw new Error(`delayed function call scope ${scope} no supported`);
         }
-        if (typeof this.delayedCalls[scope] === 'undefined') {
-            this.delayedCalls[scope] = {};
+
+        const _scope = scope === 'subproof' ? `subproof#${Context.subproofId}` : scope;
+
+        if (typeof this.delayedCalls[_scope] === 'undefined') {
+            this.delayedCalls[_scope] = {};
         }
-        if (typeof this.delayedCalls[scope][event] === 'undefined') {
-            this.delayedCalls[scope][event] = {};
+        if (typeof this.delayedCalls[_scope][event] === 'undefined') {
+            this.delayedCalls[_scope][event] = {};
         }
-        if (typeof this.delayedCalls[scope][event][fname] === 'undefined') {
-            this.delayedCalls[scope][event][fname] = {sourceRefs: []};
+        if (typeof this.delayedCalls[_scope][event][fname] === 'undefined') {
+            this.delayedCalls[_scope][event][fname] = {sourceRefs: []};
         }
-        this.delayedCalls[scope][event][fname].sourceRefs.push(this.context.sourceRef);
+        this.delayedCalls[_scope][event][fname].sourceRefs.push(this.context.sourceRef);
     }
     execExpr(s) {
         s.expr.eval();
@@ -1303,13 +1308,12 @@ module.exports = class Processor {
         // create a tag for each substitution string
         const codeTags = tags.map((x, index) => 'expr ____'+index+' = '+x.expr+";").join("\n");
 
-        // compile a list of tags to created its associated expressions
         // this expressions aren't executed, only compiled for this reason
         // we don't need create a context.
         const compiledTags = this.compiler.parseExpression(codeTags);
 
         // evaluating different init of each tag
-        const stringTags = compiledTags.map(e => e.init.eval({unroll: true}).toString());
+        const stringTags = compiledTags.map(e => e.statements.init.eval({unroll: true}).toString());
 
         // replace on string each tag for its value
         const evaluatedTemplate = stringTags.map((s, index) => tags[index].pre + s).join('')+lastS;

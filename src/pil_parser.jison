@@ -418,6 +418,9 @@ statement_closed
     | HINT expression CS
        { $$ = { type: 'hint', name: $1, data: $2 }}
 
+    | include_directive
+        { $$ = $1 }
+
     | function_definition
         { $$ = $1 }
 
@@ -648,9 +651,6 @@ statement_no_closed
         { $$ = { type: 'constraint', left: $1, right: $3 } }
 
     | delayed_function_call
-        { $$ = $1 }
-
-    | include_directive
         { $$ = $1 }
 
     | public_declaration
@@ -1302,14 +1302,14 @@ subproof_value_declaration
 
 
 subproof_definition
-    : SUBPROOF AGGREGATE IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
-        { $$ = { type: 'subproof_definition', aggregate: true, name: $3, ...$5, statements: $8.statements } }
+    : AIR AGGREGATE IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
+        { $$ = { type: 'air_definition', aggregate: true, name: $3, ...$5, statements: $8.statements } }
 
-    | SUBPROOF IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
-        { $$ = { type: 'subproof_definition', aggregate: false, name: $2, ...$4, statements: $7.statements } }
+    | AIR IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
+        { $$ = { type: 'air_definition', aggregate: false, name: $2, ...$4, statements: $7.statements } }
 
-    | SUBPROOF IDENTIFIER '{' statement_block '}'
-        { $$ = { type: 'subproof_block', aggregate: false, name: $2, statements: $4.statements } }
+    | AIR IDENTIFIER '{' statement_block '}'
+        { $$ = { type: 'air_block', aggregate: false, name: $2, statements: $4.statements } }
     ;
 
 constant_definition

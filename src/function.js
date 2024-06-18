@@ -135,7 +135,7 @@ module.exports = class Function {
         for (let iarg = 0; iarg < eargs.length; ++iarg) {
             // default values are ignored
             if (typeof eargs[iarg] === 'undefined') continue;
-            eargs[iarg] = eargs[iarg].eval({unroll: true});
+            eargs[iarg] = eargs[iarg].instance({unroll: true});
             // TODO: checking types and dims
             /*
             if (Array.isArray(args[iarg])) {
@@ -191,8 +191,11 @@ module.exports = class Function {
             console.log(value.dim);
             throw new Error(`Invalid match dimensions on call ${this.name} and parameter ${name} (${lengths.length} !== ${arg.dim})`);
         }
-        Context.references.declare(name, arg.type, lengths, {sourceRef: this.sourceRef}, value);
+        this.declareArgument(name, arg.type, lengths, {sourceRef: Context.sourceRef}, value);
         return false;
+    }
+    declareArgument(name, type, lengths, options, value) {
+        Context.references.declare(name, type, lengths, options, value);
     }
     exec(callInfo, mapInfo) {
         this.declareAndInitializeArguments(mapInfo.eargs);

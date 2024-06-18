@@ -10,12 +10,17 @@ class ExpressionList extends ExpressionItem {
         super(options);
         this.indexes = [items.length];
         this.label = '';
+        this.names = [];
         if (options.cloneItems === false) {
             this.items = items;
+            this.names = options.names ?? false;
         } else {
             this.items = [];
-            for (const item of items) {
-                this.items.push(item.clone());
+            this.names = options.names ? [] : false;
+            for (let index = 0; index < items.length; ++index) {
+                this.items.push(items[index].clone());
+                if (!options.names) continue;
+                this.names.push(options.names[index]);
             }
         }
         this.array = new MultiArray([this.items.length]);
@@ -35,11 +40,14 @@ class ExpressionList extends ExpressionItem {
         return '[' + this.items.map(x => x.toString()).join(',')+']';
     }
     cloneInstance() {
-        return new ExpressionList(this.items, this.debug);
+        let instance = new ExpressionList(this.items, this.debug);
+        instance.names = this.names === false ? false : [...this.names];
+        return instance;
     }
-    pushItem(item) {
+    pushItem(item, name = false) {
         assert.instanceOf(item, ExpressionItem);
         this.items.push(item.clone());
+        if (this.names !== false) this.names.push(name);
         this.indexes = [this.items.length];
     }
     evalInside(options = {}) {

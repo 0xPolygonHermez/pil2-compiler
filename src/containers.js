@@ -7,6 +7,7 @@ module.exports = class Containers {
         this.current = false;
         this.uses = [];
         this.aliases = [];
+        this.subproofContainers = [];
     }
     addScopeAlias(alias, value) {
         // NOTE: there is no need to check for aliases because by grammatical definition,
@@ -65,19 +66,33 @@ module.exports = class Containers {
         // if container is defined, contents is ignored but alias must be defined
         if (alias) {
             this.addScopeAlias(alias, name);
-        }
+        }        
+        
+        if (this.isSubproofContainer(name)) {
+            const subproofId = Context.subproofId;
+            if (typeof this.subproofContainers[subproofId] === 'undefined') {
+                this.subproofContainers[subproofId] = {};
+            }
+            if (this.subproofContainers[subproofId][name]) {
+                return false;
+            }
+            this.subproofContainers[subproofId][name] = {scope: this.parent.getNameScope(name), alias, subproofId, references: {}};            
+        } else {
+            // console.log(`CREATE CONTAINER ${name}`);
+            // if container is defined, contents is ignored
+            if (this.containers[name]) {
+                return false;
+            }
 
-        // console.log(`CREATE CONTAINER ${name}`);
-        // if container is defined, contents is ignored
-        if (this.containers[name]) {
-            return false;
+            // const nameInfo = this.decodeName(name).scope;    
+            this.containers[name] = {scope: this.parent.getNameScope(name), alias, subproofId: false, references: {}};
+            // console.log(this.containers[name]);
         }
-
-        // const nameInfo = this.decodeName(name).scope;    
-        this.containers[name] = {scope: this.parent.getNameScope(name), alias, references: {}};
-        // console.log(this.containers[name]);
         this.current = name;
         return true;
+    }
+    isSubproofContainer(name) {
+        return name.startsWith('subproof.');
     }
     inside() {
         return this.current;
@@ -89,16 +104,20 @@ module.exports = class Containers {
         this.current = false;
     }
     isDefined(name) {
-        return (this.containers[name] ?? false) !== false;
+        return this.get(name) !== false;
     }
     get (name) {
+        if (this.isSubproofContainer(name)) {
+            const subproofId = Context.subproofId;
+            return this.subproofContainers[subproofId] ? (this.subproofContainers[subproofId][name] ?? false) : false;
+        }
         return this.containers[name] ?? false;
     }
     addReference(name, reference) {
         if (this.current === false) {
             throw new Error(`Could add reference ${name} to closed container`);
         }
-        const container = this.containers[this.current];
+        const container = this.get(this.current);
         // console.log(this.containers);
         // console.log(this.current);
         if (container.references[name]) {
@@ -107,7 +126,7 @@ module.exports = class Containers {
         container.references[name] = reference;
     }
     addUse(name) {
-        if (!this.containers[name]) {
+        if (!this.isDefined(name)) {
             // TODO: defined must be check containers
             throw new Error(`Use not created container ${name}`);
         }
@@ -124,11 +143,12 @@ module.exports = class Containers {
     getReference(name, defaultValue) {
         return this.#getReference(name, defaultValue, this.current, true);
     }
-    #getReference(name, defaultValue, container, uses) {
+    #getReference(name, defaultValue, containerName, uses) {
         // first search on specific container
         let reference = false;
+        let container = containerName ? this.get(containerName) : false;
         if (container) {
-            return this.containers[container].references[name] ?? defaultValue;
+            return container.references[name] ?? defaultValue;
         }
         if (!uses) return defaultValue; 
 
@@ -136,13 +156,20 @@ module.exports = class Containers {
         let usesIndex = this.uses.length;
         while (!reference && usesIndex > 0) {
             --usesIndex;
-            reference = this.containers[this.uses[usesIndex]].references[name] ?? false;
+            container = this.get(this.uses[usesIndex]);
+            reference = container ? (container.references[name] ?? false) : false;
         }
         return reference ? reference : defaultValue;
     }
     *[Symbol.iterator]() {
         for (let name in this.containers) {
           yield name;
+        }
+        const subproofId = Context.subproofId;
+        if (this.subproofContainers[subproofId]) {
+            for (let name in this.subproofContainers[subproofId]) {
+                yield name;
+            }
         }
     }
 }

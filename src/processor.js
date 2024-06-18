@@ -16,6 +16,7 @@ const Sequence = require("./sequence.js");
 const List = require("./list.js");
 const Assign = require("./assign.js");
 const Function = require("./function.js");
+const SubproofFunction = require("./subproof_function.js");
 const PackedExpressions = require("./packed_expressions.js");
 const ProtoOut = require("./proto_out.js");
 const FixedCols = require("./fixed_cols.js");
@@ -58,6 +59,8 @@ module.exports = class Processor {
         this.delayedCalls = {};
         this.timers = {};
 
+        this.lastSubproofId = -1;
+        this.lastAirId = -1;
         this.airId = 0;
         this.subproofId = 0;
 
@@ -98,7 +101,7 @@ module.exports = class Processor {
         ExpressionItem.setManager(ExpressionItems.Subproofval, this.subproofvalues);
         this.references.register('subproofvalue', this.subproofvalues);
 
-        this.functions = new Indexable('function', Function, ExpressionItems.FunctionCall);
+        this.functions = new Indexable('function', Function, ExpressionItems.FunctionCall, {const: true});
         ExpressionItem.setManager(ExpressionItems.FunctionCall, this.functions);
         this.references.register('function', this.functions);
 
@@ -145,33 +148,32 @@ module.exports = class Processor {
             const builtInCls = require(__dirname + '/builtin/'+ filename);
             const builtInObj = new builtInCls(this);
             this.builtIn[builtInObj.name] = builtInObj;
-            this.references.declare(builtInObj.name, 'function', [], [], builtInObj);
+            this.references.declare(builtInObj.name, 'function', [], {}, builtInObj);
         }
     }
     insideFunction() {
         return this.functionDeep > 0;
     }
+    declareBuiltInConstants() {
+        this.references.declare('PRIME', 'int', [], { global: true, sourceRef: this.sourceRef, const: true }, this.prime);
+        this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('SUBPROOF', 'string', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('SUBPROOF_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('AIR_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
+    }
     startExecution(statements) {
         this.sourceRef = '(start-execution)';
 
-        // TODO: use a constant
-        this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
-        this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
-        this.references.declare('PRIME', 'int', [], { global: true, sourceRef: this.sourceRef }, this.prime);
-        this.references.declare('__SUBPROOF__', 'string', [], { global: true, sourceRef: this.sourceRef });
+        this.declareBuiltInConstants();
         this.scope.pushInstanceType('proof');
         this.sourceRef = '(execution)';
         this.execute(statements);
         this.sourceRef = '(subproof-execution)';
-        this.executeSubproofs();
+        this.finalClosingSubproofs();
         this.finalProofScope();
         this.scope.popInstanceType();
         this.generateProtoOut();
-    }
-    executeSubproofs() {
-        for (const name of this.subproofs) {
-            this.executeSubproof(name, this.subproofs.get(name));
-        }
     }
     generateProtoOut()
     {        
@@ -223,7 +225,10 @@ module.exports = class Processor {
         this.traceLog(`[TRACE] #${__executeStatementCounter} ${st.debug ?? ''} (DEEP:${this.scope.deep})`, '38;5;75');
 
         this.sourceRef = st.debug ? (st.debug.split(':').slice(0,2).join(':') ?? ''):'';
-
+        // if (st instanceof ExpressionItem) {
+        //     const res = st.instance();
+        //     return res;
+        // }
         if (typeof st.type === 'undefined') {
             console.log(st);
             this.error(st, `Invalid statement (without type)`);
@@ -322,6 +327,22 @@ module.exports = class Processor {
         this.execute(st.statements);
         this.scope.popInstanceType();
     }
+    prepareFunctionCall(func, callinfo) {
+        const mapInfo = func.mapArguments(callinfo);
+        // console.log(mapInfo);
+        // console.log(func.constructor.name);
+        // callinfo.dumpArgs(mapInfo.eargs, 'CALLINFO');
+        this.callstack.push(mapInfo.scall ?? func.name);
+        ++this.functionDeep;
+        this.scope.push();
+        return mapInfo;
+    }
+    finishFunctionCall(func) {
+        this.scope.pop();
+        --this.functionDeep;
+        this.callstack.pop();
+        if (Debug.active) console.log(`END CALL ${func.name}`, res);
+    }
     executeFunctionCall(name, callinfo) {
         const func = this.builtIn[name] ?? this.references.get(name);
         if (Debug.active) {
@@ -329,24 +350,19 @@ module.exports = class Processor {
             console.log(callinfo);
         }
 
-        if (func) {
-            const mapInfo = func.mapArguments(callinfo);
-            // console.log(mapInfo);
-            // console.log(func.constructor.name);
-            // callinfo.dumpArgs(mapInfo.eargs, 'CALLINFO');
-            this.callstack.push(mapInfo.scall ?? name);
-            ++this.functionDeep;
-            this.scope.push();
-            this.references.pushVisibilityScope();
-            let res = func.exec(callinfo, mapInfo);
-            this.references.popVisibilityScope();
-            this.scope.pop();
-            --this.functionDeep;
-            this.callstack.pop();
-            if (Debug.active) console.log(`END CALL ${name}`, res);
-            return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
+        if (!func) {
+            this.error({}, `Undefined function ${name}`);
         }
-        this.error({}, `Undefined function ${name}`);
+        if (func.isBridge) {   
+            return func.exec(callinfo);
+        }
+
+        const mapInfo = this.prepareFunctionCall(func, callinfo);
+        this.references.pushVisibilityScope();
+        let res = func.exec(callinfo, mapInfo);
+        this.references.popVisibilityScope();
+        this.finishFunctionCall(func);
+        return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
     }
     execCall(st) {
         const name = st.function.name;
@@ -730,7 +746,7 @@ module.exports = class Processor {
         if (!s.contents) {
             // to support dynamic includes, add some internal statements need to compile inside subproof
             // but after take compiled statements. TODO: analyze use current subproof name
-            const sts = this.compiler.loadInclude(s.file.asString(), {preSrc: 'subproof __(2**2) {\n', postSrc: '\n};\n'});
+            const sts = this.compiler.loadInclude(s.file.asString(), {preSrc: 'air __(int N=2**2) {\n', postSrc: '\n};\n'});
             if (sts === false) {
                 throw new Error(`ERROR loading include ${s.file.asString()}`);
             }
@@ -742,7 +758,7 @@ module.exports = class Processor {
         const requireId = s.file.asString();
         if (!s.contents) {
             // TODO: check if sense use dynamic requires
-            const sts = this.compiler.loadInclude(requireId, {preSrc: 'subproof __(2**2) {\n', postSrc: '\n};\n'});
+            const sts = this.compiler.loadInclude(requireId, {preSrc: 'air __(int N=2**2) {\n', postSrc: '\n};\n'});
             if (sts === false) {
                 return;
             }
@@ -756,9 +772,9 @@ module.exports = class Processor {
         }    
     }
     execFunctionDefinition(s) {
-        if (Debug.active) console.log('FUNCTION '+s.funcname);
-        let func = new Function(this, s);
-        this.references.declare(func.name, 'function', [], {sourceRef: Context.sourceRef});
+        if (Debug.active) console.log('FUNCTION '+s.name);
+        const id = this.references.declare(s.name, 'function', [], {sourceRef: Context.sourceRef});
+        let func = new Function(id, s);
         this.references.set(func.name, [], func);
     }
     getExprNumber(expr, s, title) {
@@ -819,117 +835,153 @@ module.exports = class Processor {
         return base + this.log2_32bits(Number(value));
     }
     checkRows(rows) {
-        for (const row of rows) {
-            if (2n ** BigInt(this.log2(row)) === row) continue;
-            throw new Error(`Invalid row ${row}. Rows must be a power of 2`);
+        if (2n ** BigInt(this.log2(rows)) !== BigInt(rows)) {
+            throw new Error(`Invalid N ${rows}. N must be a power of 2`);
         }
     }
-    execSubproofDefinition(s) {
+    execAirDefinition(s) {
         const subproofName = s.name ?? false;
         if (subproofName === false) {
-            this.error(s, `subproof not defined correctly`);
+            this.error(s, `air not defined correctly`);
         }
 
-        let subproofRows = this.evalExpressionList(s.rows);
-        this.checkRows(subproofRows);
+        const subproof = new Subproof(subproofName, s.statements, s.aggregate ?? false);
+        this.subproofs.define(subproofName, subproof, `air ${subproofName} has been defined previously on ${this.context.sourceRef}`);
 
-        // TODO: Fr inside context
-        const subproof = new Subproof(subproofRows, s.statements, s.aggregate ?? false);
-        this.subproofs.define(subproofName, subproof, `subproof ${subproofName} has been defined previously on ${this.context.sourceRef}`);
+        const id = this.references.declare(subproofName, 'function', [], {sourceRef: Context.sourceRef});
+        const subproofFunc = new SubproofFunction(id, {args: s.args, name: subproofName, subproof, sourceRef: Context.sourceRef});
+        this.references.set(subproofName, [], subproofFunc);
     }
-    execSubproofBlock(s) {
+    execAirBlock(s) {
         const subproofName = s.name ?? false;
         if (subproofName === false) {
-            this.error(s, `subproof not defined correctly`);
+            this.error(s, `air not defined correctly`);
         }
         const subproof = this.subproofs.get(subproofName);
         if (!subproof) {
-            throw new Error(`Subproof definition ${subproofName} hasn't been defined before subproof block`);
+            throw new Error(`Air definition ${subproofName} hasn't been defined before air block`);
         }
         subproof.addBlock(s.statements);
     }
-    executeSubproof(subproofName, subproof) {
+    /**
+     * method to return id of subproof, if this id not defined yet, use lastSubproofId to set it
+     * @param {Subproof} subproof 
+     * @returns {number}
+     */
+    getSubproofId(subproof) {    
+        const subproofId = subproof.getId();
+        if (subproofId !== false) {
+            this.proto.useSubproof(subproofId);
+            return subproofId;
+        }
+        ++this.lastSubproofId;
+        subproof.setId(this.lastSubproofId);
+        this.proto.setSubproof(this.lastSubproofId, subproof.name, subproof.aggregate);
+        return this.lastSubproofId;
+    }
+    /**
+     * Open or reopen a subproof with name subproofName, this means that 
+     * start to executing inside subproof scope
+     * @param {string} subproofName 
+     * @param {Subproof} subproof 
+     */
+    openSubproof(subproof) {
         this.currentSubproof = subproof;
         this.scope.pushInstanceType('subproof');
-        this.context.subproofName = subproofName;
-        // proto.setSubproofvalues(this.subproofvalues.getPropertyValues(['id', 'aggregateType', 'subproofId']));
-        const subproofId = this.proto.setSubproof(subproofName, subproof.aggregate);
+        this.context.subproofName = subproof.name;
+        this.subproofId = this.getSubproofId(subproof);        
         Context.subproofId = this.subproofId;
-        for (const airRows of subproof.rows) {
-            console.log(`BEGIN AIR ${subproofName} (${airRows})`); //  #${this.airId}`);
-            this.rows = airRows;
-
-            // TODO: context is global?
-            const air = new Air(this.Fr, this.context, airRows);
-
-            const airName = subproofName + (subproof.rows.length > 1 ? `_${air.bits}`:'');
-            const airId = this.proto.setAir(airName, airRows);
-            Context.airId = airId;
-            Context.airName = airName;
-            
-            subproof.airs.define(airName, air);
-
-            // create built-in constants
-            this.references.set('N', [], air.rows);
-            this.references.set('BITS', [], air.bits);
-            this.references.set('__SUBPROOF__', [], subproofName);
-            if (Context.config.test.onSubproofBegin && subproof.airs.length === 1) {
-                Context.config.test.onSubproofBegin(subproof);
-            }
-
-            if (Context.config.test.onAirBegin) {
-                Context.config.test.onAirBegin(subproof, air);
-            }
-
-
-/*            this.references.set('N', [], new ExpressionItems.IntValue(air.rows));
-            this.references.set('BITS', [], new ExpressionItems.IntValue(air.bits));
-            this.references.set('__SUBPROOF__', [], new ExpressionItems.StringValue(subproofName));*/
-
-            this.context.push(false, subproofName);
-            this.scope.pushInstanceType('air');
-            subproof.airStart();
-            for (const statements of subproof.blocks) {
-                // REVIEW: clear uses and regular expressions
-                // this.scope.push();
-                this.execute(statements, `SUBPROOF ${subproofName}`);
-                // this.scope.pop();
-            }
-            this.finalAirScope();
-            subproof.airEnd();
-
-            // pilout generation
-            // setting id of proofitems used, be carefull with challenge (stage not defined)
-
-            // const subproof = this.subproofs.get(subproofName);
-            // proto.setSubproof(subproofName, subproof.aggregate);
-            // clearing air scope
-            this.subproofProtoOut(subproofId, airId)
-
-            this.constraints = new Constraints();
-            if (Context.config.test.onAirEnd) {
-                Context.config.test.onAirEnd(subproof, air);
-            }
-            if (Context.config.test.onSubproofEnd && subproof.airs.length === 1) {
-                Context.config.test.onSubproofEnd(subproof);
-            }
-            this.clearAirScope(airName);
-            this.scope.popInstanceType(['witness', 'fixed', 'im']);
-            this.context.pop();
-            console.log(`END AIR ${subproofName} (${airRows}) #${this.airId}`);
-            Context.airId = false;
-            Context.airName = false;
-            ++this.airId;
-        }
+    }    
+    /**
+    * close current subproof and call defered funcions, clear scope of subproof
+    */
+    closeCurrentSubproof() {
         this.finalSubproofScope();
-        if (Context.config.protoOut === false) {
-            this.proto.setSubproofValues(this.subproofvalues.getAggreationTypesBySubproofId(subproofId));
-        }
+        this.suspendCurrentSubproof();
+        this.references.clearScope('subproof');
+        if (this.proto) this.proto.setSubproofValues(this.subproofvalues.getAggreationTypesBySubproofId(this.subproofId));
+    }
+    /**
+    * "suspend" current because this subproof could be opened again
+    */
+    suspendCurrentSubproof() {
         this.scope.popInstanceType();
         this.currentSubproof = false;
-        Context.subproofName = false;
-        this.references.clearScope('subproof');
-        ++this.subproofId;
+        this.subproofId = false;
+        Context.subproofId = false;
+    }
+    /**
+    * create a new air on current subproof, take number of rows of N parameter of subproof
+    * if this parameter doesn't exists an error was produced
+    */
+    createAir(subproof) {
+        const item = this.references.isDefined('N') ? this.references.getItem('N') : false;
+        if (!(item instanceof ExpressionItems.IntValue)) {
+            throw new Error(`an int parameter N must be declared as subproof argument`);
+        }
+        const rows = item.asInt();
+        this.checkRows(rows);
+        this.rows = rows;
+
+        const air = subproof.createAir(this.rows);
+        if (this.proto) this.proto.setAir(air.id, air.name, this.rows);
+        Context.airId = air.id
+        Context.airName = air.name;
+        return air;
+    }
+    closeAir() {
+        console.log(`END AIR ${Context.airName} (${this.rows}) #${Context.airId}`);
+        Context.airId = false;
+        Context.airName = false;
+    }
+    setBuiltIntConstants(subproof, air) {
+        // create built-in constants
+        this.references.set('BITS', [], air.bits);
+        this.references.set('SUBPROOF', [], subproof.name);  
+        this.references.set('SUBPROOF_ID', [], new ExpressionItems.IntValue(subproof.id));  
+        this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id));  
+    }
+    executeSubproof(subproof, subproofFunc, callinfo) {
+        // proto.setSubproofvalues(this.subproofvalues.getPropertyValues(['id', 'aggregateType', 'subproofId']));
+        // console.log(callinfo);
+        this.openSubproof(subproof);
+
+        // subproof was a function derivated class
+        const mapinfo = this.prepareFunctionCall(subproofFunc, callinfo);
+        subproofFunc.prepare(callinfo, mapinfo);
+
+        const air = this.createAir(subproof);
+
+        this.setBuiltIntConstants(subproof, air);
+        this.context.push(false, subproof.name);
+        this.scope.pushInstanceType('air');
+        subproof.airStart();
+        let res = subproof.exec(air.name ,callinfo);
+        this.finalAirScope();
+        subproof.airEnd();
+
+        if (this.proto) this.subproofProtoOut(subproof.id, air.id)
+
+        this.constraints = new Constraints();
+
+        this.clearAirScope(air.name);
+        this.scope.popInstanceType(['witness', 'fixed', 'im']);
+        this.context.pop();
+        this.closeAir(air);
+
+        // closing subproof but no closing final        
+        this.suspendCurrentSubproof(false);
+
+        this.finishFunctionCall(subproof);
+
+        return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
+    }
+    finalClosingSubproofs() {
+       for (const subproof of this.subproofs.values()) {
+            if (subproof.id === false) continue;
+            this.openSubproof(subproof);
+            this.closeCurrentSubproof();
+        }
     }
     subproofProtoOut(subproofId, airId) {
         if (Context.config.protoOut === false) return;
@@ -976,14 +1028,15 @@ module.exports = class Processor {
     }
     callDelayedFunctions(scope, event) {
         if (Debug.active) console.log(this.delayedCalls);
-        if (typeof this.delayedCalls[scope] === 'undefined' || typeof this.delayedCalls[scope][event] === 'undefined') {
+        const _scope = scope === 'subproof' ? `subproof#${Context.subproofId}` : scope;
+        if (typeof this.delayedCalls[_scope] === 'undefined' || typeof this.delayedCalls[_scope][event] === 'undefined') {
             return false;
         }
-        for (const fname in this.delayedCalls[scope][event]) {
-            if (Debug.active) console.log(`CALL DELAYED(${scope},${event}) FUNCTION ${fname}`);
+        for (const fname in this.delayedCalls[_scope][event]) {
+            if (Debug.active) console.log(`CALL DELAYED(${_scope},${event}) FUNCTION ${fname}`);
             this.execCall({ op: 'call', function: {name: fname}, args: [] });
         }
-        this.delayedCalls[scope][event] = {};
+        this.delayedCalls[_scope][event] = {};
     }
     execWitnessColDeclaration(s) {
         this.colDeclaration(s, 'witness', false, true, {stage: s.stage ? Number(s.stage):0 });
@@ -1068,16 +1121,19 @@ module.exports = class Processor {
         if (['proof', 'subproof', 'air'].includes(scope) === false) {
             throw new Error(`delayed function call scope ${scope} no supported`);
         }
-        if (typeof this.delayedCalls[scope] === 'undefined') {
-            this.delayedCalls[scope] = {};
+
+        const _scope = scope === 'subproof' ? `subproof#${Context.subproofId}` : scope;
+
+        if (typeof this.delayedCalls[_scope] === 'undefined') {
+            this.delayedCalls[_scope] = {};
         }
-        if (typeof this.delayedCalls[scope][event] === 'undefined') {
-            this.delayedCalls[scope][event] = {};
+        if (typeof this.delayedCalls[_scope][event] === 'undefined') {
+            this.delayedCalls[_scope][event] = {};
         }
-        if (typeof this.delayedCalls[scope][event][fname] === 'undefined') {
-            this.delayedCalls[scope][event][fname] = {sourceRefs: []};
+        if (typeof this.delayedCalls[_scope][event][fname] === 'undefined') {
+            this.delayedCalls[_scope][event][fname] = {sourceRefs: []};
         }
-        this.delayedCalls[scope][event][fname].sourceRefs.push(this.context.sourceRef);
+        this.delayedCalls[_scope][event][fname].sourceRefs.push(this.context.sourceRef);
     }
     execExpr(s) {
         s.expr.eval();
@@ -1126,13 +1182,6 @@ module.exports = class Processor {
     }
     execCode(s) {
         return this.execute(s.statements,`CODE ${this.sourceRef}`);
-    }
-    execOnce(s) {
-        if (!s.executed) {
-            s.executed = true;
-            return this.execute(s.statements,`CODE ${this.sourceRef}`);
-        }
-        if (Debug.active) console.log(`Ignore once section because it has already executed ${s.debug}`);
     }
     execConstraint(s) {
         const scopeType = this.scope.getInstanceType();
@@ -1240,13 +1289,12 @@ module.exports = class Processor {
         // create a tag for each substitution string
         const codeTags = tags.map((x, index) => 'expr ____'+index+' = '+x.expr+";").join("\n");
 
-        // compile a list of tags to created its associated expressions
         // this expressions aren't executed, only compiled for this reason
         // we don't need create a context.
         const compiledTags = this.compiler.parseExpression(codeTags);
 
         // evaluating different init of each tag
-        const stringTags = compiledTags.map(e => e.init.eval({unroll: true}).toString());
+        const stringTags = compiledTags.map(e => e.statements.init.eval({unroll: true}).toString());
 
         // replace on string each tag for its value
         const evaluatedTemplate = stringTags.map((s, index) => tags[index].pre + s).join('')+lastS;

@@ -462,19 +462,27 @@ class Expression extends ExpressionItem {
         }
         if (Debug.active) this.dump(`evaluateStackPos #${stackIndex} #${options.evaluateId ?? 0}`);
         let value = null;
+        let branch = 0;
         if (values.some(value => value instanceof ExpressionItems.NonRuntimeEvaluableItem))  {
+            branch = 1;
             value = this.evalNonRuntimeOperands(st.op, values);
         } else if (values.some(value => value === null))  {
+            branch = 2;
             value = null;
             this.dump('value=null '+Context.sourceRef);
         } else if (st.op === false) {
+            branch = 3;
             value = values[0];
         } else if (values.some(value => value.isRuntimeEvaluable() === false)) {
+            branch = 4;
             value = this.evalNonRuntimeOperands(st.op, values);
         } else {
+            branch = 5;
             // values.forEach(x => {if (x.dump) x.dump()});
             value = this.applyOperation(st.op, values);
         }
+
+        assert.notTypeOf(value, 'undefined', `invalid value undefined with branch ${branch}`);
 
         if (value !== null && !(value instanceof ExpressionItems.NonRuntimeEvaluableItem)) {
             if (value instanceof Expression && !value.isAlone()) {
@@ -754,6 +762,10 @@ class Expression extends ExpressionItem {
                 // insert into stack the expression (1)
                 const result = operand.eval(options);
                 // console.log(`RESULT #${stpos}/${operandIndex}`, operand, result);
+                if (typeof result === 'undefined') {
+                    console.log(operand);
+                    EXIT_HERE;
+                }
                 operandResults.push(result);
                 if (options.instance && result !== null) {
                     if (Debug.active) this.dump(`AAAA.IN stpos:${stpos}`);

@@ -106,6 +106,7 @@ module.exports = class ProtoOut {
         this.Hint = this.root.lookupType('Hint');
     }
     setupPilOut(name) {
+        console.log('FR', this.Fr.p, this.toBaseField(this.Fr.p));
         this.pilOut = {
             name,
             baseField: this.toBaseField(this.Fr.p, 0, false),
@@ -131,17 +132,24 @@ module.exports = class ProtoOut {
     saveToFile(filename) {
         fs.writeFileSync(filename, this.data);
     }
-    setAir(name, rows) {
-        const airId = this.currentSubproof.airs.length;
-        this.currentAir = {name, numRows: Number(rows)};
+    setAir(airId, name, rows) {
+        assert.equal(airId, this.currentSubproof.airs.length);
+        this.currentAir = {name, numRows: Number(rows), airId};
         this.currentSubproof.airs.push(this.currentAir);
-        return airId;
     }
-    setSubproof(name, aggregable = false) { // TODO: Add subproof value
-        this.currentSubproof = {name, aggregable, airs: []};
-        const subproofId = this.pilOut.subproofs.length;
+    useSubproof(subproofId) { // TODO: Add subproof value
+        // check if exist a subproof with this name, if not create it.
+        const subproof = this.pilOut.subproofs.find(sp => sp.subproofId === subproofId);
+        if (typeof subproof === 'undefined') {
+            throw new Error(`Using subproofId ${subproofId} not found on proto`);
+        }
+        this.currentSubproof = subproof;
+    }
+    setSubproof(subproofId, name, aggregable = false) { // TODO: Add subproof value
+        // check if exist a subproof with this name, if not create it.
+        assert.equal(subproofId, this.pilOut.subproofs.length);
+        this.currentSubproof = {name, aggregable, airs: [], subproofId };
         this.pilOut.subproofs.push(this.currentSubproof);
-        return subproofId;
     }
     setSubproofValues(aggregations) {
         // this.currentSubproof.subproofvalues = this.spvId2Proto.filter(value => value[2] === subproofId).map(value => { return {aggType: SPV_AGGREGATIONS.indexOf(value[1])}});
@@ -510,7 +518,7 @@ module.exports = class ProtoOut {
         if (value && typeof value.asInt === 'function') {
             value = value.asInt();
         }
-        if (this.bitIntType === 'bigint') {
+        if (this.bigIntType === 'bigint') {
             return BigInt(value);
         }
         if (value === 0n && bytes === 0) {

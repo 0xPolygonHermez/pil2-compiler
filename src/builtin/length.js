@@ -4,7 +4,7 @@ const IntValue = require('../expression_items/int_value.js');
 const util = require('util');
 module.exports = class Length extends Function {
     constructor (parent) {
-        super(parent, {funcname: 'length'});
+        super(parent, {name: 'length'});
     }
     mapArguments(s) {
         if (s.args.length !== 1) {

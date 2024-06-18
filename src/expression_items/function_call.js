@@ -10,8 +10,9 @@ module.exports = class FunctionCall extends RuntimeItem {
         this.name = name;
         if (args instanceof ExpressionList) {
             if (Debug.active) console.log(util.inspect(args, false, 10, true));
+            this.namedargs = args.names ?? false;
             args = args.items;
-        }
+        }        
         if (Debug.active) console.log(`#FCALL#${name} ${Context.sourceTag} ${args.length}`+ 
                                       util.inspect(args, false, null));
         // this.args = args.map(x => (typeof x.clone === 'function') ? x.clone() : x);
@@ -36,7 +37,9 @@ module.exports = class FunctionCall extends RuntimeItem {
         return this.name + args + indexes;
     }
     cloneInstance() {
-        return new FunctionCall(this.name, this.args, this.indexes);
+        let cloned = new FunctionCall(this.name, this.args, this.indexes);
+        cloned.namedargs = this.namedargs ? [...this.namedargs] : this.namedargs;
+        return cloned;
     }
     cloneUpdate(source) {
         super.cloneUpdate(source);
@@ -54,7 +57,7 @@ module.exports = class FunctionCall extends RuntimeItem {
         if (Debug.active) {
             console.log([`#FCALL.EVAL #${this.name} ${Context.sourceTag}`, this.args]);
             this.dumpArgs(this.args, `CALL ${this.name}`);
-        }
+        }        
         const definition = Context.references.get(this.name, options);
         const res = Context.processor.executeFunctionCall(this.name, this);
         if (Debug.active) console.log(this.name, res);

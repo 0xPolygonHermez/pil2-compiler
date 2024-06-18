@@ -1,21 +1,38 @@
 const Definitions = require("./definitions.js");
-const Airs = require("./airs.js");
+// const Airs = require("./airs.js");
 const Air = require("./air.js")
 const Context = require('./context.js');
+const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js");
+const ExpressionItems = require('./expression_items.js');
 module.exports = class Subproof {
-
-    constructor (rows, statements, aggregate) {
-        this.rows = rows;   // array of rows
-        this.blocks = [statements];
-        this.airs = new Airs(this);
+    constructor (name, statements, aggregate) {
+        // TODO: when instance a subproof return an integer (as a handler id)
+        this.id = false;
+        this.airs = [];
         this.aggregate = aggregate;
+        this.name = name;
+        this.blocks = [statements];
+
         this.insideFirstAir = false;
         this.spvDeclaredInFirstAir = {};
         this.spvDeclaredInsideThisAir = {};
         this.insideAir = false;
     }
+    getId(id) {
+        return this.id;
+    }
+    setId(id) {
+        this.id = id;
+    }
+    createAir(rows, options = {}) {
+        const id = this.airs.length;
+        const name = options.name ??  (this.name + (id ? `_${id}`:''));
+        const air = new Air(id, rows, {...options, name});
+        this.airs.push(air);
+        return air;
+    }
     addBlock(statements) {
-        this.blocks.push(statements);
+        this.statements = [...this.statements, ...statements];
     }
     airStart() {
         this.insideAir = true;
@@ -45,13 +62,8 @@ module.exports = class Subproof {
         }
         if (this.insideFirstAir) {
             // this.colDeclaration(s, 'subproofvalue', true, false, {aggregateType: s.aggregateType});
-            // console.log(['SUBPROOFVALUE', name,lengths, data]);
             const res = Context.references.declare(name, 'subproofvalue', lengths, data);
-            // console.log(Context.references.getNameScope(name));
-            // console.log(Context.references.containers.getCurrent())
-            // console.log(Context.references.containers.get(Context.references.containers.getCurrent()));
             this.spvDeclaredInFirstAir[name] = {res, lengths: [...lengths]};
-            // console.log(res);
             return res;
         }
 
@@ -70,4 +82,18 @@ module.exports = class Subproof {
 
         return this.spvDeclaredInFirstAir[name].res;
     }
+    exec(callInfo, mapInfo) {
+        let res = false;
+        for (const statements of this.blocks) {
+            // REVIEW: clear uses and regular expressions
+            // this.scope.push();
+            res = Context.processor.execute(statements, `SUBPROOF ${this.name}`);
+            if (res instanceof FlowAbortCmd) {
+                assert.instanceOf(res, ReturnCmd);
+                Context.processor.traceLog('[TRACE-BROKE-RETURN]', '38;5;75;48;5;16');
+                res = res.reset();
+            }
+        }
+        return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue(0) : res;
+    }   
 }

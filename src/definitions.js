@@ -34,7 +34,7 @@ module.exports = class Definitions {
 
     *[Symbol.iterator]() {
         for (let index in this.definitions) {
-          yield index;
+            yield index;
         }
     }
 

@@ -91,9 +91,14 @@ module.exports = class ExpressionFactory {
     static _fromExpressionList(obj) {
         if (Debug.active) console.log(obj.values);
         if (Debug.active) console.log(obj.__debug);
-        const elist = new ExpressionList(this._fromObjects(obj.values, {elist: true}));
+        let options = {};
+        if (obj.names) {
+            options.names = obj.names;
+        }
+        const elist = new ExpressionList(this._fromObjects(obj.values, {elist: true}), options);
         if (Debug.active) console.log(elist);
         delete obj.values;
+        delete obj.names;
         return elist;
     }
     static _fromAppend(obj) {

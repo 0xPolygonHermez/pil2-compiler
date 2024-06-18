@@ -3,7 +3,7 @@ const IntValue = require('../expression_items/int_value.js');
 
 module.exports = class IsArray extends Function {
     constructor (parent) {
-        super(parent, {funcname: 'is_array'});
+        super(parent, {name: 'is_array'});
     }
     mapArguments(s) {
         if (s.args.length !== 1) {

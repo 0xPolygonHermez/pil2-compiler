@@ -21,7 +21,7 @@ function notStrictEqual(actual, expected, message) {
 function returnInstanceOf(actual, cls, message) {
     if (actual instanceof cls) return actual;
     if (actual && actual.constructor) {
-        return _message(`value(${actual.constructor.name}) isn't an instance of ${cls}`, actual);
+        return _message(`value(${actual.constructor.name}) isn't an instance of ${cls.name}`, actual);
     }
     _message(message, `value isn't an instance of ${cls}`, actual);
 }

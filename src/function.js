@@ -8,6 +8,7 @@ const Context = require('./context.js');
 const Debug = require('./debug.js');
 const Types = require('./types.js');
 const {ArrayOf} = require('./expression_items.js')
+const assert = require('./assert.js');
 module.exports = class Function {
     constructor (id, data = {}) {
         this.id = id;
@@ -201,11 +202,12 @@ module.exports = class Function {
         this.declareAndInitializeArguments(mapInfo.eargs);
         if (Debug.active) console.log(Context.constructor.name);
         let res = Context.processor.execute(this.statements, `FUNCTION ${this.name}`);
-        if (res instanceof ReturnCmd) {
+        if (res instanceof FlowAbortCmd) {
+            assert.instanceOf(res, ReturnCmd);
             Context.processor.traceLog('[TRACE-BROKE-RETURN]', '38;5;75;48;5;16');
-            return res.reset();
+            res = res.reset();
         }
-        return res;
+        return res === false ? new ExpressionItems.IntValue(0) : res;
     }
     toString() {
         return `[Function ${this.name}${this.args ? '(' + Object.keys(this.args).join(',') + ')': ''}]`;

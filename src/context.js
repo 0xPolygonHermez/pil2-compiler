@@ -58,6 +58,9 @@ module.exports = class Context {
         }
         return 'PROOF';
     }
+    static applyTemplates(value) {
+        return this._instance.applyTemplates(value);
+    }
     setNamespace(namespace, subproof) {
         this.namespace = namespace;
         if (typeof subproof !== 'undefined') {
@@ -76,6 +79,10 @@ module.exports = class Context {
     clearUses() {
         this.uses = [];
     }
+    applyTemplates(value) {
+        if (!value.includes('${')) return value;
+        return this._processor.evaluateTemplate(value);
+    }
     getNames(name) {
         if (typeof name.name !== 'undefined') {
             console.log(name);
@@ -84,11 +91,9 @@ module.exports = class Context {
 
         let names = name;
         if (typeof name === 'string') {
-            if (name.includes('${')) {
-                name = this.processor.evaluateTemplate(name);
-            }
             names = [name];
         }
+        names = names.map(name => this.applyTemplates(name));
         if (!Array.isArray(names) || names.length !== 1) {
             return names;
         }
@@ -113,6 +118,10 @@ module.exports = class Context {
         if (typeof name !== 'string') {
             console.log(name);
             throw new Error(`getFullName invalid argument`);
+        }
+        name = this.applyTemplates(name);
+        if (this._processor.references.insideContainer) {
+            return name;
         }
 
         const parts = name.split('.');

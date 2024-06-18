@@ -16,6 +16,12 @@ module.exports = class References {
         this.visibilityStack = [];
         this.containers = new Containers(this);
     }
+    isContainerDefined(name) {
+        return this.containers.isDefined(name);
+    }
+    get insideContainer() {
+        return this.containers.getCurrent() !== false;
+    }
     getDefinitionByItem(item, options = {}) {
         let instance = null;
         const instances = [...(options.instances ?? []), ...Object.values(this.types).map(x => x.instance)];
@@ -419,7 +425,7 @@ module.exports = class References {
         let reference = false;
         if (!explicitContainer) {
             reference = this.containers.getReferenceInsideCurrent(lname, false);
-        } else {
+        } else {            
             if (['proof', 'subproof', 'air'].includes(explicitContainer)) {
                 const scopeId = Context.scope.getScopeId(explicitContainer);
                 if (scopeId === false) {
@@ -461,7 +467,7 @@ module.exports = class References {
         // if more than one name is sent, use the first one (mainName). Always first name it's directly
         // name defined on source code, second optionally could be name with subproof, because as symbol is
         // stored with full name.
-        const mainName = Array.isArray(name) ? name[0]:name;
+        const mainName = Array.isArray(name) ? name[0]:Context.applyTemplates(name);
         const nameInfo = this.decodeName(mainName);
         let names = false;
 

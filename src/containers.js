@@ -148,8 +148,10 @@ module.exports = class Containers {
         let reference = false;
         let container = containerName ? this.get(containerName) : false;
         if (container) {
-            reference = container.references[name] ?? false;
+            return container.references[name] ?? defaultValue;
         }
+        if (!uses) return defaultValue; 
+
         // if not found check other counters indicate with use
         let usesIndex = this.uses.length;
         while (!reference && usesIndex > 0) {

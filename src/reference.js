@@ -64,37 +64,46 @@ class Reference {
         if (!this.array || this.array.isFullIndexed(indexes)) {
             return this.setOneItem(value, indexes, options);
         }
-        this.setArrayLevel(0, indexes, value, options);
+        this.setArrayLevel(indexes.length, indexes, [], value, options);
         // At this point, it's a array initilization
     }
-    setArrayLevel(level, indexes, value, options = {}) {
-        if (Debug.active) console.log(`setArrayLevel(${this.name} ${level}, [${indexes.join(',')}] ${Context.sourceRef}`);
+    /**
+     * Set value for all array elements (multidimensional)
+     * @param {number} level - level of reference to set, for example: a (level=0), b[2] (level=1), b[2][1] (level=2)
+     * @param {number[]} indexes - current indexes of set, for example: a (indexes=[]), b[2] (indexes=[2]), b[2][1] (indexes=[2][1])
+     * @param {number[]} vindexes - current indexes of value to assign, for example: a (indexes=[]), b[2] (indexes=[2]), b[2][1] (indexes=[2][1])
+     * @param {ExpressionItem} value - value to set
+     * @param {Object} options
+     */
+    setArrayLevel(level, indexes, vindexes, value, options = {}) {
+        if (Debug.active) console.log(`setArrayLevel(${this.name} ${level}, [${indexes.join(',')}], [${vindexes.join(',')}]) ${Context.sourceRef}`);
         const len = this.array.lengths[level];
 
         // indexes is base, over it we fill all value levels.
         const isArray = Array.isArray(value);
-        const valueLen = isArray ? value.length : value.getLevelLength(indexes);
+        const valueLen = isArray ? value.length : value.getLevelLength(vindexes);
         
         if (len !== valueLen) {
-            throw new Error(`Mismatch con array length (${len} vs ${valueLen}) on ${this.name}[${indexes.join('],[')}] at ${Context.sourceRef}`);
+            throw new Error(`Mismatch con array length (${len} vs ${valueLen}) on ${this.name}[${indexes.join('],[')}] level:${level} at ${Context.sourceRef}`);
         }
 
         for (let index = 0; index < len; ++index) {
-            let _indexes = [...indexes];
-            _indexes.push(index);
+            const _indexes = [...indexes, index];
+            const _vindexes = [...vindexes, index];
+    
             // we are on final now we could set values
             if (level + 1 === this.array.dim) {
                 if (isArray) {
                     this.setOneItem(value[index], _indexes, options);
                 } else {    
                     if (value.dump) value.dump();
-                    const _item = value.getItem(_indexes);
+                    const _item = value.getItem(_vindexes);
                     this.setOneItem(_item, _indexes, options);
                 }
                 continue;
             }
             // for each possible index call recursiverly up levels
-            this.setArrayLevel(level+1, _indexes, isArray ? value[index] : value, options);
+            this.setArrayLevel(level+1, _indexes, _vindexes, isArray ? value[index] : value, options);
         }
     }
     // setting by only one element
@@ -172,6 +181,7 @@ class Reference {
         let evaluatedIndexes = [];
         let fromIndex = false;
         let toIndex = false;
+
         if (Array.isArray(indexes) && indexes.length > 0) {
             for (let index = 0; index < indexes.length; ++index) {
                 if (indexes[index].isInstanceOf && indexes[index].isInstanceOf(RangeIndex)) {
@@ -198,8 +208,14 @@ class Reference {
 
         // if array is defined
         let res = false;
+        let runtimeRow = false;
         if (this.array) {
-            if (this.array.isFullIndexed(evaluatedIndexes)) {
+            // check if row access in case of fixed
+            if (this.instance.runtimeRows && this.array.isFullIndexed(evaluatedIndexes.slice(0, -1))) {
+                locator = this.array.locatorIndexesApply(this.locator, evaluatedIndexes.slice(0, -1));
+                runtimeRow = evaluatedIndexes[evaluatedIndexes.length - 1];
+            }
+            else if (this.array.isFullIndexed(evaluatedIndexes)) {
                 // full access => result an item (non subarray)
                 locator = this.array.locatorIndexesApply(this.locator, evaluatedIndexes);
             } else {
@@ -228,6 +244,9 @@ class Reference {
             res.setLabel(label);
         } else res.setLabel('___');
 
+        if (runtimeRow !== false) {
+            return res.getRowItem(runtimeRow);
+        }
         return res;
     }
 }

@@ -19,6 +19,9 @@ module.exports = class Assign {
         return this.#assign(name, indexes, value);
     }
     getValue(value) {
+        if (typeof value.eval !== 'function') {
+            return value;
+        }
         const _value = value.eval();
         if (typeof _value !== 'undefined' && _value !== null && (_value instanceof NonRuntimeEvaluableItem) === false) {
             return _value;

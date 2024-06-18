@@ -107,10 +107,13 @@ module.exports = class Indexable {
             return res.value.clone();
         }
         if (typeof res.value === 'undefined') {
-            if (this.expressionItemClass.createWithId) {
-                return new itemClass(id);
+            const item = this.expressionItemClass.createWithId ? new itemClass(id) : new itemClass();
+            // to link expression item to definitio class, for example, for fixed cols because values or sequences
+            // are inside of definition, expression item is only id.
+            if (res instanceof this.definitionClass) {
+                item.definition = res;
             }
-            return new itemClass();
+            return item;
         }
         if (assert.isEnabled) assert.typeOf(itemClass.createFrom, 'function', [this.type, this.constructor.name, itemClass, res, res.value]);
         return itemClass.createFrom(res.value, {id, instance: this});

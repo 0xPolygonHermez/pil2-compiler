@@ -105,6 +105,7 @@ module.exports = class ProtoOut {
         this.Hint = this.root.lookupType('Hint');
     }
     setupPilOut(name) {
+        console.log('FR', this.Fr.p, this.toBaseField(this.Fr.p));
         this.pilOut = {
             name,
             baseField: this.toBaseField(this.Fr.p),
@@ -516,7 +517,7 @@ module.exports = class ProtoOut {
         if (value && typeof value.asInt === 'function') {
             value = value.asInt();
         }
-        if (this.bitIntType === 'bigint') {
+        if (this.bigIntType === 'bigint') {
             return BigInt(value);
         }
         if (value === 0n && bytes === 0) {

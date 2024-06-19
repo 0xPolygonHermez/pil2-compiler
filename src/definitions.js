@@ -1,3 +1,4 @@
+const Exceptions = require('./exceptions.js');
 module.exports = class Definitions {
 
     constructor () {
@@ -19,7 +20,7 @@ module.exports = class Definitions {
 
     define(name, value, msg) {
         if (this.isDefined(name)) {
-            throw new Error(msg ?? `${name} already defined on ....`);
+            throw new Exceptions.AlreadyDefined(msg ?? `${name} already defined on ....`);
         }
         this.definitions[name] = value;
     }

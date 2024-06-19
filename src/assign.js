@@ -1,4 +1,5 @@
 const Expression = require("./expression.js");
+const Exception = require('./exceptions.js');
 const Context = require('./context.js');
 const NonRuntimeEvaluableItem = require('./expression_items/non_runtime_evaluable_item.js');
 const Debug = require('./debug.js');
@@ -48,7 +49,7 @@ module.exports = class Assign {
         const def = Context.references.getDefinition(ref.name);
 
         if (array.dim != def.array.dim) {
-            throw new Error(`different array dimension on asignation ${array.dim} vs ${def.array.dim}`);
+            throw new Exceptions.Array(`different array dimension on asignation ${array.dim} vs ${def.array.dim}`);
         }
         this.assignArrayLevel(0, name, indexes, value, def.array, array);
         // array.lengths[0] != def.array.lengths[0]) {

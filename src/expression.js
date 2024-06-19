@@ -200,10 +200,10 @@ class Expression extends ExpressionItem {
         }
         this.stack.push({op: false, operands: [this.assertExpressionItem(operand.clone())]});
     }
-    isRuntime () {
-        return this.stack.some(st => this.isRuntimeStackPos(st));
+    hasNonNativeOperations () {
+        return this.stack.some(st => this.isNonNativeOperation(st));
     }
-    isRuntimeStackPos(st) {
+    isNonNativeOperation(st) {
         return ((st.op !== false &&  NATIVE_OPS.indexOf(st.op) < 0) || st.operands.some(operand  => operand instanceof ExpressionItems.RuntimeItem));
     }
     insertOne (op, b = false) {

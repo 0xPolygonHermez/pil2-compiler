@@ -1,6 +1,7 @@
 const Expression = require('./expression.js');
 const Context = require('./context.js');
 const assert = require('./assert.js');
+const Exceptions = require('./exceptions.js');
 module.exports = class Constraints {
     constructor (expressions = false) {
         this.constraints = [];
@@ -38,15 +39,11 @@ module.exports = class Constraints {
     define(left, right, boundery, sourceRef) {
         assert.instanceOf(left, Expression);
         assert.instanceOf(right, Expression);
-        // left.dump('LEFT(simplied)');
-        // right.dump('RIGHT(simplied)');
-        if (left.isRuntime()) {
-            left.dump('LEFT  CONSTRAINT');
-            throw new Error(`left constraint has runtime no resolved elements`);
+        if (left.hasNonNativeOperations()) {
+            throw new NonNativeOperations(`left part of constraint has non native operations`);
         }
-        if (right.isRuntime()) {
-            right.dump('RIGHT CONSTRAINT');
-            throw new Error(`right constraint has runtime no resolved elements`);
+        if (right.hasNonNativeOperations()) {
+            throw new NonNativeOperations(`right part of constraint has non native operations`);
         }
         if (left.fixedRowAccess || right.fixedRowAccess) {
             console.log('\x1B[31mWARNING: accessing fixed row acces\x1b[0m');
@@ -55,12 +52,8 @@ module.exports = class Constraints {
         if (right.asIntDefault(false) !== 0n) {
             left.insert('sub', right);
         }
-        // const dumpId = Date.now();
-        // left.dump(`XXXXXXXXX-${dumpId}-1`)
-        // left.instance().dump(`XXXXXXXXX-${dumpId}-2`);
         left.simplify();
         const exprId = this.getExpressions().insert(left);
-        // console.log(`DEFINE CONSTRAINT ${sourceRef}`);
         return this.constraints.push({exprId, sourceRef, boundery}) - 1;
     }
 
@@ -100,7 +93,10 @@ module.exports = class Constraints {
             }
             return info;
         } catch (e) {
-            throw new Error(`ERROR generation debug info for constraint ${constraint.sourceRef}: ${e.message}`)
+            if (e instanceof Exceptions.General) {
+                throw e;
+            }
+            throw new Exceptions.Generic(`ERROR generation debug info for constraint: ${e.message}`)
         }
     }
 }

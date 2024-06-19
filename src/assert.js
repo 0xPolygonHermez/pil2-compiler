@@ -1,3 +1,5 @@
+const Exceptions = require('./exceptions.js');
+
 function equal(actual, expected, message) {
     if (actual == expected) return;
     _message(message, `${actual} not equal ${expected}`, actual);
@@ -61,10 +63,10 @@ function _message(message, defaultmsg = false, value = false) {
     if (typeof message === 'object') { 
         console.log(message);
         debugger;
-        throw new Error('ASSERT:' + defaultmsg);
+        throw new Exceptions.Assert(defaultmsg);
     }
     debugger;
-    throw new Error('ASSERT:' + (message ?? defaultmsg));
+    throw new Exceptions.Assert(message ?? defaultmsg);
 }
 
 function defined(value, message) {
@@ -81,27 +83,6 @@ function ok(value, message) {
     if (value) return true;
     _message(message, `defined value ${value}`);
 }   
-
-/*
-const _exports = {
-    enable,
-    disable,
-    isEnabled: true,
-    equal,
-    notEqual,
-    strictEqual,
-    notStrictEqual,
-    defined,
-    undefined: _undefined,
-    returnInstanceOf,
-    instanceOf: returnInstanceOf,
-    returnNotInstanceOf,
-    notInstanceOf: returnNotInstanceOf,
-    typeOf,
-    notTypeOf,
-    ok,
-}
-*/
 
 const _exports = {
     enable,
@@ -143,7 +124,6 @@ function enable(value = true) {
     _exports.ok = ok;
     _exports.returnTypeOf = returnTypeOf;    
     _exports.returnNotTypeOf = returnNotTypeOf;    
-    _showState();
 }
 
 function disable() {
@@ -163,11 +143,6 @@ function disable() {
     _exports.ok = () => {};
     _exports.returnTypeOf = (value) => value;
     _exports.returnNotTypeOf = (value) => value;
-    _showState();
-}
-
-function _showState() {
-    console.log('ASSERT STATE: '+(_exports.isEnabled ? '\x1B[1;32mON':'\x1B[1;31mOFF')+'\x1B[0m');
 }
 
 module.exports = _exports;

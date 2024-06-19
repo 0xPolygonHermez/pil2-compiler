@@ -1,5 +1,6 @@
 const assert = require('./assert.js');
 const Context = require('./context.js');
+const Exceptions = require('./exceptions.js');
 module.exports = class Containers {
     constructor (parent) {
         this.parent = parent;
@@ -12,9 +13,8 @@ module.exports = class Containers {
     addScopeAlias(alias, value) {
         // NOTE: there is no need to check for aliases because by grammatical definition,
         // aliases must be an identifier
-
         if (this.aliases[alias]) {
-            throw new Error(`Alias ${alias} already defined on ${this.aliases[alias].sourceRef}`);
+            throw new Exceptions.AliasAlreadyDeclared(`Alias ${alias} already defined on ${this.aliases[alias].sourceRef}`);
         }
 
         Context.scope.addToScopeProperty('aliases', alias);
@@ -46,7 +46,7 @@ module.exports = class Containers {
             case 'aliases': return this.unsetAlias(values);
             case 'uses': return this.unsetUses(values);
         }
-        throw new Error(`unsetProperty was called with invalid property ${property}`);
+        throw new Exceptions.Internal(`unsetProperty was called with invalid property ${property}`);
     }
     clearScope(proofScope) {
         // const previousScopes = Object.keys(this.containers).map(name => `${name}(${this.containers[name].scope})`).join();
@@ -56,10 +56,9 @@ module.exports = class Containers {
             .reduce((containers, name) => { containers[name] = this.containers[name]; return containers; }, {});
         // console.log(`clearScope(Container) ${proofScope}: ` + _containers.filter(c => typeof this.containers[c[0]] === 'undefined').map(c => `${c[0]}(${c[1]})`).join(', '));
     }
-    create(name, alias = false)
-    {
+    create(name, alias = false) {
         if (this.current !== false) {
-            throw new Error(`Container ${this.current} is open, must be closed before start new container`);
+            throw new Exceptions.AliasStillOpen(`Container ${this.current} is open, must be closed before start new container`);
         }
 
         // console.log(`createContainer(${name},${alias}) at ${Context.sourceRef}`);
@@ -115,20 +114,19 @@ module.exports = class Containers {
     }
     addReference(name, reference) {
         if (this.current === false) {
-            throw new Error(`Could add reference ${name} to closed container`);
+            throw new Exceptions.ClosedContainer(`Could add reference ${name} to closed container`);
         }
         const container = this.get(this.current);
         // console.log(this.containers);
         // console.log(this.current);
         if (container.references[name]) {
-            throw new Error(`Reference ${name} was declared previously on scope ${this.current}`);
+            throw new Exceptions.ReferenceAlreadyDeclared(`Reference ${name} was declared previously on scope ${this.current}`);
         }
         container.references[name] = reference;
     }
     addUse(name) {
         if (!this.isDefined(name)) {
-            // TODO: defined must be check containers
-            throw new Error(`Use not created container ${name}`);
+            throw new Exceptions.ContainerNotFound(`Use of non defined container ${name}`);
         }
         Context.scope.addToScopeProperty('uses', name);
         this.uses.push(name);

@@ -84,10 +84,7 @@ module.exports = class Context {
         return this._processor.evaluateTemplate(value);
     }
     getNames(name) {
-        if (typeof name.name !== 'undefined') {
-            console.log(name);
-            throw new Error('Invalid name used on getNames');
-        }
+        assert.defined(name.name);
 
         let names = name;
         if (typeof name === 'string') {
@@ -115,10 +112,7 @@ module.exports = class Context {
         }
     }
     getFullName(name) {
-        if (typeof name !== 'string') {
-            console.log(name);
-            throw new Error(`getFullName invalid argument`);
-        }
+        assert.typeOf(name, 'string');
         name = this.applyTemplates(name);
         if (this._processor.references.insideContainer) {
             return name;

@@ -9,18 +9,11 @@ module.exports = class ExpressionVariable extends Variable {
         this.value = new (ExpressionClass.get());
     }
     setValue(value) {
-        if (Debug.active) {
-            console.log('================================================================');
-            console.log(util.inspect(value, false, 10, true));
-            console.log('================================================================');
-        }
         // super.setValue(value);
         if (typeof value.instance === 'function') {
             this.value = value.instance();
             return;
         }
-        if (Debug.active) console.log(value);
-        console.log(value.constructor.name);
         this.value = value.clone();
         /*
         if (value instanceof ExpressionClass || value instanceof ValueItem) {

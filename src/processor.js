@@ -393,13 +393,9 @@ module.exports = class Processor {
             }
         } else {
             assignedValue = st.value.instance();
-            if (st.assign) {
-                console.log(st.assign);
-            }
         }
         this.assign.assign(names, indexes, assignedValue);
         if (Debug.active) console.log(`ASSIGN ${st.name.name} = ${assignedValue.toString()} \x1B[0;90m[${Context.sourceTag}]\x1B[0m`);
-        // this.references.set(st.name.name, [], this.expressions.eval(st.value));
     }
     execHint(s) {
         const name = s.name;

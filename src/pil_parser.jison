@@ -823,23 +823,6 @@ case_list
         { $$ = {cases: [{ condition: $2, statements: implicit_scope($4.statements) }]} }
     ;
 
-for_assignation
-    : variable_assignment
-        { $$ = $1 }
-
-    | INC name_id
-        { $$ = { ...$2, type: 'variable_increment', pre: 1n, post: 0n } }
-
-    | DEC name_id
-        { $$ = { ...$2, type: 'variable_increment', pre: -1n, post: 0n } }
-
-    | name_id INC
-        { $$ = { ...$1, type: 'variable_increment', pre: 0n, post: 1n } }
-
-    | name_id DEC
-        { $$ = { ...$1, type: 'variable_increment', pre: 0n, post: -1n } }
-    ;
-
 for_init
     : variable_declaration
         { $$ = $1; }
@@ -967,17 +950,14 @@ return_statement
     ;
 
 assign_operation
-    : '='
-        { $$ = { type: 'assign' } }
-
-    | '+='
-        { $$ = { type: 'increment' } }
+    : '+='
+        { $$ = { type: 'add' } }
 
     | '-='
-        { $$ = { type: 'substract' } }
+        { $$ = { type: 'sub' } }
 
     | '*='
-        { $$ = { type: 'product' } }
+        { $$ = { type: 'mul' } }
     ;
 
 left_variable_multiple_assignment_list
@@ -1008,19 +988,35 @@ variable_multiple_assignment
     ;
 
 variable_assignment
-    : name_id assign_operation expression %prec EMPTY
-        { $$ = { type: 'assign', assign: $2.type, name: $1, value: $3 } }
+    : name_id '=' expression %prec EMPTY
+        { $$ = { type: 'assign', name: $1, value: $3 } }
+
+    | name_id assign_operation expression %prec EMPTY
+        { $$ = { type: 'assign', name: $1, value: ExpressionFactory.fromObject({ type: 'reference', ...$1 }).insert($2.type, ExpressionFactory.fromObject($3))} }
 
     | name_id '=' sequence_definition
         { $$ = { type: 'assign', name: $1, sequence: $3 } }
+
+    | INC name_id
+        { $$ = { type: 'assign', name: $2, value: ExpressionFactory.fromObject({ type: 'reference', ...$2 }).insert('add', ExpressionFactory.fromObject({type: 'number', value: 1n}))} }
+
+    | DEC name_id
+        { $$ = { type: 'assign', name: $2, value: ExpressionFactory.fromObject({ type: 'reference', ...$2 }).insert('sub', ExpressionFactory.fromObject({type: 'number', value: 1n}))} }
+
+    | name_id INC
+        { $$ = { type: 'assign', name: $1, value: ExpressionFactory.fromObject({ type: 'reference', ...$1 }).insert('add', ExpressionFactory.fromObject({type: 'number', value: 1n}))} }
+
+    | name_id DEC
+        { $$ = { type: 'assign', name: $1, value: ExpressionFactory.fromObject({ type: 'reference', ...$1 }).insert('sub', ExpressionFactory.fromObject({type: 'number', value: 1n}))} }
+
     ;
 
 
 variable_assignment_list
-    : variable_assignment_list ',' for_assignation
+    : variable_assignment_list ',' variable_assignment
         { $$ = $1; $$.statements.push($3); }
 
-    | for_assignation
+    | variable_assignment
         { $$ = { statements: [$1] } }
     ;
 
@@ -1388,18 +1384,6 @@ expression
 
     | name_id
         { $$ = ExpressionFactory.fromObject({ type: 'reference', ...$1 }) }
-
-    | INC name_id
-        { $$ = ExpressionFactory.fromObject({ type: 'reference', ...$2, inc: 'pre'}) }
-
-    | DEC name_id
-        { $$ = ExpressionFactory.fromObject({ type: 'reference', ...$2, dec: 'pre'}) }
-
-    | name_id INC %prec INC_LEFT
-        { $$ = ExpressionFactory.fromObject({ type: 'reference', ...$1, inc: 'post'}) }
-
-    | name_id DEC %prec DEC_LEFT
-        { $$ = ExpressionFactory.fromObject({ type: 'reference', ...$1, dec: 'post'}) }
 
     | NUMBER %prec EMPTY
         { $$ = ExpressionFactory.fromObject({ type: 'number', value: BigInt($1)}) }

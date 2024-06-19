@@ -394,18 +394,8 @@ module.exports = class Processor {
         } else {
             assignedValue = st.value.instance();
         }
-        if (st.name.reference) {
-            // REVIEW
-            EXIT_HERE
-            // assert.strictEqual(indexes.length, 0);
-            // const assignedValue = st.value.instance();
-            if (Debug.active) console.log(assignedValue);
-            this.assign.assignReference(names, assignedValue);
-            return;
-        }
         this.assign.assign(names, indexes, assignedValue);
         if (Debug.active) console.log(`ASSIGN ${st.name.name} = ${assignedValue.toString()} \x1B[0;90m[${Context.sourceTag}]\x1B[0m`);
-        // this.references.set(st.name.name, [], this.expressions.eval(st.value));
     }
     execHint(s) {
         const name = s.name;
@@ -1211,16 +1201,6 @@ module.exports = class Processor {
         }
         console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] > ${expr.toString({hideClass:true, hideLabel:false})} === 0 (${this.sourceRef})\x1B[0m`);
         console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] (RAW) > ${expr.toString({hideClass:true, hideLabel:true})} === 0 (${this.sourceRef})\x1B[0m`);
-    }
-    execVariableIncrement(s) {
-        // REVIEW used only inside loop (increment) in other cases was an expression
-        const name = s.name;
-        const value = this.references.get(name, []);
-        // REVIEW: could be an expression (if expression x+1+1 = x+2)
-        const intValue = value.getValue();
-        if (Debug.active) console.log(`INCREMENT ${s.name} = ${intValue} + ${s.pre + s.post} = ${intValue + s.pre + s.post}`);
-        // console.log(s.pre, s.post, value.getValue());
-        this.references.set(name, [], intValue + s.pre + s.post);
     }
     execVariableDeclaration(s) {
         if (Debug.active) console.log('VARIABLE DECLARATION '+Context.sourceRef+' init:'+s.init);

@@ -17,7 +17,6 @@ module.exports = class Transpiler {
             case 'for': return this.#transpileFor(st);
             case 'code': return this.#transpile(st.statements);
             case 'variable_declaration': return this.#transpileVariableDeclaration(st);
-            case 'variable_increment': return this.#transpileVariableIncrement(st);
             case 'scope_definition': return this.#transpileScopeDefinition(st);
             case 'expr': return this.#transpileExpr(st);
             case 'switch': return this.#transpileSwitchCase(st);

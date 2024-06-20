@@ -886,10 +886,15 @@ module.exports = class Processor {
     * close current subproof and call defered funcions, clear scope of subproof
     */
     closeCurrentSubproof() {
+        // get subproofId because during closing process this.subproofId is set to false
+        const subproofId = this.subproofId;
         this.finalSubproofScope();
         this.suspendCurrentSubproof();
         this.references.clearScope('subproof');
-        if (this.proto) this.proto.setSubproofValues(this.subproofvalues.getAggreationTypesBySubproofId(this.subproofId));
+        if (this.proto) {
+            this.proto.setSubproofValues(this.subproofvalues.getIdsBySubproofId(subproofId),
+                                         this.subproofvalues.getAggreationTypesBySubproofId(subproofId));
+        }
     }
     /**
     * "suspend" current because this subproof could be opened again
@@ -932,8 +937,6 @@ module.exports = class Processor {
         this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id));  
     }
     executeSubproof(subproof, subproofFunc, callinfo) {
-        // proto.setSubproofvalues(this.subproofvalues.getPropertyValues(['id', 'aggregateType', 'subproofId']));
-        // console.log(callinfo);
         this.openSubproof(subproof);
 
         // subproof was a function derivated class

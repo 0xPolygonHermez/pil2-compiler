@@ -38,22 +38,22 @@ function returnNotInstanceOf(actual, cls, message) {
 
 function returnTypeOf(actual, typename, message) {
     if (typeof actual === typename) return actual;
-    _message(message, `value (${typeof actual} isn't type ${typename}`, actual);
+    _message(message, `value type ${typeof actual} isn't type ${typename}`, actual);
 }
 
 function returnNotTypeOf(actual, typename, message) {
     if (typeof actual !== typename) return actual;
-    _message(message, `value (${typeof actual} is type ${typename}`, actual);
+    _message(message, `value type ${typeof actual} is type ${typename}`, actual);
 }
 
 function typeOf(actual, typename, message) {
     if (typeof actual === typename) return actual;
-    _message(message, `value isn't typeof ${typename}`, actual);
+    _message(message,`value type ${typeof actual} isn't type ${typename}`, actual);
 }
 
 function notTypeOf(actual, typename, message) {
     if (typeof actual !== typename) return actual;
-    _message(message, `value is typeof ${typename}`, actual);
+    _message(message, `value type ${typeof actual} is type ${typename}`, actual);
 }
 
 function _message(message, defaultmsg = false, value = false) {

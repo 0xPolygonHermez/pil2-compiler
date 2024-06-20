@@ -18,6 +18,14 @@ module.exports = class SubproofValues extends Indexable {
         let definition = super.getEmptyValue(id, {relativeId, ...options});
         return definition;
     }
+    getIdsBySubproofId(subproofId) {
+        let result = [];
+        for (let index = 0; index < this.values.length; ++index) {
+            if (this.values[index].subproofId != subproofId) continue;
+            result.push(index);
+        }
+        return result;
+    }
     getAggreationTypesBySubproofId(subproofId) {
         return this.values.filter(x => x.subproofId == subproofId).map(x => x.aggregateType);
     }

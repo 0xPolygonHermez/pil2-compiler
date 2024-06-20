@@ -40,6 +40,7 @@ module.exports = class ProtoOut {
         this.currentAir = null;
         this.witnessId2ProtoId = [];
         this.fixedId2ProtoId = [];
+        this.subproofvalId2ProtoId = []; 
         this.options = options;
         this.bigIntType = options.bigIntType ?? 'Buffer';
         this.toBaseField = this.mapBigIntType();
@@ -151,25 +152,16 @@ module.exports = class ProtoOut {
         this.currentSubproof = {name, aggregable, airs: [], subproofId };
         this.pilOut.subproofs.push(this.currentSubproof);
     }
-    setSubproofValues(aggregations) {
-        // this.currentSubproof.subproofvalues = this.spvId2Proto.filter(value => value[2] === subproofId).map(value => { return {aggType: SPV_AGGREGATIONS.indexOf(value[1])}});
-        this.currentSubproof.subproofvalues = aggregations.map(aggregation => { return {aggType: SPV_AGGREGATIONS.indexOf(aggregation)}});
-    }
-
-    // use for all subproof values, of all subproofs
-    setSubproofvalues(values) {
-        this.spvId2Proto = [];
-        let subproofBaseId = [];
-        for (const [id, aggregation, subproofId] of values) {
-            let baseId = subproofBaseId[subproofId] ?? false;
-            if (baseId === false) {
-                baseId = id;
-                subproofBaseId[subproofId] = id;
+    setSubproofValues(ids, aggregations) {
+        assert.equal(ids.length, aggregations.length);
+        this.currentSubproof.subproofvalues = [];
+        for (let index = 0; index < ids.length; ++index) {
+            this.subproofvalId2ProtoId[ids[index]] = index;
+            const aggType = SPV_AGGREGATIONS.indexOf(aggregations[index]);
+            if (aggType < 0) {
+                throw new Error(`Invalid aggregation type on ${Context.sourceRef}`);
             }
-            if (aggregation !== 'sum' && aggregation !== 'prod') {
-                throw new Error(`Invalid subproofvalue aggregation ${aggregation}`);
-            }
-            this.spvId2Proto[id] = [id - baseId, aggregation, subproofId];
+            this.currentSubproof.subproofvalues.push({aggType});
         }
     }
     setGlobalSymbols(symbols) {
@@ -218,8 +210,8 @@ module.exports = class ProtoOut {
                 return {type: REF_TYPE_WITNESS_COL, id: protoId, stage};
             }
             case 'subproofvalue': {
-                const def = ref.instance.get(id);
-                return {type: REF_TYPE_SUBPROOF_VALUE, id: def.relativeId, subproofId: ref.data.subproofId};
+                const protoId = assert.returnTypeOf(this.subproofvalId2ProtoId[id], 'number');
+                return {type: REF_TYPE_SUBPROOF_VALUE, id: protoId, subproofId: ref.data.subproofId};
             }
             case 'proofvalue':
                 return {type: REF_TYPE_PROOF_VALUE, id};

@@ -1,0 +1,21 @@
+air AirA(int N = 2**16, int type = 0) {
+    col witness a,b,c,d;
+
+    subproofval aggregate(sum) typeg;
+    if (type == 0) {
+        subproofval aggregate(prod) type0;
+        type0 === a * b;
+        typeg === a * c;
+    }
+}
+
+air AirB(int N = 2**16) {
+    col witness a,b;
+
+    subproofval aggregate(sum) typeb;
+    typeb === a * b;
+}
+
+AirA(2**8, 0);
+AirA(2**16, 1);
+AirB(2**8);

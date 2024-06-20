@@ -27,6 +27,7 @@ module.exports = class FixedCol extends ProofItem {
         return new FixedCol(this.id);
     }
     cloneUpdate(source) {
+        super.cloneUpdate(source);
         this.definition = source.definition;
     }
 }

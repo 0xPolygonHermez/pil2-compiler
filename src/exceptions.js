@@ -3,6 +3,7 @@ const CannotBeCastToType = require('./exceptions/cannot_be_cast_to_type.js');
 const ReferenceNotFound = require('./exceptions/reference_not_found.js');
 const ReferenceNotVisible = require('./exceptions/reference_not_visible.js');
 const Internal = require('./exceptions/internal.js');
+const Expression = require('./exceptions/expression.js');
 class Assert extends Generic {
     constructor (message, options) {super('ASSERT: '+message, options)}
 }
@@ -15,6 +16,9 @@ class AliasAlreadyDeclared extends Generic {};
 class AliasStillOpen extends Generic {};
 class ContainerNotFound extends Generic {};
 class AlreadyDefined extends Generic {};
+class ExpressionBuild extends Expression {};
+class ExpressionEvaluation extends Expression {};
+
 
 const Exceptions = {
     General,

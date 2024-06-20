@@ -21,6 +21,7 @@ const Debug = require('./debug.js');
 const Types = require('./types.js');
 const TranslationTable = require('./expression/translation_table.js');
 const assert = require('./assert.js');
+const Exceptions = require('./exceptions.js');
 // TODO: StackPos as class
 
 
@@ -196,7 +197,7 @@ class Expression extends ExpressionItem {
     }
     _set (operand) {
         if (this.stack.length) {
-            throw new Error(`Set only could be used with empty stack`);
+            throw new Exceptions.Build(`Set only could be used with empty stack but it has ${this.stack.length} elements`);
         }
         this.stack.push({op: false, operands: [this.assertExpressionItem(operand.clone())]});
     }
@@ -214,7 +215,7 @@ class Expression extends ExpressionItem {
         const bIsEmpty = b === false || b.stack.length === 0;
 
         if (bIsEmpty && Expression.unitaryOperators.includes(op) === false ) {
-            throw new Error(`insert without operands`);
+            throw new Exceptions.ExpressionBuild(`Insert operation (${op}) without operands (b=${b?'false':'true'})`, this);
         }
         const aIsAlone = this.isAlone();
         const bIsAlone = b === false || b.isAlone();

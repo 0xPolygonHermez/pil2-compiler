@@ -46,7 +46,7 @@ module.exports = class ExpressionPacker {
                 return this.container.neg();
 
             default:
-                throw new Error(`Invalid operation ${st.op} on packed expression`);
+                throw new Exceptions.General(`Invalid operation ${st.op} on packed expression`);
         }
     }
 
@@ -62,7 +62,7 @@ module.exports = class ExpressionPacker {
             }
         } else {
             const opeType = ope instanceof Object ? ope.constructor.name : typeof ope;
-            throw new Error(`Invalid reference ${opeType} on packed expression`);
+            throw new Exceptions.General(`Invalid reference ${opeType} on packed expression`);
         }
 
     }
@@ -114,7 +114,7 @@ module.exports = class ExpressionPacker {
                 this.referencePack(defvalue, options);
             }
         } else {
-            throw new Error(`Invalid reference class ${ope.constructor.name} to pack`);
+            throw new Exceptions.General(`Invalid reference class ${ope.constructor.name} to pack`);
         }
     }
 }

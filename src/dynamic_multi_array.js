@@ -1,5 +1,6 @@
 
 const {cloneDeep} = require('lodash');
+const Exceptions = require('./exceptions.js');
 module.exports = class DynamicMultiArray extends MultiArray {
     constructor (lengths, debug) {
         // length[0] means dynamic index

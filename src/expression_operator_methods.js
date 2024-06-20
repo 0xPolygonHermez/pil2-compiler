@@ -1,5 +1,6 @@
 const util = require('util');
 const ExpressionItem = require('./expression_items/expression_item.js');
+const Exceptions = require('./exceptions.js');
 module.exports = class ExpressionOperatorMethods {
     static operatorAddIntValue(valueA, valueB) {
         let res = valueA.clone();
@@ -31,7 +32,7 @@ module.exports = class ExpressionOperatorMethods {
     }
     static operatorEq(valueA, valueB) {
         if (!valueA.isAlone() || !valueB.isAlone()) {
-            throw new Error(`Comparing not alone operators ....`);
+            throw new Exceptions.General(`Comparing not alone operators ....`);
         }
         EXIT_HERE;
     }

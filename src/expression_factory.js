@@ -8,6 +8,8 @@ const RowOffset = require('./expression_items/row_offset.js');
 const Context = require('./context.js');
 const Debug = require('./debug.js');
 const assert = require('./assert.js');
+const Exceptions = require('./exceptions.js');
+
 module.exports = class ExpressionFactory {
 
     // pre function to delete property op only used by routing
@@ -21,7 +23,7 @@ module.exports = class ExpressionFactory {
             if (e.message.startsWith(Context.processor.sourceRef + ':') === false) {
                 e.message = Context.processor.sourceRef + ': ' + e.message;
             }
-            throw e; // new Error();
+            throw new Exceptions.General(e.message); // new Error();
         }
     }
     static _fromObject(obj, options = {}) {        
@@ -58,7 +60,7 @@ module.exports = class ExpressionFactory {
 
         if (unknownProperties.length > 0) {
             console.log(obj);
-            throw new Error(`Invalid properties: ${unknownProperties.join(',')} / ${type} on ${obj.debug}`);
+            throw new Exceptions.General(`Invalid properties: ${unknownProperties.join(',')} / ${type} on ${obj.debug}`);
         }
         if (type === 'row_offset') {
             return item;

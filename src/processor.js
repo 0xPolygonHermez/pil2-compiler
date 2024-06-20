@@ -891,10 +891,6 @@ module.exports = class Processor {
         this.finalSubproofScope();
         this.suspendCurrentSubproof();
         this.references.clearScope('subproof');
-        if (this.proto) {
-            this.proto.setSubproofValues(this.subproofvalues.getIdsBySubproofId(subproofId),
-                                         this.subproofvalues.getAggreationTypesBySubproofId(subproofId));
-        }
     }
     /**
     * "suspend" current because this subproof could be opened again
@@ -953,7 +949,9 @@ module.exports = class Processor {
         this.finalAirScope();
         subproof.airEnd();
 
-        if (this.proto) this.subproofProtoOut(subproof.id, air.id)
+        if (this.proto) {
+            this.subproofProtoOut(subproof.id, air.id);
+        }
 
         this.constraints = new Constraints();
 
@@ -983,6 +981,9 @@ module.exports = class Processor {
         this.proto.setFixedCols(this.fixeds);
         this.proto.setPeriodicCols(this.fixeds);
         this.proto.setWitnessCols(this.witness);
+        this.proto.setSubproofValues(this.subproofvalues.getIdsBySubproofId(this.subproofId),
+                                     this.subproofvalues.getAggreationTypesBySubproofId(this.subproofId));
+
         // this.expressions.pack(packed, {instances: [air.fixeds, air.witness]});
         this.expressions.pack(packed, {instances: [this.fixeds, this.witness]});
         this.proto.setConstraints(this.constraints, packed,

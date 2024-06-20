@@ -369,9 +369,13 @@ module.exports = class ProtoOut {
                     ope.witnessCol.stage = stage;
                 }
                 break;
-            case 'subproofValue':
-                // subproof no need translate idx because put index from begining
-                // ope.subproofValue.aggType = SPV_AGGREGATIONS.indexOf(ope.subproofValue.aggType)
+            case 'subproofValue': {
+                    const protoId = this.subproofvalId2ProtoId[ope.subproofValue.idx] ?? false;
+                    if (protoId === false) {
+                        throw new Error(`Translate: Found invalid subproofValue idx ${ope.subproofValue.idx}`);
+                    }
+                    ope.subproofValue.idx = protoId;        
+                }
                 break;
             case 'challenge': {
                     /* const id = ope.challenge.idx;

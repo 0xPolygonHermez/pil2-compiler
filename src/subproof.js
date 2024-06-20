@@ -43,14 +43,10 @@ module.exports = class Subproof {
     }
     airEnd() {
         if (!this.insideFirstAir) {
-            /* const spvNonDeclared = Object.keys(this.spvDeclaredInsideThisAir).filter(name => this.spvDeclaredInsideThisAir[name] === false);
-            console.log(spvNonDeclared);
+            const spvNonDeclared = Object.keys(this.spvDeclaredInsideThisAir).filter(name => this.spvDeclaredInsideThisAir[name] === false);
             for (const name of spvNonDeclared) {
-                console.log(Context.references.getReference(name));
-                console.log(Context.references.getReference(name+'__'));
-                // console.log(spvNonDeclared, Context.airName);
-                // throw new Error(``);
-            }*/
+                throw new Error(`Subproofvalue ${name} declared on previous ${this.name} instance, isn't declared on current air instance`);
+            }
         }
         this.insideFirstAir = false;
         this.insideAir = false;

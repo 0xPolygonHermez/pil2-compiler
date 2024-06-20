@@ -6,10 +6,6 @@ air AirA(int N = 2**16, int type = 0) {
         subproofval aggregate(prod) type0;
         type0 === a * b;
         typeg === a * c;
-    } else {
-        subproofval aggregate(prod) type0;
-        type0 === c * b;
-        typeg === c * c;
     }
 }
 
@@ -20,6 +16,6 @@ air AirB(int N = 2**16) {
     typeb === a * b;
 }
 
-AirA(2**8);
-AirA(2**16);
+AirA(2**8, 0);
+AirA(2**16, 1);
 AirB(2**8);

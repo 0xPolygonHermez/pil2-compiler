@@ -1,6 +1,7 @@
 const Expression = require("../expression.js");
 const Context = require('../context.js');
 const assert = require('../assert.js');
+const Exceptions = require('../exceptions.js');
 
 module.exports = class SequenceBase {
     constructor (parent, label, options = {}) {
@@ -28,31 +29,31 @@ module.exports = class SequenceBase {
             case 'arith_seq': return this.arithSeq(e);
             case 'geom_seq': return this.geomSeq(e);
         }
-        throw new Error(`Invalid sequence type ${e.type} ${this.label}`);
+        throw new Exceptions.Sequence(`Invalid sequence type ${e.type} ${this.label}`);
     }
     expr(e){        
-        throw new Error(`Sequence type:expr not implemented for ${this.label}`);
+        throw new Exceptions.Sequence(`Sequence type:expr not implemented for ${this.label}`);
     }
     sequence(e){        
-        throw new Error(`Sequence type:sequence not implemented for ${this.label}`);
+        throw new Exceptions.Sequence(`Sequence type:sequence not implemented for ${this.label}`);
     }
     paddingSeq(e){
-        throw new Error(`Sequence type:paddingSeq not implemented for ${this.label}`);
+        throw new Exceptions.Sequence(`Sequence type:paddingSeq not implemented for ${this.label}`);
     }
     seqList(e){
-        throw new Error(`Sequence type:seqList not implemented for ${this.label}`);
+        throw new Exceptions.Sequence(`Sequence type:seqList not implemented for ${this.label}`);
     }
     repeatSeq(e){
-        throw new Error(`Sequence type:repeatSeq not implemented for ${this.label}`);
+        throw new Exceptions.Sequence(`Sequence type:repeatSeq not implemented for ${this.label}`);
     }
     rangeSeq(e){
-        throw new Error(`Sequence type:rangeSeq not implemented for ${this.label}`);
+        throw new Exceptions.Sequence(`Sequence type:rangeSeq not implemented for ${this.label}`);
     }
     arithSeq(e){
-        throw new Error(`Sequence type:arithSeq not implemented for ${this.label}`);
+        throw new Exceptions.Sequence(`Sequence type:arithSeq not implemented for ${this.label}`);
     }
     geomSeq(e){
-        throw new Error(`Sequence type:geomSeq not implemented for ${this.label}`);
+        throw new Exceptions.Sequence(`Sequence type:geomSeq not implemented for ${this.label}`);
     }
     e2num(e) {
         if (typeof e === 'bigint' || typeof e === 'number') {
@@ -63,7 +64,7 @@ module.exports = class SequenceBase {
     toNumber(value) {
         let nvalue = Number(value);
         if (nvalue === NaN || isNaN(nvalue)) {
-            throw new Error(`Invalid number ${value}`);
+            throw new Exceptions.Sequence(`Invalid number ${value}`);
         }
         return nvalue;
     }
@@ -71,7 +72,7 @@ module.exports = class SequenceBase {
         const fromTimes = e.times ? this.toNumber(this.e2num(e.times)): 1;
         const toTimes = e.toTimes ? this.toNumber(this.e2num(e.toTimes)): fromTimes;
         if (fromTimes !== toTimes) {
-            throw new Error(`In range sequence, from(${fromTimes}) and to(${toTimes}) must be same`);
+            throw new Exceptions.Sequence(`In range sequence, from(${fromTimes}) and to(${toTimes}) must be same`);
         }
         return [this.e2num(e.from), this.e2num(e.to), fromTimes];
     }
@@ -82,14 +83,14 @@ module.exports = class SequenceBase {
         const t2Times = e.t2.times ? this.toNumber(this.e2num(e.t2.times)): 1;
         const tnTimes = e.tn.times === false ? false : (e.tn.times ? this.toNumber(this.e2num(e.t2.times)): 1);
         if (t1Times !== t2Times && (tnTimes === false || tnTimes === t2Times)) {
-            throw new Error(`In term sequence, t1(${t1Times}), t2(${t2Times})`+
+            throw new Exceptions.Sequence(`In term sequence, t1(${t1Times}), t2(${t2Times})`+
                         (tnTimes === false ? '':` and tn(${tbTimes}`)+'must be same');
         }
         const t1 = this.e2num(e.t1 instanceof Expression ? e.t1 : e.t1.value);
         const t2 = this.e2num(e.t2 instanceof Expression ? e.t2 : e.t2.value);
         const tn = e.tn === false ? false : this.e2num(e.tn instanceof Expression ? e.tn : e.tn.value);
         if (t1 === t2) {
-            throw new Error(`In term sequence, t1(${t1}), t2(${t2}) must be different`);
+            throw new Exceptions.Sequence(`In term sequence, t1(${t1}), t2(${t2}) must be different`);
         }
         e._cache_getTermSeqInfo = [t1, t2, tn, t1Times];
         return e._cache_getTermSeqInfo;
@@ -133,10 +134,10 @@ module.exports = class SequenceBase {
     }
     geomCount(fromValue, toValue, delta) {
         if (delta < Number.MIN_SAFE_INTEGER || delta > Number.MAX_SAFE_INTEGER) {
-            throw new Error(`Geometric coeficient to big ${delta}`);
+            throw new Exceptions.Sequence(`Geometric coeficient to big ${delta}`);
         }
         if (!fromValue || !toValue || !delta) {
-            throw new Error(`Invalid geometric parameters from:${fromValue} to:${toValue} delta:${delta}`);
+            throw new Exceptions.Sequence(`Invalid geometric parameters from:${fromValue} to:${toValue} delta:${delta}`);
         }
 
         const _delta = Number(delta);
@@ -167,7 +168,7 @@ module.exports = class SequenceBase {
             case '*': return fromValue * (delta ** BigInt(size - 1));
             case '/': return fromValue / (delta ** BigInt(size - 1));
         }
-        throw new Error(`Invalid sequence operation ${operation}`);            
+        throw new Exceptions.Sequence(`Invalid sequence operation ${operation}`);            
     }
     calculateSingleCount(fromValue, toValue, delta, operation) {
         switch (operation) {
@@ -176,7 +177,7 @@ module.exports = class SequenceBase {
             case '*': return this.geomCount(fromValue, toValue, delta);
             case '/': return this.geomCount(fromValue, toValue, delta);
         }
-        throw new Error(`Invalid sequence operation ${operation}`);
+        throw new Exceptions.Sequence(`Invalid sequence operation ${operation}`);
     }
     getGeomInfo(t1, t2, tn, times, calculateSize = false) {
         // TODO: negative values ?
@@ -201,7 +202,7 @@ module.exports = class SequenceBase {
                 // console.log({tn, t1, ratio, n, paddingSize: this.paddingSize});
                 tn = t1 / (ratio ** n);
                 if (tn === 0n) {
-                    throw new Error(`Invalid geometric sequence must specify last element, implicit last element is < 1 ${this.debug}`)
+                    throw new Exceptions.Sequence(`Invalid geometric sequence must specify last element, implicit last element is < 1 ${this.debug}`)
                 }
             }
         }
@@ -217,7 +218,7 @@ module.exports = class SequenceBase {
             // console.log({_: 'calculateGeomN', n, ratio, ti, tf});
         }
         if (tf !== (ti * (ratio ** BigInt(n)))) {
-            throw new Error(`ERROR geometric seq calculation ${tf} !== ${ti} * (${ratio} ** ${BigInt(n)})`);
+            throw new Exceptions.Sequence(`ERROR geometric seq calculation ${tf} !== ${ti} * (${ratio} ** ${BigInt(n)})`);
         }
         return [this.toNumber(n) + 1, reverse, ti, tf, ratio];
     }

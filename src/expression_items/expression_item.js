@@ -55,6 +55,7 @@
 */
 const Exceptions = require('../exceptions.js');
 const Debug = require('../debug.js');
+
 class ExpressionItem {
     static _classToManager = {};
 
@@ -76,7 +77,7 @@ class ExpressionItem {
     }
     popArrayIndex () {
         if (this.indexes === false) {
-            throw new Error(`try to add index to non-indexable element`);
+            throw new Exceptions.ExpressionItemBuild(`try to add index to non-indexable element`,this);
         }
         if (typeof this.indexes === 'undefined') {
             this.indexes = [];
@@ -85,10 +86,10 @@ class ExpressionItem {
     }
     pushArrayIndex () {
         if (this.indexes === false) {
-            throw new Error(`try to add an index to non-indexable element`);
+            throw new Exceptions.ExpressionItemBuild(`try to add an index to non-indexable element`, this);
         }
         if (this.dim < 1) {
-            throw new Error(`try to remove an index from element without indexes`);
+            throw new Exceptions.ExpressionItemBuild(`try to remove an index from element without indexes`, this);
         }
         return this.indexes.pop();
     }

@@ -4,6 +4,8 @@ const ReferenceNotFound = require('./exceptions/reference_not_found.js');
 const ReferenceNotVisible = require('./exceptions/reference_not_visible.js');
 const Internal = require('./exceptions/internal.js');
 const Expression = require('./exceptions/expression.js');
+const ExpressionItem = require('./exceptions/expression_item.js');
+const Statement = require('./exceptions/statement.js');
 class Assert extends Generic {
     constructor (message, options) {super('ASSERT: '+message, options)}
 }
@@ -18,10 +20,12 @@ class ContainerNotFound extends Generic {};
 class AlreadyDefined extends Generic {};
 class ExpressionBuild extends Expression {};
 class ExpressionEvaluation extends Expression {};
-
+class Sequence extends Generic {};
+class Syntax extends Generic {};
+class Proto extends Generic {};
 
 const Exceptions = {
-    General,
+    Generic,
     Internal,
     Assert,
     Array,
@@ -35,5 +39,12 @@ const Exceptions = {
     AliasStillOpen,
     ContainerNotFound,
     AlreadyDefined,
+    ExpressionBuild,
+    ExpressionEvaluation,
+    Sequence,
+    ExpressionItem,
+    Syntax,
+    Statement,
+    Proto,
 }
 module.exports = Exceptions;

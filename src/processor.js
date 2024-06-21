@@ -37,6 +37,7 @@ const util = require('util');
 const Debug = require('./debug.js');
 const Transpiler = require('./transpiler.js');
 const assert = require('./assert.js');
+const Exceptions = require('./exceptions.js');
 
 const MAX_SWITCH_CASE_RANGE = 512;
 module.exports = class Processor {
@@ -231,13 +232,13 @@ module.exports = class Processor {
         // }
         if (typeof st.type === 'undefined') {
             console.log(st);
-            this.error(st, `Invalid statement (without type)`);
+            throw new Exceptions.Statement(`Invalid statement (without type)`, st);
         }
         const method = ('exec_'+st.type).replace(/[-_][a-z]/g, (group) => group.slice(-1).toUpperCase());
         if (Debug.active) console.log(`## DEBUG ## ${this.executeCounter}.${this.executeStatementCounter} ${method} ${st.debug}` );
         if (!(method in this)) {
             console.log('==== ERROR ====');
-            this.error(st, `Invalid statement type: ${st.type}`);
+            throw new Exceptions.Statement(`Invalid statement type: ${st.type}`, st);
         }
         let res;
         try {
@@ -351,7 +352,7 @@ module.exports = class Processor {
         }
 
         if (!func) {
-            this.error({}, `Undefined function ${name}`);
+            throw new Exceptions.ReferenceNotFound(`Undefined function ${name}`);
         }
         if (func.isBridge) {   
             return func.exec(callinfo);
@@ -432,10 +433,10 @@ module.exports = class Processor {
         for (let icond = 0; icond < s.conditions.length; ++icond) {
             const cond = s.conditions[icond];
             if ((icond === 0) !== (cond.type === 'if')) {
-                throw new Error('first position must be an if, and if only could be on first position');
+                throw new Exceptions.Syntax('first position must be an if, and if only could be on first position');
             }
             if (cond.type === 'else' && icond !== (s.conditions.length-1)) {
-                throw new Error('else only could be on last position');
+                throw new Exceptions.Syntax('else only could be on last position');
             }
             if (Debug.active) console.log(cond);
 
@@ -460,7 +461,7 @@ module.exports = class Processor {
                     if (value instanceof Expression) {  
                         const _key = value.asInt();
                         if (typeof values[_key] !== 'undefined') {
-                            throw new Error(`Switch-case value ${_key} duplicated`);
+                            throw new Exceptions.Syntax(`Switch-case value ${_key} duplicated`);
                         }
                         values[_key] = index;
                     } else if (value.from && value.to && value.from instanceof Expression && value.to instanceof Expression) {
@@ -469,13 +470,13 @@ module.exports = class Processor {
                         if ((_to - _from) < MAX_SWITCH_CASE_RANGE) { 
                             while (_from <= _to) {
                                 if (typeof values[_from] !== 'undefined') {
-                                    throw new Error(`Switch-case value ${_from} duplicated`);
+                                    throw new Exceptions.Syntax(`Switch-case value ${_from} duplicated`);
                                 }
                                 values[_from] = index;
                                 ++_from;
                             }
                         } else {
-                            throw new Error(`Switch-case range too big ${from}..${to} (${_to-_from}) max: ${MAX_SWITCH_CASE_RANGE}`);
+                            throw new Exceptions.Syntax(`Switch-case range too big ${from}..${to} (${_to-_from}) max: ${MAX_SWITCH_CASE_RANGE}`);
                         }        
                     } else {
                         console.log(value);
@@ -485,7 +486,7 @@ module.exports = class Processor {
                 _case.__cached_values = values;
             } else if (_case.default) {
                 if (typeof values[false] !== 'undefined') {
-                    throw new Error(`Switch-case DEFAULT duplicated`);
+                    throw new Exceptions.Syntax(`Switch-case DEFAULT duplicated`);
                 }
                 values[false] = index;
             } else {
@@ -728,17 +729,13 @@ module.exports = class Processor {
     execContinue(s) {
         return new ContinueCmd();
     }
-    error(s, msg) {
-        console.log(s);
-        throw new Error(msg);
-    }
     execInclude(s) {
         if (!s.contents) {
             // to support dynamic includes, add some internal statements need to compile inside subproof
             // but after take compiled statements. TODO: analyze use current subproof name
             const sts = this.compiler.loadInclude(s.file.asString(), {preSrc: 'air __(int N=2**2) {\n', postSrc: '\n};\n'});
             if (sts === false) {
-                throw new Error(`ERROR loading include ${s.file.asString()}`);
+                throw new Exceptions.Syntax(`ERROR loading include ${s.file.asString()}`);
             }
             s.contents = sts[0].statements;
         }
@@ -777,7 +774,7 @@ module.exports = class Processor {
 //        if (se.op !== 'number') {
             console.log('ERROR');
             console.log(se);
-            this.error(s, title + ' is not constant expression (1)');
+            throw new Exceptions.Statement(title + ' is not constant expression (1)', s);
         }
 //        return Number(se.value);
         return se;
@@ -789,7 +786,7 @@ module.exports = class Processor {
         const subproof = s.subproof ?? false;
         const namespace = s.namespace;
         if (subproof !== false && !this.subproofs.isDefined(subproof)) {
-            this.error(s, `subproof ${s.subproof} hasn't been defined`);
+            throw new Exceptions.Statement(`subproof ${s.subproof} hasn't been defined`, s);
         }
 
         // TODO: verify if namespace just was declared in this case subproof must be the same
@@ -826,13 +823,13 @@ module.exports = class Processor {
     }
     checkRows(rows) {
         if (2n ** BigInt(this.log2(rows)) !== BigInt(rows)) {
-            throw new Error(`Invalid N ${rows}. N must be a power of 2`);
+            throw new Exceptions.Syntax(`Invalid N ${rows}. N must be a power of 2`);
         }
     }
     execAirDefinition(s) {
         const subproofName = s.name ?? false;
         if (subproofName === false) {
-            this.error(s, `air not defined correctly`);
+            throw new Exceptions.Statement(`air not defined correctly`, s);
         }
 
         const subproof = new Subproof(subproofName, s.statements, s.aggregate ?? false);
@@ -845,11 +842,11 @@ module.exports = class Processor {
     execAirBlock(s) {
         const subproofName = s.name ?? false;
         if (subproofName === false) {
-            this.error(s, `air not defined correctly`);
+            throw new Exceptions.Statement(`air not defined correctly`, s);
         }
         const subproof = this.subproofs.get(subproofName);
         if (!subproof) {
-            throw new Error(`Air definition ${subproofName} hasn't been defined before air block`);
+            throw new Exceptions.Syntax(`Air definition ${subproofName} hasn't been defined before air block`);
         }
         subproof.addBlock(s.statements);
     }
@@ -912,7 +909,7 @@ module.exports = class Processor {
     createAir(subproof) {
         const item = this.references.isDefined('N') ? this.references.getItem('N') : false;
         if (!(item instanceof ExpressionItems.IntValue)) {
-            throw new Error(`an int parameter N must be declared as subproof argument`);
+            throw new Exceptions.Syntax(`an int parameter N must be declared as subproof argument`);
         }
         const rows = item.asInt();
         this.checkRows(rows);
@@ -1089,7 +1086,7 @@ module.exports = class Processor {
         const name = s.items[0].name ?? '';
 
         if (this.currentSubproof === false) {
-            throw new Error(`Subproofvalue ${name} must be declared inside subproof (air)`);
+            throw new Exceptions.Syntax(`Subproofvalue ${name} must be declared inside subproof (air)`);
         }
         for (const value of s.items) {
             const lengths = this.decodeLengths(value);
@@ -1106,13 +1103,13 @@ module.exports = class Processor {
         const fname = s.function.name;
         const event = s.event;
         if (s.args.length > 0) {
-            throw new Error('delayed function call arguments are not yet supported');
+            throw new Exceptions.Syntax('delayed function call arguments are not yet supported');
         }
         if (event !== 'final') {
-            throw new Error(`delayed function call event ${event} no supported`);
+            throw new Exceptions.Syntax(`delayed function call event ${event} no supported`);
         }
         if (['proof', 'subproof', 'air'].includes(scope) === false) {
-            throw new Error(`delayed function call scope ${scope} no supported`);
+            throw new Exceptions.Syntax(`delayed function call scope ${scope} no supported`);
         }
 
         const _scope = scope === 'subproof' ? `subproof#${Context.subproofId}` : scope;
@@ -1200,7 +1197,7 @@ module.exports = class Processor {
             expr = this.globalConstraints.getExpr(id);
             prefix = 'GLOBAL';
         } else {
-            throw new Error(`Constraint definition on invalid scope (${scopeType}) ${this.context.sourceRef}`);
+            throw new Exceptions.Syntax(`Constraint definition on invalid scope (${scopeType}) ${this.context.sourceRef}`);
         }
         console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] > ${expr.toString({hideClass:true, hideLabel:false})} === 0 (${this.sourceRef})\x1B[0m`);
         console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] (RAW) > ${expr.toString({hideClass:true, hideLabel:true})} === 0 (${this.sourceRef})\x1B[0m`);
@@ -1211,7 +1208,7 @@ module.exports = class Processor {
         const count = s.items.length;
 
         if (s.multiple && s.init.length !== count) {
-            this.error(s, `Mismatch between len of variables (${count}) and len of their inits (${inits.length})`);
+            throw new Exceptions.Statement(`Mismatch between len of variables (${count}) and len of their inits (${s.init.length})`, s);
         }
 
         for (let index = 0; index < count; ++index) {
@@ -1293,7 +1290,7 @@ module.exports = class Processor {
         const sourceRef = this.sourceRef;
         this.traceLog(`[RETURN.BEGIN ${sourceRef}] ${this.scope.deep}`);
         if (!this.insideFunction()) {
-            throw new Error('Return is called out of function scope');
+            throw new Exceptions.Syntax('Return is called out of function scope');
         }
         const res = s.value.instance();
         if (Debug.active) {

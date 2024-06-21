@@ -3,6 +3,7 @@ const FixedColItem = require("./expression_items/fixed_col.js");
 const FixedCol = require("./definition_items/fixed_col.js");
 const Context = require('./context.js');
 const assert = require('./assert.js');
+const Exceptions = require('./exceptions.js');
 module.exports = class FixedCols extends Indexable {
 
     constructor () {
@@ -16,7 +17,7 @@ module.exports = class FixedCols extends Indexable {
         if (assert.isEnabled) assert.ok(item, {type: this.type, definition: this.definitionClass, id, item});
         if (typeof item.setRowValue !== 'function') {
             console.log({type: this.type, definition: this.definitionClass, id, item});
-            throw new Error(`Invalid assignation at ${Context.sourceTag}`);
+            throw new Exceptions.Generic(`Invalid assignation`);
         }
         item.setRowValue(row, value);
         if (this.debug) {
@@ -28,7 +29,7 @@ module.exports = class FixedCols extends Indexable {
         if (assert.isEnabled) assert.ok(item, {type: this.type, definition: this.definitionClass, id, item});
         if (typeof item.getRowValue !== 'function') {
             console.log({type: this.type, definition: this.definitionClass, id, item});
-            throw new Error(`Invalid access at ${Context.sourceTag}`);
+            throw new Exceptions.Generic(`Invalid access`);
         }
         return item.getRowValue(row);
     }

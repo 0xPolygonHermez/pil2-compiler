@@ -3,6 +3,7 @@ const Debug = require('../debug.js');
 const assert = require('../assert.js');
 const Context = require('../context.js');
 const SequenceBase = require('./base.js');
+const Exceptions = require('../exceptions.js');
 
 module.exports = class SequenceExtend extends SequenceBase {
     constructor (parent, label, options = {}) {
@@ -93,11 +94,11 @@ module.exports = class SequenceExtend extends SequenceBase {
         let seqSize = this.execute(e.value);
         let remaingValues = this.paddingSize - seqSize;
         if (remaingValues < 0) {
-            throw new Error(`In padding range must be space at least for one time sequence at ${this.debug}`);
+            throw new Exceptions.Sequence(`In padding range must be space at least for one time sequence at ${this.debug}`);
         }
         if (seqSize < 1) {
             console.log(e.value);
-            throw new Error(`Sequence must be at least one element at ${this.debug}`);
+            throw new Exceptions.Sequence(`Sequence must be at least one element at ${this.debug}`);
         }
         // console.log('SETTING REMAING_VALUES '+remaingValues+' '+seqSize);
         // console.log({remaingValues, seqSize});

@@ -1,5 +1,6 @@
 const Expression = require("./expression.js");
 const ExpressionId = require('./expression_id.js');
+const Exceptions = require('./exceptions.js');
 
 module.exports = class Hints {
 
@@ -54,7 +55,7 @@ module.exports = class Hints {
             return result;
         }
         console.log(data);
-        throw new Error(`Invalid hint-data (type:${typeof data} ${data && data.constructor ? data.constructor.name : ''}) on cloneHint of ${path}`);
+        throw new Exceptions.Generic(`Invalid hint-data (type:${typeof data} ${data && data.constructor ? data.constructor.name : ''}) on cloneHint of ${path}`);
     }
 
     getPackedExpressionId(id, container, options) {

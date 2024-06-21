@@ -13,7 +13,6 @@ const OP_RUNTIME = 'runtime';
 const NATIVE_REFS = ['witness', 'fixed', 'public', 'challenge', 'subproofvalue', 'proofvalue', 'publictable'];
 const NATIVE_OPS = ['add', 'sub', 'mul', 'neg'];
 const VALID_NATIVE_OPS = [false, ...NATIVE_OPS];
-const Exceptions = require('./exceptions.js');
 const ExpressionPacker = require('./expression_packer.js');
 const ExpressionClass = require('./expression_class.js');
 const ExpressionList = require('./expression_items/expression_list.js');
@@ -276,7 +275,7 @@ class Expression extends ExpressionItem {
         // this.runtime = this.runtime || NATIVE_OPS.indexOf(op) < 0 || bs.some((b) => b.runtime);
 
         if (anyEmptyB) {
-            throw new Error(`insert without operands`);
+            throw new Exceptions.ExpressionBuild(`Insert without operands`, this);
         }
         const aIsAlone = this.isAlone();
         const allBsAreAlone = bs.reduce((res, b) => res && b.isAlone(), true);
@@ -325,17 +324,13 @@ class Expression extends ExpressionItem {
         }
         return operand;
     }
-    evaluateRuntime(op, deeply = false) {
-        let res = Context.expressions.evalRuntime(op, this, deeply);
-        return res;
-    }
     getReference() {
         if (!this.isAlone()) {
-            throw new Error(`Invalid expression by reference`);
+            throw new Exceptions.Expression(`Invalid expression by reference`, this);
         }
         let dope = this.cloneAloneOperand();
         if (dope.next || dope.prior) {
-            throw new Error(`Invalid expression by reference`);
+            throw new Exceptions.Expression(`Invalid expression by reference`, this);
         }
         this.evaluateIndexes(dope);
         return dope;
@@ -540,11 +535,11 @@ class Expression extends ExpressionItem {
 
         if (operationInfo === false) {
             console.log(_values);
-            throw new Error(`Operation ${operation} not was defined`);
+            throw new Exceptions.Expression(`Operation ${operation} not was defined`, this);
         }
 
         if (operationInfo.args !== _values.length) {
-            throw new Error(`Invalid number of arguments on operation ${operation}, received ${_values.length} values but was expected ${operationInfo.args}`);
+            throw new Exceptions.Expression(`Invalid number of arguments on operation ${operation}, received ${_values.length} values but was expected ${operationInfo.args}`, this);
         }
 
 
@@ -624,11 +619,11 @@ class Expression extends ExpressionItem {
                 ++iarg;
             }            
         }
-        throw new Error(`Operation ${operation} not was defined by types ${types.join(',')} [${methods.join(', ')}] at ${Context.sourceRef}`);
+        throw new Exceptions.Expression(`Operation ${operation} not was defined by types ${types.join(',')} [${methods.join(', ')}] at ${Context.sourceRef}`, this);
     }
     applyOperationIf(values) {
         if (values.length !== 3) {
-            throw new Error(`Invalid number of arguments on operation if, received ${values.length} values but was expected 3`);
+            throw new Exceptions.Expression(`Invalid number of arguments on operation if, received ${values.length} values but was expected 3`, this);
         }
         const cond = values[0].asBool();
         return values[cond ? 1 : 2].eval();
@@ -712,7 +707,7 @@ class Expression extends ExpressionItem {
         const res = typeof value.asIntDefault === 'function' ? value.asIntDefault(false) : false;
         if (res === false) {
             console.log(value);
-            throw new Error(this.toString() + " cannot evaluated as a integer");
+            throw new Exceptions.Expression(this.toString() + " cannot evaluated as a integer", this);
         }
         return res;
     }

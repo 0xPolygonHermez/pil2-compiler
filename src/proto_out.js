@@ -5,6 +5,7 @@ const fs = require('fs');
 const util = require('util');
 const assert = require('./assert.js');
 const Context = require('./context.js');
+const Exceptions = require('./exceptions.js');
 
 const MAX_CHALLENGE = 200;
 const MAX_STAGE = 20;
@@ -55,7 +56,7 @@ module.exports = class ProtoOut {
                 this.uint8size = this.options.uint8size ?? 8;
                 return this.bint2uint8;
         }
-        throw new Error(`Invalid bigIntType ${this.bigIntType} on ProtoOut`);
+        throw new Exceptions.Proto(`Invalid bigIntType ${this.bigIntType} on ProtoOut`);
     }
     buildTypes() {
         this.PilOut = this.root.lookupType('PilOut');
@@ -142,7 +143,7 @@ module.exports = class ProtoOut {
         // check if exist a subproof with this name, if not create it.
         const subproof = this.pilOut.subproofs.find(sp => sp.subproofId === subproofId);
         if (typeof subproof === 'undefined') {
-            throw new Error(`Using subproofId ${subproofId} not found on proto`);
+            throw new Exceptions.Proto(`Using subproofId ${subproofId} not found on proto`);
         }
         this.currentSubproof = subproof;
     }
@@ -159,7 +160,7 @@ module.exports = class ProtoOut {
             this.subproofvalId2ProtoId[ids[index]] = index;
             const aggType = SPV_AGGREGATIONS.indexOf(aggregations[index]);
             if (aggType < 0) {
-                throw new Error(`Invalid aggregation type on ${Context.sourceRef}`);
+                throw new Exceptions.Proto(`Invalid aggregation type on ${Context.sourceRef}`);
             }
             this.currentSubproof.subproofvalues.push({aggType});
         }
@@ -189,7 +190,7 @@ module.exports = class ProtoOut {
                 };
                 this.pilOut.symbols.push(payout);
             } catch (e) {
-                throw new Error(`ERROR exporting proto symbol ${name}: ` + e.message);
+                throw new Exceptions.Proto(`ERROR exporting proto symbol ${name}: ` + e.message);
             }
         }
     }
@@ -226,7 +227,7 @@ module.exports = class ProtoOut {
             }
 
         }
-        throw new Error(`Invalid symbol type ${type}`);
+        throw new Exceptions.Proto(`Invalid symbol type ${type}`);
     }
 
     setPublics(publics) {
@@ -275,7 +276,7 @@ module.exports = class ProtoOut {
                 const _value = col.getValue(irow);
                 if (typeof _value === 'undefined') {
                     console.log(irow, col);
-                    throw new Error(`Error ${col.constructor.name} on row ${irow}`);
+                    throw new Exceptions.Proto(`Error ${col.constructor.name} on row ${irow}`);
                 }
                 values.push(this.toBaseField(_value));
             }
@@ -289,7 +290,7 @@ module.exports = class ProtoOut {
         let stages = [];
         for (const col of cols) {
             if (col.stage < 1) {
-                throw new Error(`Invalid stage ${col.stage}`);
+                throw new Exceptions.Proto(`Invalid stage ${col.stage}`);
             }
             const stageIndex = col.stage - 1;
             if (typeof stages[stageIndex] === 'undefined') {
@@ -333,7 +334,7 @@ module.exports = class ProtoOut {
                     this.translate(e[op].value);
                     break;
                 default:
-                    throw new Error(`Invalid operation ${op} on packedExpression`);
+                    throw new Exceptions.Proto(`Invalid operation ${op} on packedExpression`);
             }
             expressions.push(e);
         }
@@ -347,7 +348,7 @@ module.exports = class ProtoOut {
                     const [type, protoId] = this.fixedId2ProtoId[ope.fixedCol.idx] ?? [false,false];
                     if (protoId === false) {
                         console.log(ope);
-                        throw new Error(`Translate: Found invalid fixedColId ${ope.fixedCol.idx}`);
+                        throw new Exceptions.Proto(`Translate: Found invalid fixedColId ${ope.fixedCol.idx}`);
                     }
                     ope.fixedCol.colIdx = protoId;
                     if (type === 'P') {
@@ -363,7 +364,7 @@ module.exports = class ProtoOut {
                     const [stage, protoId] = this.witnessId2ProtoId[ope.witnessCol.colIdx] ?? [false, false];
                     // console.log(`TRANSLATE witnessCol colIdx:${ope.witnessCol.colIdx}=>${protoId} rowOffset:${ope.witnessCol.rowOffset} stage:${ope.witnessCol.stage}=>${stage}`);
                     if (protoId === false) {
-                        throw new Error(`Translate: Found invalid witnessColId ${ope.witnessCol.colIdx}`);
+                        throw new Exceptions.Proto(`Translate: Found invalid witnessColId ${ope.witnessCol.colIdx}`);
                     }
                     ope.witnessCol.colIdx = protoId;
                     ope.witnessCol.stage = stage;
@@ -378,7 +379,7 @@ module.exports = class ProtoOut {
                     const [protoId, stage] = this.challengeId2Proto[id] ?? [false, false];
                     if (protoId === false) {
                         console.log(ope);
-                        throw new Error(`Translate: Found invalid subproofvalue ${id}`);
+                        throw new Exceptions.Proto(`Translate: Found invalid subproofvalue ${id}`);
                     }
                     ope.challenge.idx = protoId;
                     ope.challenge.stage = stage;*/
@@ -391,10 +392,10 @@ module.exports = class ProtoOut {
     }
     setupAirProperty(propname, init = []) {
         if (this.currentAir === null) {
-            throw new Error('Current air not defined');
+            throw new Exceptions.Proto('Current air not defined');
         }
         if (typeof this.currentAir[propname] !== 'undefined') {
-            throw new Error(`Property ${propname} already defined on current air`);
+            throw new Exceptions.Proto(`Property ${propname} already defined on current air`);
         }
         this.currentAir[propname] = init;
         return this.currentAir[propname];
@@ -432,7 +433,7 @@ module.exports = class ProtoOut {
                     break;
 
                 default:
-                    throw new Error(`Invalid constraint boundery '${constraint.boundery}'`);
+                    throw new Exceptions.Proto(`Invalid constraint boundery '${constraint.boundery}'`);
 
             }
             airConstraints.push(payload);
@@ -492,7 +493,7 @@ module.exports = class ProtoOut {
             }
             return { hintFieldArray: { hintFields: Array.isArray(result) ? result : [result] }};
         }
-        throw new Error(`Invalid hint-data (type:${typeof hdata}/${(hdata.constructor ?? {name:''}).name}) on cloneHint of ${path}`);
+        throw new Exceptions.Proto(`Invalid hint-data (type:${typeof hdata}/${(hdata.constructor ?? {name:''}).name}) on cloneHint of ${path}`);
     }
     bint2uint8(value, bytes = 0) {
         let result = new Uint8Array(this.uint8size);

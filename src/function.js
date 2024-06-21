@@ -9,6 +9,7 @@ const Debug = require('./debug.js');
 const Types = require('./types.js');
 const {ArrayOf} = require('./expression_items.js')
 const assert = require('./assert.js');
+const Exceptions = require('./exceptions.js');
 module.exports = class Function {
     constructor (id, data = {}) {
         this.id = id;
@@ -31,10 +32,10 @@ module.exports = class Function {
             console.log(`FUNCTION.setValue ${value.name}`, value.args);
         }
         if (this.initialized) {
-            throw new Error(`function it's initialized again`);
+            throw new Exceptions.Generic(`function it's initialized again`);
         }
         if (value instanceof Function === false) {
-            throw new Error(`Invalid value to setValue of function`);
+            throw new Exceptions.Generic(`Invalid value to setValue of function`);
         }
         this.initialized = value.initialized;
         this.name = value.name;
@@ -51,8 +52,8 @@ module.exports = class Function {
         let iarg = 0;
         for (const arg of args) {
             const name = arg.name;
-            if (name === '') throw new Error('Invalid argument name');
-            if (name in this.args) throw new Error(`Duplicated argument ${name}`);
+            if (name === '') throw new Exceptions.Generic('Invalid argument name');
+            if (name in this.args) throw new Exceptions.Generic(`Duplicated argument ${name}`);
 
             // default values must be defined when define function
             const defaultValue = typeof arg.defaultValue === 'undefined' ? arg.defaultValue : arg.defaultValue.instance();
@@ -67,7 +68,7 @@ module.exports = class Function {
         const argslen = args.length ?? 0;
         if (argslen < this.nargs) {
             console.log(this.args);
-            throw new Error(`Invalid number of arguments calling ${this.name} function, called with ${argslen} arguments, but defined with ${this.nargs} arguments at ${Context.sourceRef}`);
+            throw new Exceptions.Generic(`Invalid number of arguments calling ${this.name} function, called with ${argslen} arguments, but defined with ${this.nargs} arguments`);
         }
     }
     // instance all called arguments on call scope before
@@ -92,17 +93,17 @@ module.exports = class Function {
         while (iarg < argslen) {
             const name = namedargs[iarg] ?? false;
             if (name === false) {
-                throw new Error(`Used a non-namedarg on position #${iarg} calling ${this.name}`);
+                throw new Exceptions.Generic(`Used a non-namedarg on position #${iarg} calling ${this.name}`);
             }
             const arg = this.args[name];
             if (typeof arg === 'undefined') {
-                throw new Error(`Not found argument named ${name} on position #${iarg} calling ${this.name}`);                
+                throw new Exceptions.Generic(`Not found argument named ${name} on position #${iarg} calling ${this.name}`);                
             }
             if (arg.index < indexedArgs) {
-                throw new Error(`Argument ${name} on position #${iarg} is called with and without name calling ${this.name}`);                
+                throw new Exceptions.Generic(`Argument ${name} on position #${iarg} is called with and without name calling ${this.name}`);                
             }
             if (typeof _namedargs[arg.index] !== 'undefined') {
-                throw new Error(`Argument ${name} is used more than once (position #${iarg}) calling ${this.name}`);                
+                throw new Exceptions.Generic(`Argument ${name} is used more than once (position #${iarg}) calling ${this.name}`);                
             }
             _namedargs[arg.index] = name;
             eargs[arg.index] = args[iarg];
@@ -190,7 +191,7 @@ module.exports = class Function {
         if (lengths.length !== arg.dim) {        
             console.log(arg);
             console.log(value.dim);
-            throw new Error(`Invalid match dimensions on call ${this.name} and parameter ${name} (${lengths.length} !== ${arg.dim})`);
+            throw new Exceptions.Generic(`Invalid match dimensions on call ${this.name} and parameter ${name} (${lengths.length} !== ${arg.dim})`);
         }
         this.declareArgument(name, arg.type, lengths, {sourceRef: Context.sourceRef}, value);
         return false;

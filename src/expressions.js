@@ -46,20 +46,15 @@ module.exports = class Expressions {
     }
 
     define(id, expr) {        
-        if (this.isDefined(id)) {
-            throw new Error(`${id} already defined on ....`);
-        }
-        if (id === 600) debugger;
+        assert.equal(this.isDefined(id), false, `${id} already defined on ....`);
         this.expressions[id] = expr;
     }
 
     set(id, expr) {
-        if (id === 600) debugger;
         this.expressions[id] = expr;
     }
 
     update(id, expr) {
-        if (id === 600) debugger;
         this.expressions[id] = expr;
     }
 
@@ -69,26 +64,12 @@ module.exports = class Expressions {
     checkExpression(e) {
         if (typeof e === 'undefined' || e.expr || !(e instanceof Expression)) {
             console.log(e)
-            throw new Error(`Invalid eval argument, it must be an Expression`);
+            throw new Exceptions.Generic(`Invalid eval argument, it must be an Expression`);
         }
         return e;
     }
     eval(e) {
         return this.checkExpression(e).eval();
-    }
-    evalRuntime(operand, expr, deeply) {
-        // TODO: if not runtime evaluable return null or
-        const op = operand.op;
-        switch (op) {
-            case 'string': return this._evalString(operand);
-            case 'number': return this._evalNumber(operand);
-            case 'call': return this._evalCall(operand);
-            case 'idref': return this._evalIdref(operand);
-            case 'reference': return this._evalReference(operand, expr, deeply);
-        }
-        console.log(operand);
-        return operand.eval();
-        throw new Error(`Invalid runtime operation ${op}`);
     }
     evalReference(e) {
         const ref = this.evalReferenceValue(e);
@@ -113,89 +94,11 @@ module.exports = class Expressions {
           yield expr;
         }
     }
-    error(a, b) {
-        console.log(a);
-        console.log(b);
-        EXIT_HERE;
-    }
     getLabel(type, id, options) {
         if (type === 'im') {
             return this.labelRanges.getLabel(id, options);
         }
         return Context.references.getLabel(type, id, options);
-    }
-    _resolveReference(operand, deeply = false) {
-        const names = this.context.getNames(operand.name);
-
-        let options = {};
-        if (!deeply) {
-            if (operand.inc === 'pre') {
-                options.preDelta = 1n;
-            }
-            if (operand.inc === 'post') {
-                options.postDelta = 1n;
-            }
-            if (operand.dec === 'pre') {
-                options.preDelta = -1n;
-
-            }
-            if (operand.dec === 'post') {
-                options.postDelta = -1n;
-            }
-        }
-        let res = Context.references.getTypedValue(names, operand.__indexes, options);
-        if (typeof operand.__next !== 'undefined') {
-            res.__next = res.next = operand.__next;
-        } else if (typeof operand.next !== 'number' && (operand.next || operand.prior)) {
-            throw new Error(`INTERNAL: next and prior must be previouly evaluated`);
-        } else if (typeof operand.next === 'number' && operand.next) {
-            res.next = operand.next;
-        }
-        return res;
-    }
-    _getReferenceInfo(e, options) {
-        const names = this.context.getNames(e.getAloneOperand().name);
-        return Context.references.getTypeInfo(names, e.__indexes, options);
-    }
-    _e2num(e, s, title = '') {
-        DEPRECATED;
-        return this.e2types(e, s, title, ['number','bigint']);
-    }
-    _e2number(e, s, title = '') {
-        DEPRECATED;
-        let res = this.e2types(e, s, title, ['number','bigint'], false);
-        return Number(res);
-    }
-    _e2types(e, s, title, types, toBigInt = true) {
-        DEPRECATED;
-
-        // TODO: review specify PRE/POST on expression conversion ==> refactorize !!!
-        let res = e;
-        if (res instanceof Expression) {
-            res = e.eval();
-            if (res instanceof Expression) {
-                e.dump();
-                debugger;
-                res = e.eval();
-            }
-        }
-        if (typeof res.value !== 'undefined') {
-            // REVIEW, why eval return { type: 'expr', value: 6n, id: 0, next: 0, __next: 0 }  !!!
-            res = res.value;
-        }
-        // console.log(res);
-        // const res = e.expr && e.expr instanceof Expression ? e.expr.eval() : e;
-        return this.getValueTypes(res, s, title, types, toBigInt);
-    }
-    _getValueTypes(e, s, title, types, toBigInt = true) {
-        const etype = typeof e;
-        if (types.includes(etype)) {
-            return toBigInt && etype === 'number' ? BigInt(e) : e;
-        }
-        this.error(s, (title ? ' ':'') + `is not constant expression (${etype}) (2)`);
-    }
-    _getValue(e, s, title = '') {
-        return this.getValueTypes(e, s, title, ['number','bigint','string']);
     }
     pack(container, options) {
         this.packedIds = [];

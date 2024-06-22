@@ -399,7 +399,6 @@ class Expression extends ExpressionItem {
     }
     eval(options = {}) {
         assert.ok(this.stack.length > 0);
-//        return this.instance(options);
         if (this.stack.length === 0) {
             return this;
         }
@@ -835,7 +834,7 @@ class Expression extends ExpressionItem {
     // referenced and solved values (as runtime variable)
 
     simplifyOperation(st) {
-        if (st.op === false || st.operands.length > 2) {
+        if (st.op === false) {
             return false;
         }
 
@@ -904,6 +903,12 @@ class Expression extends ExpressionItem {
             st.operands[1] = new ExpressionItems.IntValue(-secondValue);
             return true;
         }
+        
+        if (st.op === 'if' && firstValue !== false) {
+            st.op = false;
+            st.operands = [st.operands[firstValue ? 1:2]];
+            return true;
+        } 
 
         // TODO: be carrefull with next, prior, inc, dec
         // x - x = 0 ???

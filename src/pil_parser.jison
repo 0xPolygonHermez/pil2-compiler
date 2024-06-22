@@ -59,11 +59,6 @@ final                                       { return 'FINAL' }
 function                                    { return 'FUNCTION' }
 return                                      { return 'RETURN' }
 
-first                                       { return 'FIRST' }
-last                                        { return 'LAST' }
-frame                                       { return 'FRAME' }
-debugger                                    { return 'DEBUGGER' }
-
 \.\.\+\.\.                                  { return 'DOTS_ARITH_SEQ' }
 \.\.\*\.\.                                  { return 'DOTS_GEOM_SEQ' }
 \.\.\.                                      { return 'DOTS_FILL' }
@@ -238,51 +233,9 @@ lopcs
     ;
 
 top_level_block
-    /* : container_definition
-        { $$ = $1 }
-*/
-    : subproof_definition
+    : air_definition
         { $$ = $1 }
 
-    | proof_definition
-        { $$ = $1 }
-/*
-    | function_definition
-        { $$ = $1 }
-
-    | include_directive
-        { $$ = $1 }
-
-    | col_declaration
-        { $$ = $1 }
-
-    | challenge_declaration
-        { $$ = $1 }
-
-    | public_declaration
-        { $$ = $1 }
-
-    | public_table_declaration
-        { $$ = $1 }
-
-    | proof_value_declaration
-        { $$ = $1 }
-
-    | subproof_value_declaration
-        { $$ = $1 }
-
-    | constant_definition
-        { $$ = $1 }
-
-    | variable_declaration
-        { $$ = $1 }
-
-    | DEBUGGER
-        { $$ = { type: 'debugger' }}
-
-    | PRAGMA
-        { $$ = { type: 'pragma', value: $1 }}
-*/
     | statement_list ';'
     ;
 
@@ -305,12 +258,6 @@ closed_container_definition
 
     | CONTAINER name_reference ALIAS IDENTIFIER '{' declare_block '}'
         { $$ = { type: 'container', name: $2.name, alias: $4, statements: $6.statements } }
-    ;
-
-proof_definition
-    : PROOF '{' statement_block '}'
-        { $$ = { type: 'proof', statements: $3.statements } }
-
     ;
 
 non_delimited_statement
@@ -388,17 +335,6 @@ lcs
 
     // TODO_
 
-when_boundary
-    : FIRST
-        { $$ = { boundary: 'first' }}
-
-    | LAST
-        { $$ = { boundary: 'last' }}
-
-    | FRAME
-        { $$ = { boundary: 'frame' }}
-    ;
-
 statement_closed
     : codeblock_closed
         { $$ = { type: 'code', statements: $1 }; }
@@ -406,8 +342,8 @@ statement_closed
     | WHEN '(' expression ')' non_delimited_statement
         { $$ = { type: 'when', statements: $4, expression: $3 } }
 
-    | WHEN when_boundary non_delimited_statement
-        { $$ = { ...$2, type: 'when', statements: $3 } }
+    | WHEN IDENTIFIER non_delimited_statement
+        { $$ = { boundary: $2, type: 'when', statements: $3 } }
 
     | HINT '{' data_object '}'
        { $$ = { type: 'hint', name: $1, data: $3 } }
@@ -430,10 +366,7 @@ statement_closed
     | '{' statement_block '}'
         { $$ = { type: 'scope_definition', ...$2 }; }
 
-    | subproof_definition
-        { $$ = $1 }
-
-    | proof_definition
+    | air_definition
         { $$ = $1 }
 
     ;
@@ -785,9 +718,6 @@ codeblock_closed
     | IF '(' expression ')' non_delimited_statement ELSE non_delimited_statement
         { $$ = { type:'if', conditions: [{type: 'if', expression: $3, statements: $5 }, {type: 'else', statements: $7}]} }
 
-    | DEBUGGER
-        { $$ = { type: 'debugger' }}
-    
     | PRAGMA
         { $$ = { type: 'pragma', value: $1 }}
 
@@ -1291,7 +1221,7 @@ subproof_value_declaration
     ;
 
 
-subproof_definition
+air_definition
     : AIR AGGREGATE IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
         { $$ = { type: 'air_definition', aggregate: true, name: $3, ...$5, statements: $8.statements } }
 

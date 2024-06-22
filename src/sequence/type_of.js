@@ -26,7 +26,6 @@ module.exports = class SequenceTypeOf extends SequenceBase {
         for (const value of values) {
             if (typeof value === 'bigint' || typeof value === 'number') continue;
             if (!value || typeof value.asInt !== 'method') {
-                console.log(value, values);
             }
             if (value.asInt(false) === false) { 
                 this.isSequence = false;

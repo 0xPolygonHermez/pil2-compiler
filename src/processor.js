@@ -54,6 +54,7 @@ module.exports = class Processor {
         this.nextStatementTranspile = false;
         this.nextStatementFixed = false;
         this.loadedRequire = {};
+        this.globalScopeTypes = []; // 'witness', 'fixed', 'subproofval', 'challenge', 'proofval', 'public'];
 
         this.scope.mark('proof');
         this.delayedCalls = {};
@@ -199,8 +200,8 @@ module.exports = class Processor {
     }
     execute(statements, label = '') {
         const __executeCounter = this.executeCounter++;
+        statements = statements ?? [];
         const lstatements = Array.isArray(statements) ? statements : [statements];
-        // console.log(`## DEBUG ## ${this.executeCounter}[${lstatements.length}]`)
         // console.log(`\x1B[45m====> ${lstatements[0].type}\x1B[0m`);
         const firstBlockStatement = lstatements.length > 0 ? lstatements[0] : {debug:''};
         let __label = label ? label : (firstBlockStatement.debug ?? '');
@@ -550,7 +551,7 @@ module.exports = class Processor {
     execScopeDefinition(s) {
         this.scope.push();
         const result = this.execute(s.statements, `SCOPE ${this.sourceRef}`);
-        this.scope.pop();
+        this.scope.pop(this.globalScopeTypes);
         return result;
     }
     // TODO: remove - obsolete
@@ -763,8 +764,9 @@ module.exports = class Processor {
     }
     execFunctionDefinition(s) {
         if (Debug.active) console.log('FUNCTION '+s.name);
-        const id = this.references.declare(s.name, 'function', [], {sourceRef: Context.sourceRef});
-        let func = new Function(id, s);
+        const name = this.currentSubproof ? `${this.currentSubproof.name}.${s.name}`: s.name;
+        const id = this.references.declare(name, 'function', [], {sourceRef: Context.sourceRef});
+        let func = new Function(id, {...s, name});
         this.references.set(func.name, [], func);
     }
     getExprNumber(expr, s, title) {
@@ -956,7 +958,8 @@ module.exports = class Processor {
         this.constraints = new Constraints();
 
         this.clearAirScope(air.name);
-        this.scope.popInstanceType(['witness', 'fixed', 'im']);
+        // this.scope.popInstanceType(['witness', 'fixed', 'im']);
+        this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
         this.closeAir(air);
 

@@ -22,6 +22,9 @@ module.exports = class References {
     get insideContainer() {
         return this.containers.getCurrent() !== false;
     }
+    getContainerScope() {
+        return this.containers.getCurrentScope();
+    }
     getDefinitionByItem(item, options = {}) {
         let instance = null;
         const instances = [...(options.instances ?? []), ...Object.values(this.types).map(x => x.instance)];
@@ -154,7 +157,7 @@ module.exports = class References {
             if (res.isAirScope) return 'air';
         }
         if (useCurrentContainer) {
-            this.containers.getCurrent();
+            return this.containers.getCurrent();
         }
         return false;
     }
@@ -470,7 +473,6 @@ module.exports = class References {
         const mainName = Array.isArray(name) ? name[0]:Context.applyTemplates(name);
         const nameInfo = this.decodeName(mainName);
         let names = false;
-
         if (nameInfo.scope !== false) {
             // if scope is specified on mainName, the other names don't make sense
             names = [mainName];

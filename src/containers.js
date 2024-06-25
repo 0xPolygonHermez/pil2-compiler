@@ -100,6 +100,12 @@ module.exports = class Containers {
     getCurrent() {
         return this.current;
     }
+    getCurrentScope() {
+        if (this.current === false) {
+            return false;
+        }
+        return this.get(this.current).scope ?? false;
+    }
     close(){
         this.current = false;
     }

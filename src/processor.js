@@ -1001,6 +1001,7 @@ module.exports = class Processor {
         const info = {airId, subproofId};
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.labelRanges, 'fixed', info);
+        this.proto.setSymbolsFromLabels(this.subproofvalues.labelRanges, 'subproofvalue', info);
         this.proto.addHints(this.hints, packed, {
                 subproofId,
                 airId

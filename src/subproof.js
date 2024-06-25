@@ -45,6 +45,7 @@ module.exports = class Subproof {
         if (!this.insideFirstAir) {
             const spvNonDeclared = Object.keys(this.spvDeclaredInsideThisAir).filter(name => this.spvDeclaredInsideThisAir[name] === false);
             for (const name of spvNonDeclared) {
+                if (this.spvDeclaredInFirstAir[name].insideSubproofContainer) continue;
                 throw new Error(`Subproofvalue ${name} declared on previous ${this.name} instance, isn't declared on current air instance`);
             }
         }
@@ -53,13 +54,14 @@ module.exports = class Subproof {
     }
     declareSubproofvalue(name, lengths = [], data = {}) {
         // colDeclaration(s, type, ignoreInit, fullName = true, data = {}) {
+        const insideSubproofContainer = Context.references.getContainerScope() === 'subproof';
         if (!this.insideAir) {
             throw new Error(`Subproofvalue ${name} must be declared inside subproof (air)`);
         }
         if (this.insideFirstAir) {
             // this.colDeclaration(s, 'subproofvalue', true, false, {aggregateType: s.aggregateType});
             const res = Context.references.declare(name, 'subproofvalue', lengths, data);
-            this.spvDeclaredInFirstAir[name] = {res, lengths: [...lengths]};
+            this.spvDeclaredInFirstAir[name] = {res, lengths: [...lengths], insideSubproofContainer};
             return res;
         }
 

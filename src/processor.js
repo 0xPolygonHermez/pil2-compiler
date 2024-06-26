@@ -1002,7 +1002,7 @@ module.exports = class Processor {
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.labelRanges, 'fixed', info);
         if (airId == 0) {
-            this.proto.setSymbolsFromLabels(this.subproofvalues.labelRanges, 'subproofvalue', {subproofId: 100 + subproofId});
+            this.proto.setSymbolsFromLabels(this.subproofvalues.labelRanges, 'subproofvalue', {subproofId});
         }
         this.proto.addHints(this.hints, packed, {
                 subproofId,

@@ -133,7 +133,7 @@ module.exports = class PackedExpressions {
                 return this.getLabel('subproofvalue', props.idx, options);
 
             case 'proofValue':
-                return this.getLabel('proofValue', props.idx, options);
+                return this.getLabel('proofvalue', props.idx, options);
 
             default:
                 console.log(ope);

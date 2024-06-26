@@ -26,6 +26,10 @@ air AirB(int N = 2**16) {
     typeb === a * b;
 }
 
-AirA(2**8, 0);
-AirA(2**16, 1);
-AirB(2**8);
+AirA(2**3, 0);
+AirA(2**4, 1);
+AirB(2**3);
+
+proofval pvalue;
+
+AirB.typeb + AirA.type0 + pvalue === 23;

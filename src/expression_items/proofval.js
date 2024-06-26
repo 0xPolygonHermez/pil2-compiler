@@ -7,7 +7,7 @@ module.exports = class Proofval extends ProofItem {
     getTag() {
         return 'proofvalue';
     }
-    cloneItem() {
+    cloneInstance() {
         return new Proofval(this.id);
     }
 }

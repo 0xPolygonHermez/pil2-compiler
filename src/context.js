@@ -12,7 +12,7 @@ module.exports = class Context {
         this.stack = [];        
         this.config = {debug: {}, test: {}, ...config};
         this.uses = [];
-        this.subproofName = false;
+        this._subproofName = false;
         this.airId = false;
         this.airN = false;
         if (typeof this.config.test.onContextInit === 'function') {
@@ -24,6 +24,9 @@ module.exports = class Context {
     }
     static get config() {
         return this._instance.config;
+    }
+    static get subproofName() {
+        return this._instance._subproofName;
     }
     static get expressions() {
         return this._instance._processor.expressions;
@@ -53,13 +56,16 @@ module.exports = class Context {
         if (this.airName) {
             return `AIR:${this.airName}`;
         }
-        if (this.subproofName) {
-            return `SUBPROOF:${this.subproofName}`;
+        if (this._subproofName) {
+            return `SUBPROOF:${this._subproofName}`;
         }
         return 'PROOF';
     }
     static applyTemplates(value) {
         return this._instance.applyTemplates(value);
+    }
+    static getFullName(name) {
+        return this._instance._getFullName(name);
     }
     setNamespace(namespace, subproof) {
         this.namespace = namespace;
@@ -98,7 +104,7 @@ module.exports = class Context {
             return names;
         }
         name = names[0];
-        const fullName = this.getFullName(name);
+        const fullName = this._getFullName(name);
         return name === fullName ? [name]:[name, fullName];
     }
     decodeName(name) {
@@ -114,7 +120,7 @@ module.exports = class Context {
             return [m.groups.subproof, m.groups.namespace, m.groups.name];
         }
     }
-    getFullName(name) {
+    _getFullName(name) {
         if (typeof name !== 'string') {
             console.log(name);
             throw new Error(`getFullName invalid argument`);

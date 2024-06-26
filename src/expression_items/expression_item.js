@@ -61,7 +61,7 @@ class ExpressionItem {
     constructor(options = {}) {
         this.options = options;
         this.indexes = false;
-        this.label = '';
+        this.label = options.label ?? '';
         this._ns_ = 'ExpressionItem';
     }
     static registerClass(name, cls) {

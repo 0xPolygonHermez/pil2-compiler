@@ -235,11 +235,11 @@ module.exports = class References {
         let data = {...options};
         delete data.const;
 
-        const refProperties = {container, scope, isStatic: nameInfo.isStatic, data, const: constProperty};
-
+        const label = (!container || nameInfo.parts.length > 1) ? nameInfo.name : `${Context.subproofName}.${nameInfo.name}`;
+        const refProperties = {container, scope, isStatic: nameInfo.isStatic, data, const: constProperty, label};
 
         // TODO: reserve need array for labels?
-        const id = isReference ? null : instance.reserve(size, nameInfo.name, array, data);
+        const id = isReference ? null : instance.reserve(size, label, array, data);
 
         const reference = new Reference(nameInfo.name, type, isReference, array, id, instance, scopeId, refProperties);
 
@@ -296,7 +296,7 @@ module.exports = class References {
 
         const reference = this.getReference(name);
         // TODO: if reference is a 'reference' check if name is correct
-        const item = reference.getItem(indexes, {...options, label: reference.name});
+        const item = reference.getItem(indexes, {...options, label: reference.label ? reference.label : reference.name });
 
         if (options.preDelta) {
             EXIT_HERE;

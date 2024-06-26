@@ -165,20 +165,20 @@ module.exports = class ProtoOut {
         }
     }
     setGlobalSymbols(symbols) {
-        this._setSymbols(symbols.keyValuesOfTypes(['public', 'subproofvalue', 'proofvalue', 'challenge', 'publictable']));
+        this._setSymbols(symbols.keyValuesOfTypes(['public', 'proofvalue', 'challenge', 'publictable']));
     }
     setSymbolsFromLabels(labels, type, data = {}) {
         let symbols = [];
         for (const label of labels) {
             symbols.push([label.label, {type, locator: label.from, array: label.multiarray, data: {}}]);
-        }
+        }   
         this._setSymbols(symbols, data);
     }
     _setSymbols(symbols, data = {}) {
         for(const [name, ref] of symbols) {
             try {
                 const arrayInfo = ref.array ? ref.array : {dim: 0, lengths: []};
-                const sym2proto = this.symbolType2Proto(ref.type, ref.locator, ref);
+                const sym2proto = this.symbolType2Proto(ref.type, ref.locator, {...ref, data});
                 let payout = {
                     name,
                     dim: arrayInfo.dim,
@@ -189,6 +189,7 @@ module.exports = class ProtoOut {
                 };
                 this.pilOut.symbols.push(payout);
             } catch (e) {
+                console.log(e.stack)
                 throw new Error(`ERROR exporting proto symbol ${name}: ` + e.message);
             }
         }

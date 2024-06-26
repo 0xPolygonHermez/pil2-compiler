@@ -4,13 +4,17 @@ air AirA(int N = 2**16, int type = 0) {
     container subproof.mycontainer alias mc {
         subproofval aggregate(sum) typeg;
     }
+    container air.myair alias ma {
+        col witness aa;
+        col fixed AA = [1,2,3]...;
+    }
     if (type == 0) {
         subproofval aggregate(prod) type0;
-        type0 === a * b;
+        type0 === a * b + ma.aa * ma.AA;
         mc.typeg === a * c;
     } else {
         subproofval aggregate(prod) type0;
-        type0 === a * a;
+        type0 === a * a + ma.aa * ma.AA;
         mc.typeg === a * c;
     }
 }

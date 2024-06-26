@@ -880,7 +880,7 @@ module.exports = class Processor {
     openSubproof(subproof) {
         this.currentSubproof = subproof;
         this.scope.pushInstanceType('subproof');
-        this.context.subproofName = subproof.name;
+        this.context._subproofName = subproof.name;
         this.subproofId = this.getSubproofId(subproof);        
         Context.subproofId = this.subproofId;
     }    
@@ -1001,7 +1001,9 @@ module.exports = class Processor {
         const info = {airId, subproofId};
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.labelRanges, 'fixed', info);
-        this.proto.setSymbolsFromLabels(this.subproofvalues.labelRanges, 'subproofvalue', info);
+        if (airId == 0) {
+            this.proto.setSymbolsFromLabels(this.subproofvalues.labelRanges, 'subproofvalue', {subproofId: 100 + subproofId});
+        }
         this.proto.addHints(this.hints, packed, {
                 subproofId,
                 airId
@@ -1042,7 +1044,7 @@ module.exports = class Processor {
     execFixedColDeclaration(s) {
         const global = s.global ?? false;
         for (const col of s.items) {
-            const colname = this.context.getFullName(col.name);
+            const colname = Context.getFullName(col.name);
             // console.log(`COL_FIXED_DECLARATION(${colname})`);
             const lengths = this.decodeLengths(col);
             let init = s.sequence ?? null;
@@ -1165,7 +1167,7 @@ module.exports = class Processor {
         }
     }
     declareFullReference(name, type, lengths = [], data = {}, initValue = null) {
-        const _name = this.context.getFullName(name);
+        const _name = Context.getFullName(name);
         return this.declareReference(_name, type, lengths, data, initValue);
     }
     declareReference(name, type, lengths = [], data = {}, initValue = null) {

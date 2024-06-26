@@ -54,13 +54,14 @@ module.exports = class Subproof {
     }
     declareSubproofvalue(name, lengths = [], data = {}) {
         // colDeclaration(s, type, ignoreInit, fullName = true, data = {}) {
+        const fullname = Context.getFullName(name);
         const insideSubproofContainer = Context.references.getContainerScope() === 'subproof';
         if (!this.insideAir) {
             throw new Error(`Subproofvalue ${name} must be declared inside subproof (air)`);
         }
         if (this.insideFirstAir) {
             // this.colDeclaration(s, 'subproofvalue', true, false, {aggregateType: s.aggregateType});
-            const res = Context.references.declare(name, 'subproofvalue', lengths, data);
+            const res = Context.references.declare(fullname, 'subproofvalue', lengths, data);
             this.spvDeclaredInFirstAir[name] = {res, lengths: [...lengths], insideSubproofContainer};
             return res;
         }

@@ -124,6 +124,8 @@ module.exports = class ProtoOut {
         }
     }
     encode() {
+        this.updateSymbolsWithSameName();
+
         // fs.writeFileSync('tmp/pilout.pre.log', util.inspect(this.pilOut, false, null, false));
         let message = this.PilOut.fromObject(this.pilOut);
         // fs.writeFileSync('tmp/pilout.log', util.inspect(this.pilOut, false, null, false));
@@ -564,19 +566,19 @@ module.exports = class ProtoOut {
         let value = 0n;
         let offset = 0;
         while ((buf.length - offset) >= 8) {
-            value = (value << 64n) + (offset ? buf.readBigUInt64BE(offset):buf.readBigInt64BE(offset));
+            value = (value << 64n) + buf.readBigUInt64BE(offset);
             offset += 8;
         }
         while ((buf.length - offset) >= 4) {
-            value = (value << 32n) + (offset ? BigInt(buf.readUInt32BE(offset)) :BigInt(buf.readInt32BE(offset)));
+            value = (value << 32n) + BigInt(buf.readUInt32BE(offset));
             offset += 4;
         }
         while ((buf.length - offset) >= 2) {
-            value = (value << 16n) + (offset ? BigInt(buf.readUInt16BE(offset)) : BigInt(buf.readInt16BE(offset)));
+            value = (value << 16n) + BigInt(buf.readUInt16BE(offset));
             offset += 2;
         }
         while ((buf.length - offset) >= 1) {
-            value += (value << 8n) + (offset ? BigInt(buf.readUInt8(offset)) : BigInt(buf.readInt8(offset)));
+            value += (value << 8n) + BigInt(buf.readUInt8(offset));
             offset += 1;
         }
         return value;
@@ -592,6 +594,9 @@ module.exports = class ProtoOut {
         const PilOut = root.lookupType('pilout.PilOut');
         console.log(PilOut);
         */
+    }
+    updateSymbolsWithSameName() {
+        console.log(this.pilOut.symbols.map(x => `${x.name}__${x.subproofId}${typeof x.airId === 'undefined' ? '':('__'+x.airId)}`));
     }
 }
 

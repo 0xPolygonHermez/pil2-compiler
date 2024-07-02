@@ -838,7 +838,7 @@ module.exports = class Processor {
         }
 
         const subproof = new Subproof(subproofName, s.statements, s.aggregate ?? false);
-        this.subproofs.define(subproofName, subproof, `air ${subproofName} has been defined previously on ${this.context.sourceRef}`);
+        this.subproofs.define(subproofName, subproof, `air ${subproofName} has been defined previously on ${Context.sourceRef}`);
 
         const id = this.references.declare(subproofName, 'function', [], {sourceRef: Context.sourceRef});
         const subproofFunc = new SubproofFunction(id, {args: s.args, name: subproofName, subproof, sourceRef: Context.sourceRef});
@@ -971,7 +971,8 @@ module.exports = class Processor {
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
     }
     finalClosingSubproofs() {
-       for (const subproof of this.subproofs.values()) {
+        this.callDelayedFunctions('subproof', 'final');
+        for (const subproof of this.subproofs.values()) {
             if (subproof.id === false) continue;
             this.openSubproof(subproof);
             this.closeCurrentSubproof();
@@ -1026,9 +1027,14 @@ module.exports = class Processor {
     finalProofScope() {
         this.callDelayedFunctions('proof', 'final');
     }
+
+    getDelayedScope(scope) {
+        const _subproofId = Context.subproofId === false || typeof Context.subproofId === 'undefined' ? '':Context.subproofId;
+        return scope === 'subproof' ? `subproof#${_subproofId}` : scope;
+    }
     callDelayedFunctions(scope, event) {
         if (Debug.active) console.log(this.delayedCalls);
-        const _scope = scope === 'subproof' ? `subproof#${Context.subproofId}` : scope;
+        const _scope = this.getDelayedScope(scope);
         if (typeof this.delayedCalls[_scope] === 'undefined' || typeof this.delayedCalls[_scope][event] === 'undefined') {
             return false;
         }
@@ -1122,7 +1128,7 @@ module.exports = class Processor {
             throw new Error(`delayed function call scope ${scope} no supported`);
         }
 
-        const _scope = scope === 'subproof' ? `subproof#${Context.subproofId}` : scope;
+        const _scope = this.getDelayedScope(scope);
 
         if (typeof this.delayedCalls[_scope] === 'undefined') {
             this.delayedCalls[_scope] = {};
@@ -1133,7 +1139,7 @@ module.exports = class Processor {
         if (typeof this.delayedCalls[_scope][event][fname] === 'undefined') {
             this.delayedCalls[_scope][event][fname] = {sourceRefs: []};
         }
-        this.delayedCalls[_scope][event][fname].sourceRefs.push(this.context.sourceRef);
+        this.delayedCalls[_scope][event][fname].sourceRefs.push(Context.sourceRef);
     }
     execExpr(s) {
         s.expr.eval();
@@ -1207,7 +1213,7 @@ module.exports = class Processor {
             expr = this.globalConstraints.getExpr(id);
             prefix = 'GLOBAL';
         } else {
-            throw new Error(`Constraint definition on invalid scope (${scopeType}) ${this.context.sourceRef}`);
+            throw new Error(`Constraint definition on invalid scope (${scopeType}) ${Context.sourceRef}`);
         }
         console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] > ${expr.toString({hideClass:true, hideLabel:false})} === 0 (${this.sourceRef})\x1B[0m`);
         console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] (RAW) > ${expr.toString({hideClass:true, hideLabel:true})} === 0 (${this.sourceRef})\x1B[0m`);
@@ -1302,7 +1308,7 @@ module.exports = class Processor {
         if (!this.insideFunction()) {
             throw new Error('Return is called out of function scope');
         }
-        const res = s.value.instance();
+        const res = (typeof s.value === 'undefined' || s.value === null) ? new ExpressionItems.IntValue() : s.value.instance();
         if (Debug.active) {
             console.log(res);
             console.log(res.eval());

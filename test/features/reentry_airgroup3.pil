@@ -1,0 +1,27 @@
+air AirA(int N = 2**16) {
+    col witness a,b,c,d;
+    std_call_range_check();
+}
+
+air AirB(int N = 2**16) {
+    col witness a,b;
+    std_call_range_check();
+}
+
+function std_call_range_check() {
+    on final subproof range_check();
+}
+
+function range_check() {
+    // TODO: Expected to print 0 and 1, but prints 1 and 2
+    println("SUBPROOF_ID",SUBPROOF_ID);
+    // adding air...
+    AirC();
+}
+
+air AirC(int N = 2**16) {
+    col witness a,b;
+}
+
+AirA();
+AirB();

@@ -883,6 +883,8 @@ module.exports = class Processor {
         this.context._subproofName = subproof.name;
         this.subproofId = this.getSubproofId(subproof);        
         Context.subproofId = this.subproofId;
+        this.references.set('SUBPROOF', [], subproof.name);  
+        this.references.set('SUBPROOF_ID', [], new ExpressionItems.IntValue(subproof.id));  
     }    
     /**
     * close current subproof and call defered funcions, clear scope of subproof

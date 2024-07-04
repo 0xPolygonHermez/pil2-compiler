@@ -1,0 +1,38 @@
+air AirA(int N = 2**16) {
+    col witness a,b,c,d;
+    std_call_range_check();
+}
+
+air AirB(int N = 2**16) {
+    col witness a,b;
+    std_call_range_check();
+}
+
+air AirC(int N = 2**16, int id = 99, int id2 = 88) {
+    col witness a,b;
+    println("INSIDE AIRC ID", id, id2);
+}
+
+air AirD(int N = 2**16) {
+    println("INSIDE AIRD ID", SUBPROOF_ID);
+}
+function std_call_range_check() {
+    on final subproof range_check_in_same_subproof();
+}
+
+function range_check_in_same_subproof() {
+    // TODO: Expected to print 0 and 1, but prints 1 and 1
+    println("BEFORE SUBPROOF_ID",SUBPROOF_ID);
+    
+    // canvi subproof context
+    // eval params
+    // canvi de contexte
+    // creació dels parametres local y la asignació
+    int _id2 = SUBPROOF_ID;
+    AirC(id: SUBPROOF_ID, id2:_id2);
+    println("AFTER SUBPROOF_ID",SUBPROOF_ID);
+}
+
+
+AirA();
+AirB();

@@ -126,6 +126,7 @@ module.exports = class Processor {
         this.loadBuiltInClass();
         this.scopeType = 'proof';
         this.currentSubproof = false;
+        this.subproofStack = [];
 
         this.sourceRef = '(init)';
 
@@ -855,6 +856,10 @@ module.exports = class Processor {
         }
         subproof.addBlock(s.statements);
     }
+    setSubproofBuiltIntConstants(subproof) {
+        this.references.set('SUBPROOF', [], subproof ? subproof.name : '');  
+        this.references.set('SUBPROOF_ID', [], new ExpressionItems.IntValue(subproof ? subproof.id : 0));  
+    }
     /**
      * method to return id of subproof, if this id not defined yet, use lastSubproofId to set it
      * @param {Subproof} subproof 
@@ -878,11 +883,13 @@ module.exports = class Processor {
      * @param {Subproof} subproof 
      */
     openSubproof(subproof) {
+        this.subproofStack.push(this.currentSubproof);
         this.currentSubproof = subproof;
         this.scope.pushInstanceType('subproof');
         this.context._subproofName = subproof.name;
         this.subproofId = this.getSubproofId(subproof);        
         Context.subproofId = this.subproofId;
+        this.setSubproofBuiltIntConstants(subproof);
     }    
     /**
     * close current subproof and call defered funcions, clear scope of subproof
@@ -899,9 +906,11 @@ module.exports = class Processor {
     */
     suspendCurrentSubproof() {
         this.scope.popInstanceType();
-        this.currentSubproof = false;
-        this.subproofId = false;
-        Context.subproofId = false;
+        this.currentSubproof = this.subproofStack[this.subproofStack.length - 1];
+        this.subproofId = this.currentSubproof ? this.currentSubproof.getId() : false;
+        this.subproofStack.pop();
+        Context.subproofId = this.subproofId;
+        this.setSubproofBuiltIntConstants(this.currentSubproof);
     }
     /**
     * create a new air on current subproof, take number of rows of N parameter of subproof
@@ -930,8 +939,7 @@ module.exports = class Processor {
     setBuiltIntConstants(subproof, air) {
         // create built-in constants
         this.references.set('BITS', [], air.bits);
-        this.references.set('SUBPROOF', [], subproof.name);  
-        this.references.set('SUBPROOF_ID', [], new ExpressionItems.IntValue(subproof.id));  
+        this.setSubproofBuiltIntConstants(subproof);
         this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id));  
     }
     executeSubproof(subproof, subproofFunc, callinfo) {

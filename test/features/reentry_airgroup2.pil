@@ -16,6 +16,7 @@ air AirC(int N = 2**16, int id = 99, int id2 = 88) {
 air AirD(int N = 2**16) {
     println("INSIDE AIRD ID", SUBPROOF_ID);
 }
+
 function std_call_range_check() {
     on final subproof range_check_in_same_subproof();
 }

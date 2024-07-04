@@ -289,21 +289,32 @@ class Expression extends ExpressionItem {
             return this;
         }
 
-        let counts = [];
+        // calculate array with rows added for each operand
+        let stackRows = [];
+        let baseStackOffset = 0;
         for (const b of bs) {
-            counts.push(b.isAlone() ? 0 : this.pushStack(b));
-        }
-        counts.push(1);
-        for (let index = counts.length - 2; index >= 0; --index) {
-            counts[index] += counts[index + 1];
+            const count = b.isAlone() ? 0 : this.pushStack(b);
+            stackRows.push(count);
+            baseStackOffset += count;
         }
 
+        // The previous top of stack has offset = baseStackOffset + 1
         if (!aIsEmpty) {
-            elem = {op, operands: [new ExpressionItems.StackItem(counts[0])]};
+            elem = {op, operands: [new ExpressionItems.StackItem(baseStackOffset+1)]};
         }
+
+        // calculate relative offsets using baseStackOffset and elements added for 
+        // each operator, added 1 because first offset is 1 (position -1)
+        let stackOffsets = [];
+        for (let index = 0; index < stackRows.length; ++index) {
+            stackOffsets[index] = baseStackOffset - stackRows[index] + 1;
+            baseStackOffset -= stackRows[index];
+        }
+
         let index = 0;
         for (const b of bs) {
-            elem.operands.push(b.isAlone() ? b.cloneAlone() : new ExpressionItems.StackItem(counts[++index]));
+            elem.operands.push(b.isAlone() ? b.cloneAlone() : new ExpressionItems.StackItem(stackOffsets[index]));
+            ++index;
         }
         this.stack.push(elem);
         return this;

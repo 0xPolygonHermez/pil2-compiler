@@ -1,0 +1,18 @@
+int a = 23;
+int b = 1;
+
+int res;
+
+res = a > 25 ? 1 : (1 - b);
+println(res);
+assert(res == 0);
+
+res = a > 15 ? 1 : (1 - b);
+println(res);
+assert(res == 1);
+
+a = 30;
+res = a > 25 ? 1 : (1 - b);
+println(res);
+assert(res == 1);
+

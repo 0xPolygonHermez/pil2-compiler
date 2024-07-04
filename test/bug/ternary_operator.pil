@@ -16,3 +16,20 @@ res = a > 25 ? 1 : (1 - b);
 println(res);
 assert(res == 1);
 
+a = -1;
+println(a);
+
+a = -(-(-2**8));
+println(a);
+
+a = -2**8 + 1;
+println(a);
+
+a = 2**3**4;
+println(a);
+
+a = -3*2**8;
+println(a);
+
+a = -(2)**8;
+println(a);

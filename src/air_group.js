@@ -60,8 +60,8 @@ module.exports = class AirGroup {
             throw new Error(`airgroupval ${name} must be declared inside airgroup (air)`);
         }
         if (this.insideFirstAir) {
-            // this.colDeclaration(s, 'airgroupval', true, false, {aggregateType: s.aggregateType});
-            const res = Context.references.declare(fullname, 'airgroupval', lengths, data);
+            // this.colDeclaration(s, 'airgroupvalue', true, false, {aggregateType: s.aggregateType});
+            const res = Context.references.declare(fullname, 'airgroupvalue', lengths, data);
             this.spvDeclaredInFirstAir[name] = {res, lengths: [...lengths], insideAirGroupContainer};
             return res;
         }

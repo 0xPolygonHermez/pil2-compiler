@@ -57,7 +57,7 @@ module.exports = class Processor {
         this.nextStatementTranspile = false;
         this.nextStatementFixed = false;
         this.loadedRequire = {};
-        this.globalScopeTypes = []; // 'witness', 'fixed', 'airgroupval', 'challenge', 'proofval', 'public'];
+        this.globalScopeTypes = []; // 'witness', 'fixed', 'airgroupvalue', 'challenge', 'proofvalue', 'public'];
 
         this.scope.mark('proof');
         this.delayedCalls = {};

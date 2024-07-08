@@ -16,22 +16,22 @@
     WitnessCol            -     *    *   ProofStageItem  id              ProofStageDef   id + stage [used]
 
 
-                         Type         List                     Item
-                         ----------   --------------           --------------
-    Challenge            challenge    challenges (Ids)         stage            Ids: new cls(id)
-    Expression           expr         exprs (Variables)        value            Variables: new cls(value)
-    SubExpression        subexpr      subexprs (Ids)           id               Ids: new cls(id)
-    FeValue              fe           fes (Variables)          value            Variables: new cls(value)
-    IntValue             int          ints (Variables)         value            Variables: new cls(value)
-    FixedCol             fixed        fixeds (FixedCols)       id               Ids: new cls(id)
-    Proofval             proofvalue   proofValues (Ids)        id               Ids: new cls(id)
-    Public               public       publics (Ids)            id               Ids: new cls(id)
-    Publictable          publictable                           id
-    *PublictableCol                                            id,colId
-    ReferenceItem        -            references (References)  name
-    StringValue          string       strings (Variables)      value            Variables: new cls(value)
-    AirGroupValue        airgroupval  airGroupValues (Ids)     id               Ids: new cls(id)
-    WitnessCol           witness      witness (WitnessCols)    id               WitnessCols: new WitnessCol(id, stage)
+                         Type           List                     Item
+                         ----------     --------------           --------------
+    Challenge            challenge      challenges (Ids)         stage            Ids: new cls(id)
+    Expression           expr           exprs (Variables)        value            Variables: new cls(value)
+    SubExpression        subexpr        subexprs (Ids)           id               Ids: new cls(id)
+    FeValue              fe             fes (Variables)          value            Variables: new cls(value)
+    IntValue             int            ints (Variables)         value            Variables: new cls(value)
+    FixedCol             fixed          fixeds (FixedCols)       id               Ids: new cls(id)
+    Proofval             proofvalue     proofValues (Ids)        id               Ids: new cls(id)
+    Public               public         publics (Ids)            id               Ids: new cls(id)
+    Publictable          publictable                             id
+    *PublictableCol                                              id,colId
+    ReferenceItem        -              references (References)  name
+    StringValue          string         strings (Variables)      value            Variables: new cls(value)
+    AirGroupValue        airgroupvalue  airGroupValues (Ids)     id               Ids: new cls(id)
+    WitnessCol           witness        witness (WitnessCols)    id               WitnessCols: new WitnessCol(id, stage)
 
 
 

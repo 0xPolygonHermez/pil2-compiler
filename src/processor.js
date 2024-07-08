@@ -1137,7 +1137,7 @@ module.exports = class Processor {
         }
 
         const _scope = this.getDelayedScope(scope);
-        console.log(`adding delayed function call on scope:${scope} event:${event} fname:${fname} ${Context.sourceRef}`);
+        console.log(`adding delayed function call on scope:${_scope}/${scope} event:${event} fname:${fname} ${Context.sourceRef}`);
 
         if (typeof this.delayedCalls[_scope] === 'undefined') {
             this.delayedCalls[_scope] = {};

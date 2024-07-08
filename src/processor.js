@@ -888,6 +888,10 @@ module.exports = class Processor {
         this.references.set('AIRGROUP', [], airGroup ? airGroup.name : '');  
         this.references.set('AIRGROUP_ID', [], new ExpressionItems.IntValue(airGroup ? airGroup.id : 0));  
     }
+    setSubproofBuiltIntConstants(subproof) {
+        this.references.set('SUBPROOF', [], subproof ? subproof.name : '');  
+        this.references.set('SUBPROOF_ID', [], new ExpressionItems.IntValue(subproof ? subproof.id : 0));  
+    }
     /**
      * method to return id of airgroup, if this id not defined yet, use lastAirGroupId to set it
      * @param {AirGroup} airGroup 

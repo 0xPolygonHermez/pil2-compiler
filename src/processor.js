@@ -1043,11 +1043,13 @@ module.exports = class Processor {
     callDelayedFunctions(scope, event) {
         if (Debug.active) console.log(this.delayedCalls);
         const _scope = this.getDelayedScope(scope);
+        console.log(`call all registered delayed calls scope:${_scope}/${scope} ${event}`);
         if (typeof this.delayedCalls[_scope] === 'undefined' || typeof this.delayedCalls[_scope][event] === 'undefined') {
             return false;
         }
         for (const fname in this.delayedCalls[_scope][event]) {
             if (Debug.active) console.log(`CALL DELAYED(${_scope},${event}) FUNCTION ${fname}`);
+            console.log(`call ${fname} registered delayed call scope:${_scope}/${scope} ${event}`);
             this.execCall({ op: 'call', function: {name: fname}, args: [] });
         }
         this.delayedCalls[_scope][event] = {};

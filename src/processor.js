@@ -980,10 +980,17 @@ module.exports = class Processor {
     }
     finalClosingSubproofs() {
         this.callDelayedFunctions('subproof', 'final');
-        for (const subproof of this.subproofs.values()) {
-            if (subproof.id === false) continue;
-            this.openSubproof(subproof);
-            this.closeCurrentSubproof();
+        let subproofIdsClosed = [];
+        let newSubproofs = true;
+        while (newSubproofs) {
+            newSubproofs = false;
+            for (const subproof of this.subproofs.values()) {
+                if (subproof.id === false) continue;
+                if (subproofIdsClosed.includes(subproof.id)) continue;
+                newSubproofs = true;
+                this.openSubproof(subproof);
+                this.closeCurrentSubproof();
+            }
         }
     }
     subproofProtoOut(subproofId, airId) {

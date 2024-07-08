@@ -980,15 +980,18 @@ module.exports = class Processor {
     }
     finalClosingSubproofs() {
         this.callDelayedFunctions('subproof', 'final');
-        let subproofIdsClosed = [];
-        let newSubproofs = true;
-        while (newSubproofs) {
-            newSubproofs = false;
+        let airGroupIdsClosed = [];
+
+        // use newAirGroups to detect if new airgroups appers in last loop, only
+        // exit of these loop when all airgroups are previously processed.
+        let newAirGroups = true;
+        while (newAirGroups) {
+            newAirGroups = false;
             for (const subproof of this.subproofs.values()) {
                 if (subproof.id === false) continue;
-                if (subproofIdsClosed.includes(subproof.id)) continue;
-                newSubproofs = true;
-                subproofIdsClosed.push(subproof.id);
+                if (airGroupIdsClosed.includes(subproof.id)) continue;
+                newAirGroups = true;
+                airGroupIdsClosed.push(subproof.id);
                 this.openSubproof(subproof);
                 this.closeCurrentSubproof();
             }
@@ -1049,15 +1052,13 @@ module.exports = class Processor {
         return scope === 'subproof' ? `subproof#${_subproofId}` : scope;
     }
     callDelayedFunctions(scope, event) {
-        if (Debug.active) console.log(this.delayedCalls);
         const _scope = this.getDelayedScope(scope);
-        console.log(`call all registered delayed calls scope:${_scope}/${scope} ${event}`);
+        if (Debug.active) console.log(`call all registered delayed calls scope:${_scope} ${event}`);
         if (typeof this.delayedCalls[_scope] === 'undefined' || typeof this.delayedCalls[_scope][event] === 'undefined') {
             return false;
         }
         for (const fname in this.delayedCalls[_scope][event]) {
-            if (Debug.active) console.log(`CALL DELAYED(${_scope},${event}) FUNCTION ${fname}`);
-            console.log(`call ${fname} registered delayed call scope:${_scope}/${scope} ${event}`);
+            if (Debug.active) console.log(`call ${fname} registered delayed call scope:${_scope} ${event}`);
             this.execCall({ op: 'call', function: {name: fname}, args: [] });
         }
         this.delayedCalls[_scope][event] = {};
@@ -1147,7 +1148,7 @@ module.exports = class Processor {
         }
 
         const _scope = this.getDelayedScope(scope);
-        console.log(`adding delayed function call on scope:${_scope}/${scope} event:${event} fname:${fname} ${Context.sourceRef}`);
+        if (Debug.active) console.log(`adding delayed function call on scope:${_scope} event:${event} fname:${fname} ${Context.sourceRef}`);
 
         if (typeof this.delayedCalls[_scope] === 'undefined') {
             this.delayedCalls[_scope] = {};

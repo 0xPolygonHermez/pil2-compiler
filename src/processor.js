@@ -988,6 +988,7 @@ module.exports = class Processor {
                 if (subproof.id === false) continue;
                 if (subproofIdsClosed.includes(subproof.id)) continue;
                 newSubproofs = true;
+                subproofIdsClosed.push(subproof.id);
                 this.openSubproof(subproof);
                 this.closeCurrentSubproof();
             }

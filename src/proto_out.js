@@ -578,7 +578,7 @@ module.exports = class ProtoOut {
             offset += 2;
         }
         while ((buf.length - offset) >= 1) {
-            value += (value << 8n) + BigInt(buf.readUInt8(offset));
+            value = (value << 8n) + BigInt(buf.readUInt8(offset));
             offset += 1;
         }
         return value;

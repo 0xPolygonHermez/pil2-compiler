@@ -130,6 +130,7 @@ module.exports = class Processor {
         this.loadBuiltInClass();
         this.scopeType = 'proof';
         this.currentAirGroup = false;
+        this.airGroupStack = [];
 
         this.sourceRef = '(init)';
 
@@ -883,6 +884,10 @@ module.exports = class Processor {
         }
         airgroup.addBlock(s.statements);
     }
+    setAirGroupBuiltIntConstants(airgroup) {
+        this.references.set('AIRGROUP', [], airgroup ? airgroup.name : '');  
+        this.references.set('AIRGROUP_ID', [], new ExpressionItems.IntValue(airgroup ? airgroup.id : 0));  
+    }
     /**
      * method to return id of airgroup, if this id not defined yet, use lastAirGroupId to set it
      * @param {AirGroup} airgroup 
@@ -906,11 +911,13 @@ module.exports = class Processor {
      * @param {Subproof} subproof 
      */
     openAirGroup(subproof) {
+        this.airGroupStack.push(this.currentAirGroup);
         this.currentAirGroup = subproof;
         this.scope.pushInstanceType('airgroup');
         this.context._subproofName = subproof.name;
         this.subproofId = this.getAirGroupId(subproof);        
         Context.subproofId = this.subproofId;
+        this.setSubproofBuiltIntConstants(subproof);
     }    
     /**
     * close current subproof and call defered funcions, clear scope of subproof
@@ -927,9 +934,11 @@ module.exports = class Processor {
     */
     suspendCurrentAirGroup() {
         this.scope.popInstanceType();
-        this.currentAirGroup = false;
-        this.subproofId = false;
-        Context.subproofId = false;
+        this.currentAirGroup = this.airGroupStack[this.airGroupStack.length - 1];
+        this.airGroupId = this.currentAirGroup ? this.currentAirGroup.getId() : false;
+        this.airGroupStack.pop();
+        Context.subproofId = this.airGroupId;
+        this.setSubproofBuiltIntConstants(this.currentAirGroup);
     }
     /**
     * create a new air on current subproof, take number of rows of N parameter of subproof
@@ -955,11 +964,10 @@ module.exports = class Processor {
         Context.airId = false;
         Context.airName = false;
     }
-    setBuiltIntConstants(subproof, air) {
+    setBuiltIntConstants(airgroup, air) {
         // create built-in constants
         this.references.set('BITS', [], air.bits);
-        this.references.set('AIRGROUP', [], subproof.name);  
-        this.references.set('AIRGROUP_ID', [], new ExpressionItems.IntValue(subproof.id));  
+        this.setAirGroupBuiltIntConstants(airgroup);
         this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id));  
     }
     executeSubproof(subproof, subproofFunc, callinfo) {
@@ -1000,10 +1008,22 @@ module.exports = class Processor {
     }
     finalClosingAirgroups() {
         this.callDelayedFunctions('airgroup', 'final');
-        for (const subproof of this.subproofs.values()) {
-            if (subproof.id === false) continue;
-            this.openAirGroup(subproof);
-            this.closeCurrentAirGroup();
+        let airGroupIdsClosed = [];
+
+        // use newAirGroups to detect if new airgroups appers in last loop, only
+        // exit of these loop when all airgroups are previously processed.
+        let newAirGroups = true;
+        while (newAirGroups) {
+            newAirGroups = false;
+            for (const airgroup of this.airgroups.values()) {
+                const id = airgroup.id;
+                if (id === false) continue;
+                if (airGroupIdsClosed.includes(id)) continue;
+                newAirGroups = true;
+                airGroupIdsClosed.push(id);
+                this.openAirGroup(airgroup);
+                this.closeCurrentAirGroup();
+            }
         }
     }
     subproofProtoOut(subproofId, airId) {
@@ -1061,13 +1081,13 @@ module.exports = class Processor {
         return scope === 'airgroup' ? `airgroup#${_subproofId}` : scope;
     }
     callDelayedFunctions(scope, event) {
-        if (Debug.active) console.log(this.delayedCalls);
         const _scope = this.getDelayedScope(scope);
+        if (Debug.active) console.log(`call all registered delayed calls scope:${_scope} ${event}`);
         if (typeof this.delayedCalls[_scope] === 'undefined' || typeof this.delayedCalls[_scope][event] === 'undefined') {
             return false;
         }
         for (const fname in this.delayedCalls[_scope][event]) {
-            if (Debug.active) console.log(`CALL DELAYED(${_scope},${event}) FUNCTION ${fname}`);
+            if (Debug.active) console.log(`call ${fname} registered delayed call scope:${_scope} ${event}`);
             this.execCall({ op: 'call', function: {name: fname}, args: [] });
         }
         this.delayedCalls[_scope][event] = {};
@@ -1157,6 +1177,7 @@ module.exports = class Processor {
         }
 
         const _scope = this.getDelayedScope(scope);
+        if (Debug.active) console.log(`adding delayed function call on scope:${_scope} event:${event} fname:${fname} ${Context.sourceRef}`);
 
         if (typeof this.delayedCalls[_scope] === 'undefined') {
             this.delayedCalls[_scope] = {};

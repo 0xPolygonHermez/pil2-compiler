@@ -149,11 +149,12 @@ return                                      { return 'RETURN' }
 %left SHL SHR
 %left '+' '-'
 %left '*' "\\" '/' '%'
-%left POW
+%right UMINUS UPLUS '!'
+%right POW
 %left '[' ']'
 %left "'"
 %left '.'
-%right INC DEC UMINUS UPLUS '!'
+%right INC DEC
 %left INC_LEFT DEC_LEFT
 %left NEXT
 

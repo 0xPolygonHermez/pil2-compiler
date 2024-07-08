@@ -9,7 +9,7 @@ const Debug = require('./debug.js');
 module.exports = class AirTemplateFunction extends Function {
     constructor (id, data = {}) {
         super(id, data);
-        this.subproof = data.subproof;
+        this.airGroup = data.airGroup;
         this.isBridge = true;
     }
     prepare(callInfo, mapInfo) {
@@ -17,7 +17,7 @@ module.exports = class AirTemplateFunction extends Function {
     }
 
     exec(callInfo, mapInfo) {
-        const res = Context.processor.executeSubproof(this.subproof, this, callInfo);
+        const res = Context.processor.executeAirGroup(this.airGroup, this, callInfo);
         return res === false ? new ExpressionItems.IntValue(0) : res;
     }    
     declareArgument(name, type, lengths, options, value) {
@@ -27,6 +27,6 @@ module.exports = class AirTemplateFunction extends Function {
         Context.references.set('N', [], value);
     }
     toString() {
-        return `[Subproof(func) ${this.name}${this.args ? '(' + Object.keys(this.args).join(',') + ')': ''}]`;
+        return `[airgroup(func) ${this.name}${this.args ? '(' + Object.keys(this.args).join(',') + ')': ''}]`;
     }
 }

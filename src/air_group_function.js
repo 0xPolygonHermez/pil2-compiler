@@ -9,7 +9,7 @@ const Debug = require('./debug.js');
 module.exports = class AirGroupFunction extends Function {
     constructor (id, data = {}) {
         super(id, data);
-        this.airgroup = data.airgroup;
+        this.airGroup = data.airGroup;
         this.isBridge = true;
     }
     prepare(callInfo, mapInfo) {
@@ -17,7 +17,7 @@ module.exports = class AirGroupFunction extends Function {
     }
 
     exec(callInfo, mapInfo) {
-        const res = Context.processor.executeAirGroup(this.airgroup, this, callInfo);
+        const res = Context.processor.executeAirGroup(this.airGroup, this, callInfo);
         return res === false ? new ExpressionItems.IntValue(0) : res;
     }    
     declareArgument(name, type, lengths, options, value) {

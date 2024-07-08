@@ -6,27 +6,27 @@ module.exports = class AirGroupValues extends Indexable {
     constructor () {
         super('airgroupvalue', AirGroupValueDefinition, AirGroupValueItem)
     }
-    getRelativeLabel(subproofId, id, options) {
+    getRelativeLabel(airGroupId, id, options) {
         // TODO: arrays
-        const value = this.values.find(x => x.relativeId == id && x.subproofId == subproofId);
+        const value = this.values.find(x => x.relativeId == id && x.airGroupId == airGroupId);
 
-        return value ? value.label : `subproofvalue(${subproofId},${id})`;
+        return value ? value.label : `airgroupvalue(${airGroupId},${id})`;
     }
     getEmptyValue(id, options) {
-        const subproofId = options.subproofId;
-        const relativeId = this.values.reduce((res, spv) => spv.subproofId === subproofId ? res + 1 : res, 0);
+        const airGroupId = options.airGroupId;
+        const relativeId = this.values.reduce((res, spv) => spv.airGroupId === airGroupId ? res + 1 : res, 0);
         let definition = super.getEmptyValue(id, {relativeId, ...options});
         return definition;
     }
-    getIdsBySubproofId(subproofId) {
+    getIdsByAirGroupId(airGroupId) {
         let result = [];
         for (let index = 0; index < this.values.length; ++index) {
-            if (this.values[index].subproofId != subproofId) continue;
+            if (this.values[index].airGroupId != airGroupId) continue;
             result.push(index);
         }
         return result;
     }
-    getAggreationTypesBySubproofId(subproofId) {
-        return this.values.filter(x => x.subproofId == subproofId).map(x => x.aggregateType);
+    getAggreationTypesByAirGroupId(airGroupId) {
+        return this.values.filter(x => x.airGroupId == airGroupId).map(x => x.aggregateType);
     }
 }

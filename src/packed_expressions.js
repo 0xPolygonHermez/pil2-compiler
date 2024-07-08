@@ -2,7 +2,7 @@ const util = require('util');
 const assert = require('./assert.js');
 
 const OPERATOR_SYMBOLS = {mul: '*', add: '+', sub:'-', neg:'-'};
-const VALID_OBJ_TYPES = ['constant','challenge','subproofValue','proofValue','publicValue','periodicCol','fixedCol','witnessCol','expression'];
+const VALID_OBJ_TYPES = ['constant','challenge','airGroupValue','proofValue','publicValue','periodicCol','fixedCol','witnessCol','expression'];
 module.exports = class PackedExpressions {
 
     constructor () {
@@ -49,9 +49,10 @@ module.exports = class PackedExpressions {
         assert.defined(idx);
         this.values.push({challenge: {stage, idx}});
     }
-    pushSubproofValue (idx, subproofId) {
-        assert.defined(idx);
-        this.values.push({subproofValue: {idx, subproofId}});
+    pushAirGroupValue (idx, airGroupId) {
+        assert.defined(idx);    
+        this.values.push({subproofValue: {idx, airGroupId}});
+        // TODO: this.values.push({airGroupValue: {idx, airGroupId}});
     }
     pushProofValue (idx) {
         assert.defined(idx);
@@ -130,7 +131,7 @@ module.exports = class PackedExpressions {
                 return this.getLabel('challenge', props.idx, options);
 
             case 'subproofValue':
-                return this.getLabel('subproofvalue', props.idx, options);
+                return this.getLabel('airgroupvalue', props.idx, options);
 
             case 'proofValue':
                 return this.getLabel('proofvalue', props.idx, options);

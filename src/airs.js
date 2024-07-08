@@ -1,9 +1,8 @@
 const Definitions = require("./definitions.js");
 
 module.exports = class Airs extends Definitions {
-
-    constructor (subproof) {
+    constructor (airGroup) {
         super();
-        this.subproof = subproof;
+        this.airGroup = airGroup;
     }
 }

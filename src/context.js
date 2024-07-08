@@ -8,11 +8,11 @@ module.exports = class Context {
         this.Fr = Fr;
         this._processor = processor;
         this.namespace = '';
-        this.subproof = false;
+        this.airGroup = false;
         this.stack = [];        
         this.config = {debug: {}, test: {}, ...config};
         this.uses = [];
-        this._subproofName = false;
+        this._airGroupName = false;
         this.airId = false;
         this.airN = false;
         if (typeof this.config.test.onContextInit === 'function') {
@@ -25,8 +25,8 @@ module.exports = class Context {
     static get config() {
         return this._instance.config;
     }
-    static get subproofName() {
-        return this._instance._subproofName;
+    static get airGroupName() {
+        return this._instance._airGroupName;
     }
     static get expressions() {
         return this._instance._processor.expressions;
@@ -56,8 +56,8 @@ module.exports = class Context {
         if (this.airName) {
             return `AIR:${this.airName}`;
         }
-        if (this._subproofName) {
-            return `SUBPROOF:${this._subproofName}`;
+        if (this._aigGroupName) {
+            return `AIRGROUP:${this._airGroupName}`;
         }
         return 'PROOF';
     }
@@ -67,14 +67,14 @@ module.exports = class Context {
     static getFullName(name) {
         return this._instance._getFullName(name);
     }
-    setNamespace(namespace, subproof) {
+    setNamespace(namespace, airGroup) {
         this.namespace = namespace;
-        if (typeof subproof !== 'undefined') {
-            this.subproof = subproof;
+        if (typeof airGroup !== 'undefined') {
+            this.airGroup = airGroup;
         }
     }
-    getSubproof() {
-        return this.subproof;
+    getAirGroup() {
+        return this.airGroup;
     }
     getNamespace() {
         return this.namespace;
@@ -108,7 +108,7 @@ module.exports = class Context {
         return name === fullName ? [name]:[name, fullName];
     }
     decodeName(name) {
-        const regex = /((?<subproof>\w*)::)?((?<namespace>\w*)\.)?(?<name>\w+)/gm;
+        const regex = /((?<airgroup>\w*)::)?((?<namespace>\w*)\.)?(?<name>\w+)/gm;
 
         let m;
 
@@ -117,7 +117,7 @@ module.exports = class Context {
             if (m.index === regex.lastIndex) {
                 regex.lastIndex++;
             }
-            return [m.groups.subproof, m.groups.namespace, m.groups.name];
+            return [m.groups.airgroup, m.groups.namespace, m.groups.name];
         }
     }
     _getFullName(name) {
@@ -131,16 +131,16 @@ module.exports = class Context {
         }
 
         const parts = name.split('.');
-        if (parts.length === 1 && this.subproof !== false && this.subproof !== '') {
-            name = this.subproof + '.' + name;
+        if (parts.length === 1 && this.airGroup !== false && this.airGroup !== '') {
+            name = this.airGroup + '.' + name;
         }
         return name;
     }
-    push(namespace, subproof) {
-        this.stack.push([this.subproof, this.namespace]);
-        this.setNamespace(namespace, subproof);
+    push(namespace, airGroup) {
+        this.stack.push([this.airGroup, this.namespace]);
+        this.setNamespace(namespace, airGroup);
     }
     pop() {
-        [this.subproof, this.namespace] = this.stack.pop();
+        [this.airGroup, this.namespace] = this.stack.pop();
     }
 }

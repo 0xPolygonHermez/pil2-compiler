@@ -132,7 +132,7 @@ module.exports = class References {
         const absoluteScope = isProofScope || isAirGroupScope || isAirScope;
         let res = {isProofScope, isAirGroupScope, isAirScope, absoluteScope, parts};
         if (absoluteScope) {
-            // if absolute scope (proof, subproof or air) and has more than 2 parts, means at least 3 parts,
+            // if absolute scope (proof, airgroup or air) and has more than 2 parts, means at least 3 parts,
             // the middle part was container.
             if (parts.length > 2) {
                 return {...res, scope: parts[0], name: parts.slice(-1), container: parts.slice(0, -1).join('.')};
@@ -235,7 +235,7 @@ module.exports = class References {
         let data = {...options};
         delete data.const;
 
-        const label = (!container || nameInfo.parts.length > 1) ? nameInfo.name : `${Context.subproofName}.${nameInfo.name}`;
+        const label = (!container || nameInfo.parts.length > 1) ? nameInfo.name : `${Context.airGroupName}.${nameInfo.name}`;
         const refProperties = {container, scope, isStatic: nameInfo.isStatic, data, const: constProperty, label};
 
         // TODO: reserve need array for labels?
@@ -265,7 +265,7 @@ module.exports = class References {
     }
     hasScope(type) {
         // TODO: inside function ??
-        return ['public', 'proofvalue', 'challenge', 'subproofvalue', 'publictable'].includes(type) === false;
+        return ['public', 'proofvalue', 'challenge', 'airgroupvalue', 'publictable'].includes(type) === false;
     }
 
     get (name, indexes = []) {
@@ -468,7 +468,7 @@ module.exports = class References {
      */
     getReference(name, defaultValue, debug = {}) {
         // if more than one name is sent, use the first one (mainName). Always first name it's directly
-        // name defined on source code, second optionally could be name with subproof, because as symbol is
+        // name defined on source code, second optionally could be name with airgroup, because as symbol is
         // stored with full name.
         const mainName = Array.isArray(name) ? name[0]:Context.applyTemplates(name);
         const nameInfo = this.decodeName(mainName);
@@ -477,7 +477,7 @@ module.exports = class References {
             // if scope is specified on mainName, the other names don't make sense
             names = [mainName];
         } else if (!nameInfo.absoluteScope && nameInfo.parts.length == 2) {
-            // absoluteScope means that first scope was proof, subproof or air. If a non absolute
+            // absoluteScope means that first scope was proof, airgroup or air. If a non absolute
             // scope is defined perhaps was an alias.
             const container = this.containers.getFromAlias(nameInfo.parts[0], false);
             if (container) {

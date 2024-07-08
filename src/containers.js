@@ -7,7 +7,7 @@ module.exports = class Containers {
         this.current = false;
         this.uses = [];
         this.aliases = [];
-        this.subproofContainers = [];
+        this.airGroupContainers = [];
     }
     addScopeAlias(alias, value) {
         // NOTE: there is no need to check for aliases because by grammatical definition,
@@ -69,14 +69,14 @@ module.exports = class Containers {
         }        
         
         if (this.isAirGroupContainer(name)) {
-            const subproofId = Context.subproofId;
-            if (typeof this.subproofContainers[subproofId] === 'undefined') {
-                this.subproofContainers[subproofId] = {};
+            const airGroupId = Context.airGroupId;
+            if (typeof this.airGroupContainers[airGroupId] === 'undefined') {
+                this.airGroupContainers[airGroupId] = {};
             }
-            if (this.subproofContainers[subproofId][name]) {
+            if (this.airGroupContainers[airGroupId][name]) {
                 return false;
             }
-            this.subproofContainers[subproofId][name] = {scope: this.parent.getNameScope(name), alias, subproofId, references: {}};            
+            this.airGroupContainers[airGroupId][name] = {scope: this.parent.getNameScope(name), alias, airGroupId: airGroupId, references: {}};            
         } else {
             // console.log(`CREATE CONTAINER ${name}`);
             // if container is defined, contents is ignored
@@ -85,7 +85,7 @@ module.exports = class Containers {
             }
 
             // const nameInfo = this.decodeName(name).scope;    
-            this.containers[name] = {scope: this.parent.getNameScope(name), alias, subproofId: false, references: {}};
+            this.containers[name] = {scope: this.parent.getNameScope(name), alias, airGroupId: false, references: {}};
             // console.log(this.containers[name]);
         }
         this.current = name;
@@ -114,8 +114,8 @@ module.exports = class Containers {
     }
     get (name) {
         if (this.isAirGroupContainer(name)) {
-            const subproofId = Context.subproofId;
-            return this.subproofContainers[subproofId] ? (this.subproofContainers[subproofId][name] ?? false) : false;
+            const airGroupId = Context.airGroupId;
+            return this.airGroupContainers[airGroupId] ? (this.airGroupContainers[airGroupId][name] ?? false) : false;
         }
         return this.containers[name] ?? false;
     }
@@ -171,9 +171,9 @@ module.exports = class Containers {
         for (let name in this.containers) {
           yield name;
         }
-        const subproofId = Context.subproofId;
-        if (this.subproofContainers[subproofId]) {
-            for (let name in this.subproofContainers[subproofId]) {
+        const airGroupId = Context.airGroupId;
+        if (this.airGroupContainers[airGroupId]) {
+            for (let name in this.airGroupContainers[airGroupId]) {
                 yield name;
             }
         }

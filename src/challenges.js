@@ -6,8 +6,8 @@ module.exports = class Challenges extends Indexable {
         super('challenge', ChallengeDefinition, ChallengeItem);
     }
     getEmptyValue(id, options) {
-        const subproofId = options.subproofId;
-        const relativeId = this.values.reduce((res, spv) => spv.subproofId === subproofId ? res + 1 : res, 0);
+        const airGroupId = options.airGroupId;
+        const relativeId = this.values.reduce((res, spv) => spv.airGroupId === airGroupId ? res + 1 : res, 0);
         let definition = super.getEmptyValue(id, {relativeId, ...options});
         return definition;
     }

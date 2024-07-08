@@ -68,7 +68,7 @@ module.exports = class Containers {
             this.addScopeAlias(alias, name);
         }        
         
-        if (this.isSubproofContainer(name)) {
+        if (this.isAirGroupContainer(name)) {
             const subproofId = Context.subproofId;
             if (typeof this.subproofContainers[subproofId] === 'undefined') {
                 this.subproofContainers[subproofId] = {};
@@ -91,8 +91,8 @@ module.exports = class Containers {
         this.current = name;
         return true;
     }
-    isSubproofContainer(name) {
-        return name.startsWith('subproof.');
+    isAirGroupContainer(name) {
+        return name.startsWith('airgroup.');
     }
     inside() {
         return this.current;
@@ -113,7 +113,7 @@ module.exports = class Containers {
         return this.get(name) !== false;
     }
     get (name) {
-        if (this.isSubproofContainer(name)) {
+        if (this.isAirGroupContainer(name)) {
             const subproofId = Context.subproofId;
             return this.subproofContainers[subproofId] ? (this.subproofContainers[subproofId][name] ?? false) : false;
         }

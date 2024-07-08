@@ -1,10 +1,10 @@
 const Indexable = require("./indexable.js");
-const SubproofvalItem = require("./expression_items/subproofval.js");
-const SubproofvalDefinition = require("./definition_items/subproofval.js");
-module.exports = class SubproofValues extends Indexable {
+const AirGroupValueItem = require("./expression_items/air_group_value.js");
+const AirGroupValueDefinition = require("./definition_items/air_group_value.js");
+module.exports = class AirGroupValues extends Indexable {
 
     constructor () {
-        super('subproofvalue', SubproofvalDefinition, SubproofvalItem)
+        super('airgroupvalue', AirGroupValueDefinition, AirGroupValueItem)
     }
     getRelativeLabel(subproofId, id, options) {
         // TODO: arrays

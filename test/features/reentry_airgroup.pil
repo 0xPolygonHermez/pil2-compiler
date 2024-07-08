@@ -1,18 +1,20 @@
-air AirA(int N = 2**16, int type = 0) {
+airtemplate AirA(int N = 2**16, int type = 0) {
     col witness a,b,c,d;
     // std_call_bus();
     std_call_range_check();
 }
 
-air AirB(int N = 2**16) {
+airtemplate AirB(int N = 2**16) {
     col witness a,b;
     // std_call_bus();
     // std_call_range_check();
 }
 
+
+
 function std_call_bus() {
     println("std_call_BUS", SUBPROOF, SUBPROOF_ID);  
-    on final subproof final_bus();
+    on final airgroup final_bus();
 }
 
 function final_bus() {
@@ -27,7 +29,7 @@ function std_call_range_check() {
         proof.range_check.max_subproof_id = SUBPROOF_ID;
     }
     println("std_call_RANGE_CHECK", SUBPROOF, SUBPROOF_ID); 
-    on final subproof range_check_in_same_subproof();
+    on final airgroup range_check_in_same_subproof();
 }
 
 function range_check_in_same_subproof() {
@@ -56,14 +58,15 @@ function final_range_check() {
 }
 
 function create_and_instance_range_check() {
-    air RangeCheck(int N = 2**18) {
+    airtemplate RangeCheck(int N = 2**18) {
         col witness a,b;
         std_call_bus();
     }
     RangeCheck();
 }
-on final subproof final_range_check();
-
-AirA(2**3, 0);
-AirA(2**4, 1);
-AirB(2**3);
+on final airgroup final_range_check();
+airgroup Reentry (int N=2**3) {
+    AirA(N, 0);
+    AirA(N, 1);
+    AirB(N);
+}

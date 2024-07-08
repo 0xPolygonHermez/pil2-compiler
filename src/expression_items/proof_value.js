@@ -1,12 +1,13 @@
 const ProofItem = require("./proof_item.js");
-module.exports = class Subproofval extends ProofItem {
+
+module.exports = class ProofValue extends ProofItem {
     constructor (id) {
         super(id);
     }
     getTag() {
-        return 'subproofvalue';
+        return 'proofvalue';
     }
     cloneInstance() {
-        return new Subproofval(this.id);
+        return new ProofValue(this.id);
     }
 }

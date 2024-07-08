@@ -4,9 +4,9 @@ const Air = require("./air.js")
 const Context = require('./context.js');
 const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js");
 const ExpressionItems = require('./expression_items.js');
-module.exports = class Subproof {
+module.exports = class AirGroup {
     constructor (name, statements, aggregate) {
-        // TODO: when instance a subproof return an integer (as a handler id)
+        // TODO: when instance a airgroup return an integer (as a handler id)
         this.id = false;
         this.airs = [];
         this.aggregate = aggregate;
@@ -45,38 +45,38 @@ module.exports = class Subproof {
         if (!this.insideFirstAir) {
             const spvNonDeclared = Object.keys(this.spvDeclaredInsideThisAir).filter(name => this.spvDeclaredInsideThisAir[name] === false);
             for (const name of spvNonDeclared) {
-                if (this.spvDeclaredInFirstAir[name].insideSubproofContainer) continue;
-                throw new Error(`Subproofvalue ${name} declared on previous ${this.name} instance, isn't declared on current air instance`);
+                if (this.spvDeclaredInFirstAir[name].insideAirGroupContainer) continue;
+                throw new Error(`airgroupval ${name} declared on previous ${this.name} instance, isn't declared on current air instance`);
             }
         }
         this.insideFirstAir = false;
         this.insideAir = false;
     }
-    declareSubproofvalue(name, lengths = [], data = {}) {
+    declareAirGroupValue(name, lengths = [], data = {}) {
         // colDeclaration(s, type, ignoreInit, fullName = true, data = {}) {
         const fullname = Context.getFullName(name);
-        const insideSubproofContainer = Context.references.getContainerScope() === 'subproof';
+        const insideAirGroupContainer = Context.references.getContainerScope() === 'airgroup';
         if (!this.insideAir) {
-            throw new Error(`Subproofvalue ${name} must be declared inside subproof (air)`);
+            throw new Error(`airgroupval ${name} must be declared inside airgroup (air)`);
         }
         if (this.insideFirstAir) {
-            // this.colDeclaration(s, 'subproofvalue', true, false, {aggregateType: s.aggregateType});
-            const res = Context.references.declare(fullname, 'subproofvalue', lengths, data);
-            this.spvDeclaredInFirstAir[name] = {res, lengths: [...lengths], insideSubproofContainer};
+            // this.colDeclaration(s, 'airgroupval', true, false, {aggregateType: s.aggregateType});
+            const res = Context.references.declare(fullname, 'airgroupval', lengths, data);
+            this.spvDeclaredInFirstAir[name] = {res, lengths: [...lengths], insideAirGroupContainer};
             return res;
         }
 
-        // insideFirsAir = false. Check subproofvalue it's same declared on first air "execution"
+        // insideFirsAir = false. Check airgroupval it's same declared on first air "execution"
         const previousLengths = (this.spvDeclaredInFirstAir[name] ?? {lengths: false}).lengths;
         if (previousLengths === false) {
-            throw new Error(`Subproofvalue ${name} not declared on first air execution`);
+            throw new Error(`airgroupval ${name} not declared on first air execution`);
         }
         const sameLengths = previousLengths.length === lengths.length && previousLengths.every((length, index) => lengths[index] === length);
         if (!sameLengths) {
-            throw new Error(`Subproofvalue ${name} has different index lengths [${previousLengths.join('][')}] declared than now [${lengths.join('][')}]`);
+            throw new Error(`airgroupval ${name} has different index lengths [${previousLengths.join('][')}] declared than now [${lengths.join('][')}]`);
         }
 
-        // mark this subproof value as declared
+        // mark this airgroupval as declared
         this.spvDeclaredInsideThisAir[name] = true;
 
         return this.spvDeclaredInFirstAir[name].res;
@@ -86,7 +86,7 @@ module.exports = class Subproof {
         for (const statements of this.blocks) {
             // REVIEW: clear uses and regular expressions
             // this.scope.push();
-            res = Context.processor.execute(statements, `SUBPROOF ${this.name}`);
+            res = Context.processor.execute(statements, `AIRGROUP ${this.name}`);
             if (res instanceof FlowAbortCmd) {
                 assert.instanceOf(res, ReturnCmd);
                 Context.processor.traceLog('[TRACE-BROKE-RETURN]', '38;5;75;48;5;16');

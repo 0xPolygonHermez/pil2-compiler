@@ -26,8 +26,9 @@ public                                      { return 'PUBLIC'; }
 constant                                    { return 'CONSTANT' }
 const                                       { return 'CONST' }
 proofval                                    { return 'PROOF_VALUE' }
-subproofval                                 { return 'SUBPROOF_VALUE' }
-subproof                                    { return 'SUBPROOF' }
+airgroupval                                 { return 'AIR_GROUP_VALUE' }
+airgroup                                    { return 'AIR_GROUP' }
+airtemplate                                 { return 'AIR_TEMPLATE' }
 air                                         { return 'AIR' }
 proof                                       { return 'PROOF' }
 
@@ -220,24 +221,7 @@ all_top_level_blocks
         { $$ = $1.statements; return $$; }
     ;
 
-top_level_blocks
-    : top_level_blocks lopcs top_level_block
-        { $$ = [...$1, $3] } }
-    |
-        { $$ = [] }
-    ;
 
-lopcs
-    : lopcs CS %prec CS
-    | %prec EMPTY
-    ;
-
-top_level_block
-    : air_definition
-        { $$ = $1 }
-
-    | statement_list ';'
-    ;
 
 use_directive
     : USE name_reference
@@ -366,7 +350,10 @@ statement_closed
     | '{' statement_block '}'
         { $$ = { type: 'scope_definition', ...$2 }; }
 
-    | air_definition
+    | air_template_definition
+        { $$ = $1 }
+
+    | air_group_definition
         { $$ = $1 }
 
     ;
@@ -398,8 +385,8 @@ function_definition
     | FINAL PROOF function '(' arguments ')' '{' statement_block '}'
         { $$ = { ...$3, type: 'function_definition', final: 'proof', ...$5, returns: false, ...$8 }}
 
-    | FINAL SUBPROOF function '(' arguments ')' '{' statement_block '}'
-        { $$ = { ...$3, type: 'function_definition', final: 'subproof', ...$5, returns: false, ...$8 }}
+    | FINAL AIR_GROUP function '(' arguments ')' '{' statement_block '}'
+        { $$ = { ...$3, type: 'function_definition', final: 'airgroup', ...$5, returns: false, ...$8 }}
 
     ;
 
@@ -493,8 +480,8 @@ basic_type
     | PROOF_VALUE
         { $$ = { type: 'proof' } }
 
-    | SUBPROOF_VALUE
-        { $$ = { type: 'subproof' } }
+    | AIR_GROUP_VALUE
+        { $$ = { type: 'airgroup' } }
 
     | AIR_VALUE
         { $$ = { type: 'air' } }
@@ -557,7 +544,7 @@ declare_item
     | proof_value_declaration
         { $$ = $1 }
 
-    | subproof_value_declaration
+    | air_group_value_declaration
         { $$ = $1 }
 
     | variable_declaration
@@ -592,7 +579,7 @@ statement_no_closed
     | proof_value_declaration
         { $$ = $1 }
 
-    | subproof_value_declaration
+    | air_group_value_declaration
         { $$ = $1 }
 
     | no_closed_container_definition
@@ -653,7 +640,7 @@ defined_scopes
     | PROOF
         { $$ = $1 }
 
-    | SUBPROOF
+    | AIR_GROUP
         { $$ = $1 }
 
     ;
@@ -1215,21 +1202,29 @@ proof_value_declaration
         { $$ = { type: 'proof_value_declaration', items: $2.items } }
     ;
 
-subproof_value_declaration
-    : SUBPROOF_VALUE AGGREGATE '(' IDENTIFIER ')' col_declaration_list
-        { $$ = { type: 'subproof_value_declaration', aggregateType: $4, items: $6.items } }
+air_group_value_declaration
+    : AIR_GROUP_VALUE AGGREGATE '(' IDENTIFIER ')' col_declaration_list
+        { $$ = { type: 'air_group_value_declaration', aggregateType: $4, items: $6.items } }
     ;
 
 
-air_definition
-    : AIR AGGREGATE IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
-        { $$ = { type: 'air_definition', aggregate: true, name: $3, ...$5, statements: $8.statements } }
+air_template_definition
+    : AIR_TEMPLATE IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
+        { $$ = { type: 'air_template_definition', name: $2, ...$4, statements: $7.statements } }
 
-    | AIR IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
-        { $$ = { type: 'air_definition', aggregate: false, name: $2, ...$4, statements: $7.statements } }
+    | AIR_TEMPLATE IDENTIFIER '{' statement_block '}'
+        { $$ = { type: 'air_template_block', name: $2, statements: $4.statements } }
+    ;
 
-    | AIR IDENTIFIER '{' statement_block '}'
-        { $$ = { type: 'air_block', aggregate: false, name: $2, statements: $4.statements } }
+air_group_definition
+    : AIR_GROUP AGGREGATE IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
+        { $$ = { type: 'air_group_definition', aggregate: true, name: $3, ...$5, statements: $8.statements } }
+
+    | AIR_GROUP IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
+        { $$ = { type: 'air_group_definition', aggregate: false, name: $2, ...$4, statements: $7.statements } }
+
+    | AIR_GROUP IDENTIFIER '{' statement_block '}'
+        { $$ = { type: 'air_group_block', aggregate: false, name: $2, statements: $4.statements } }
     ;
 
 expression
@@ -1435,8 +1430,8 @@ name_reference
     : AIR '.' name_reference_right
         { $$ = { name: 'air.' + $3.name } }
 
-    | SUBPROOF '.' name_reference_right
-        { $$ = { name: 'subproof.' + $3.name } }
+    | AIR_GROUP '.' name_reference_right
+        { $$ = { name: 'airgroup.' + $3.name } }
 
     | PROOF '.' name_reference_right
         { $$ = { name: 'proof.' + $3.name } }

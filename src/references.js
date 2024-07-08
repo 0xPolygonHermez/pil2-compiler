@@ -127,10 +127,10 @@ module.exports = class References {
             return {scope, name, parts};
         }
         const isProofScope = parts[0] === 'proof';
-        const isSubproofScope = parts[0] === 'subproof';
+        const isAirGroupScope = parts[0] === 'airgroup';
         const isAirScope = parts[0] === 'air';
-        const absoluteScope = isProofScope || isSubproofScope || isAirScope;
-        let res = {isProofScope, isSubproofScope, isAirScope, absoluteScope, parts};
+        const absoluteScope = isProofScope || isAirGroupScope || isAirScope;
+        let res = {isProofScope, isAirGroupScope, isAirScope, absoluteScope, parts};
         if (absoluteScope) {
             // if absolute scope (proof, subproof or air) and has more than 2 parts, means at least 3 parts,
             // the middle part was container.
@@ -153,7 +153,7 @@ module.exports = class References {
         const res = this.decodeName(name);
         if (res.absoluteScope) {
             if (res.isProofScope) return 'proof';
-            if (res.isSubproofScope) return 'subproof';
+            if (res.isAirGroupScope) return 'airgroup';
             if (res.isAirScope) return 'air';
         }
         if (useCurrentContainer) {
@@ -429,7 +429,7 @@ module.exports = class References {
         if (!explicitContainer) {
             reference = this.containers.getReferenceInsideCurrent(lname, false);
         } else {            
-            if (['proof', 'subproof', 'air'].includes(explicitContainer)) {
+            if (['proof', 'airgroup', 'air'].includes(explicitContainer)) {
                 const scopeId = Context.scope.getScopeId(explicitContainer);
                 if (scopeId === false) {
                     throw new Error(`not found scope ${explicitContainer}`);

@@ -7,8 +7,10 @@ const References = require("./references.js");
 const Indexable = require("./indexable.js");
 const Ids = require("./ids.js");
 const Constraints = require("./constraints.js");
-const Subproof = require("./subproof.js");
-const Subproofs = require("./subproofs.js");
+const AirGroup = require("./air_group.js");
+const AirGroups = require("./air_groups.js");
+const AirTemplate = require("./air_template.js");
+const AirTemplates = require("./air_templates.js");
 const Air = require("./air.js");
 const Airs = require("./airs.js");
 const Variables = require("./variables.js");
@@ -16,12 +18,13 @@ const Sequence = require("./sequence.js");
 const List = require("./list.js");
 const Assign = require("./assign.js");
 const Function = require("./function.js");
-const SubproofFunction = require("./subproof_function.js");
+const AirGroupFunction = require("./air_group_function.js");
+const AirTemplateFunction = require("./air_template_function.js");
 const PackedExpressions = require("./packed_expressions.js");
 const ProtoOut = require("./proto_out.js");
 const FixedCols = require("./fixed_cols.js");
 const WitnessCols = require("./witness_cols.js");
-const SubproofValues = require("./subproof_values.js");
+const AirGroupValues = require("./air_group_values.js");
 const Iterator = require("./iterator.js");
 const Context = require("./context.js");
 const Runtime = require("./runtime.js");
@@ -60,10 +63,10 @@ module.exports = class Processor {
         this.delayedCalls = {};
         this.timers = {};
 
-        this.lastSubproofId = -1;
+        this.lastAirGroupId = -1;
         this.lastAirId = -1;
         this.airId = 0;
-        this.subproofId = 0;
+        this.airGroupId = 0;
 
         this.ints = new Variables('int', DefinitionItems.IntVariable, ExpressionItems.IntValue);
         this.references.register('int', this.ints);
@@ -94,19 +97,20 @@ module.exports = class Processor {
         ExpressionItem.setManager(ExpressionItems.Challenge, this.challenges);
         this.references.register('challenge', this.challenges);
 
-        this.proofvalues = new Indexable('proofvalue', DefinitionItems.Proofval, ExpressionItems.Proofval);
+        this.proofvalues = new Indexable('proofvalue', DefinitionItems.ProofValue, ExpressionItems.Proofval);
         ExpressionItem.setManager(ExpressionItems.Proofval, this.proofvalues);
         this.references.register('proofvalue', this.proofvalues);
 
-        this.subproofvalues = new SubproofValues();
-        ExpressionItem.setManager(ExpressionItems.Subproofval, this.subproofvalues);
-        this.references.register('subproofvalue', this.subproofvalues);
+        this.airgroupvalues = new AirGroupValues();
+        ExpressionItem.setManager(ExpressionItems.Subproofval, this.airgroupvalues);
+        this.references.register('airgroupvalue', this.airgroupvalues);
 
         this.functions = new Indexable('function', Function, ExpressionItems.FunctionCall, {const: true});
         ExpressionItem.setManager(ExpressionItems.FunctionCall, this.functions);
         this.references.register('function', this.functions);
 
-        this.subproofs = new Subproofs();
+        this.airgroups = new AirGroups();
+        this.airtemplates = new AirTemplates();
 
         this.expressions = new Expressions();
         this.globalExpressions = new Expressions();
@@ -125,7 +129,7 @@ module.exports = class Processor {
         this.sourceRef = '(built-in-class)';
         this.loadBuiltInClass();
         this.scopeType = 'proof';
-        this.currentSubproof = false;
+        this.currentAirGroup = false;
 
         this.sourceRef = '(init)';
 
@@ -159,8 +163,8 @@ module.exports = class Processor {
         this.references.declare('PRIME', 'int', [], { global: true, sourceRef: this.sourceRef, const: true }, this.prime);
         this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
-        this.references.declare('SUBPROOF', 'string', [], { global: true, sourceRef: this.sourceRef });
-        this.references.declare('SUBPROOF_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('AIRGROUP', 'string', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('AIRGROUP_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('AIR_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
     }
     startExecution(statements) {
@@ -170,8 +174,8 @@ module.exports = class Processor {
         this.scope.pushInstanceType('proof');
         this.sourceRef = '(execution)';
         this.execute(statements);
-        this.sourceRef = '(subproof-execution)';
-        this.finalClosingSubproofs();
+        this.sourceRef = '(airgroup-execution)';
+        this.finalClosingAirgroups();
         this.finalProofScope();
         this.scope.popInstanceType();
         this.generateProtoOut();
@@ -735,8 +739,8 @@ module.exports = class Processor {
     }
     execInclude(s) {
         if (!s.contents) {
-            // to support dynamic includes, add some internal statements need to compile inside subproof
-            // but after take compiled statements. TODO: analyze use current subproof name
+            // to support dynamic includes, add some internal statements need to compile inside airgroup
+            // but after take compiled statements. TODO: analyze use current airgroup name
             const sts = this.compiler.loadInclude(s.file.asString(), {preSrc: 'air __(int N=2**2) {\n', postSrc: '\n};\n'});
             if (sts === false) {
                 throw new Error(`ERROR loading include ${s.file.asString()}`);
@@ -764,7 +768,7 @@ module.exports = class Processor {
     }
     execFunctionDefinition(s) {
         if (Debug.active) console.log('FUNCTION '+s.name);
-        const name = this.currentSubproof ? `${this.currentSubproof.name}.${s.name}`: s.name;
+        const name = this.currentAirGroup ? `${this.currentAirGroup.name}.${s.name}`: s.name;
         const id = this.references.declare(name, 'function', [], {sourceRef: Context.sourceRef});
         let func = new Function(id, {...s, name});
         this.references.set(func.name, [], func);
@@ -831,75 +835,99 @@ module.exports = class Processor {
             throw new Error(`Invalid N ${rows}. N must be a power of 2`);
         }
     }
-    execAirDefinition(s) {
-        const subproofName = s.name ?? false;
-        if (subproofName === false) {
-            this.error(s, `air not defined correctly`);
+    execAirTemplateDefinition(s) {
+        const name = s.name ?? false;
+        if (name === false) {
+            this.error(s, `airtemplate not defined correctly`);
         }
 
-        const subproof = new Subproof(subproofName, s.statements, s.aggregate ?? false);
-        this.subproofs.define(subproofName, subproof, `air ${subproofName} has been defined previously on ${Context.sourceRef}`);
+        const instance = new AirTemplate(name, s.statements);
+        this.airtemplates.define(name, instance, `airgroup ${name} has been defined previously on ${Context.sourceRef}`);
 
-        const id = this.references.declare(subproofName, 'function', [], {sourceRef: Context.sourceRef});
-        const subproofFunc = new SubproofFunction(id, {args: s.args, name: subproofName, subproof, sourceRef: Context.sourceRef});
-        this.references.set(subproofName, [], subproofFunc);
+        const id = this.references.declare(name, 'function', [], {sourceRef: Context.sourceRef});
+        const func = new AirTemplateFunction(id, {args: s.args, name, instance, sourceRef: Context.sourceRef});
+        this.references.set(name, [], func);
     }
-    execAirBlock(s) {
-        const subproofName = s.name ?? false;
-        if (subproofName === false) {
-            this.error(s, `air not defined correctly`);
+    execAirTemplateBlock(s) {
+        const name = s.name ?? false;
+        if (name === false) {
+            this.error(s, `airtemplate not defined correctly`);
         }
-        const subproof = this.subproofs.get(subproofName);
-        if (!subproof) {
-            throw new Error(`Air definition ${subproofName} hasn't been defined before air block`);
+        const airtemplate = this.airtemplates.get(name);
+        if (!airtemplate) {
+            throw new Error(`airtemplate definition ${name} hasn't been defined before air block`);
         }
-        subproof.addBlock(s.statements);
+        airtemplate.addBlock(s.statements);
+    }
+    execAirGroupDefinition(s) {
+        const name = s.name ?? false;
+        if (name === false) {
+            this.error(s, `airgroup not defined correctly`);
+        }
+
+        const instance = new AirGroup(name, s.statements, s.aggregate ?? false);
+        this.airgroups.define(name, instance, `airgroup ${name} has been defined previously on ${Context.sourceRef}`);
+
+        const id = this.references.declare(name, 'function', [], {sourceRef: Context.sourceRef});
+        const func = new AirGroupFunction(id, {args: s.args, name, instance, sourceRef: Context.sourceRef});
+        this.references.set(name, [], func);
+    }
+    execAirGroupBlock(s) {
+        const name = s.name ?? false;
+        if (name === false) {
+            this.error(s, `airgroup not defined correctly`);
+        }
+        const airgroup = this.airgroup.get(name);
+        if (!airgroup) {
+            throw new Error(`airgroup definition ${airgroup} hasn't been defined before air block`);
+        }
+        airgroup.addBlock(s.statements);
     }
     /**
-     * method to return id of subproof, if this id not defined yet, use lastSubproofId to set it
-     * @param {Subproof} subproof 
+     * method to return id of airgroup, if this id not defined yet, use lastAirGroupId to set it
+     * @param {AirGroup} airgroup 
      * @returns {number}
      */
-    getSubproofId(subproof) {    
-        const subproofId = subproof.getId();
-        if (subproofId !== false) {
-            this.proto.useSubproof(subproofId);
-            return subproofId;
+    getAirGroupId(airgroup) {    
+        const id = subproof.getId();
+        if (id !== false) {
+            this.proto.useSubproof(id);
+            return id;
         }
-        ++this.lastSubproofId;
-        subproof.setId(this.lastSubproofId);
-        this.proto.setSubproof(this.lastSubproofId, subproof.name, subproof.aggregate);
-        return this.lastSubproofId;
+        ++this.lastAirGroupId;
+        airgroup.setId(this.lastAirGroupId);
+        this.proto.setSubproof(this.lastAirGroupId, airgroup.name, airgroup.aggregate);
+        return this.lastAirGroupId;
     }
     /**
-     * Open or reopen a subproof with name subproofName, this means that 
+     * Open or reopen a airgroup with name subproofName, this means that 
      * start to executing inside subproof scope
      * @param {string} subproofName 
      * @param {Subproof} subproof 
      */
-    openSubproof(subproof) {
-        this.currentSubproof = subproof;
-        this.scope.pushInstanceType('subproof');
+    openAirGroup(subproof) {
+        this.currentAirGroup = subproof;
+        this.scope.pushInstanceType('airgroup');
         this.context._subproofName = subproof.name;
-        this.subproofId = this.getSubproofId(subproof);        
+        this.subproofId = this.getAirGroupId(subproof);        
         Context.subproofId = this.subproofId;
     }    
     /**
     * close current subproof and call defered funcions, clear scope of subproof
     */
-    closeCurrentSubproof() {
+    closeCurrentAirGroup() {
         // get subproofId because during closing process this.subproofId is set to false
         const subproofId = this.subproofId;
         this.finalSubproofScope();
-        this.suspendCurrentSubproof();
-        this.references.clearScope('subproof');
+        this.suspendCurrentAirGroup();
+        this.references.clearScope('airgroup');
     }
     /**
     * "suspend" current because this subproof could be opened again
     */
-    suspendCurrentSubproof() {
+    suspendCurrentAirGroup() {
         this.scope.popInstanceType();
-        this.currentSubproof = false;
+        this.currentAirGroup = false;
         this.subproofId = false;
         Context.subproofId = false;
     }
@@ -930,12 +958,12 @@ module.exports = class Processor {
     setBuiltIntConstants(subproof, air) {
         // create built-in constants
         this.references.set('BITS', [], air.bits);
-        this.references.set('SUBPROOF', [], subproof.name);  
-        this.references.set('SUBPROOF_ID', [], new ExpressionItems.IntValue(subproof.id));  
+        this.references.set('AIRGROUP', [], subproof.name);  
+        this.references.set('AIRGROUP_ID', [], new ExpressionItems.IntValue(subproof.id));  
         this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id));  
     }
     executeSubproof(subproof, subproofFunc, callinfo) {
-        this.openSubproof(subproof);
+        this.openAirGroup(subproof);
 
         // subproof was a function derivated class
         const mapinfo = this.prepareFunctionCall(subproofFunc, callinfo);
@@ -964,18 +992,18 @@ module.exports = class Processor {
         this.closeAir(air);
 
         // closing subproof but no closing final        
-        this.suspendCurrentSubproof(false);
+        this.suspendCurrentAirGroup(false);
 
         this.finishFunctionCall(subproof);
 
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
     }
-    finalClosingSubproofs() {
-        this.callDelayedFunctions('subproof', 'final');
+    finalClosingAirgroups() {
+        this.callDelayedFunctions('airgroup', 'final');
         for (const subproof of this.subproofs.values()) {
             if (subproof.id === false) continue;
-            this.openSubproof(subproof);
-            this.closeCurrentSubproof();
+            this.openAirGroup(subproof);
+            this.closeCurrentAirGroup();
         }
     }
     subproofProtoOut(subproofId, airId) {
@@ -1022,7 +1050,7 @@ module.exports = class Processor {
         this.hints.clear();
     }
     finalSubproofScope() {
-        this.callDelayedFunctions('subproof', 'final');
+        this.callDelayedFunctions('airgroup', 'final');
     }
     finalProofScope() {
         this.callDelayedFunctions('proof', 'final');
@@ -1030,7 +1058,7 @@ module.exports = class Processor {
 
     getDelayedScope(scope) {
         const _subproofId = Context.subproofId === false || typeof Context.subproofId === 'undefined' ? '':Context.subproofId;
-        return scope === 'subproof' ? `subproof#${_subproofId}` : scope;
+        return scope === 'airgroup' ? `airgroup#${_subproofId}` : scope;
     }
     callDelayedFunctions(scope, event) {
         if (Debug.active) console.log(this.delayedCalls);
@@ -1101,12 +1129,12 @@ module.exports = class Processor {
     execSubproofValueDeclaration(s) {
         const name = s.items[0].name ?? '';
 
-        if (this.currentSubproof === false) {
+        if (this.currentAirGroup === false) {
             throw new Error(`Subproofvalue ${name} must be declared inside subproof (air)`);
         }
         for (const value of s.items) {
             const lengths = this.decodeLengths(value);
-            const res = this.currentSubproof.declareSubproofvalue(value.name, lengths, {aggregateType: s.aggregateType, subproofId: this.subproofId, sourceRef: this.sourceRef});
+            const res = this.currentAirGroup.declareSubproofvalue(value.name, lengths, {aggregateType: s.aggregateType, subproofId: this.subproofId, sourceRef: this.sourceRef});
         }
     }
     execChallengeDeclaration(s) {
@@ -1124,7 +1152,7 @@ module.exports = class Processor {
         if (event !== 'final') {
             throw new Error(`delayed function call event ${event} no supported`);
         }
-        if (['proof', 'subproof', 'air'].includes(scope) === false) {
+        if (['proof', 'airgroup', 'air'].includes(scope) === false) {
             throw new Error(`delayed function call scope ${scope} no supported`);
         }
 

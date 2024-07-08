@@ -1,10 +1,10 @@
 const ProofItem = require("./proof_item.js");
 
-module.exports = class Proofval extends ProofItem {
+module.exports = class ProofValue extends ProofItem {
     constructor (id) {
         super(id);
     }
     clone() {
-        return new Proofval(this.id);
+        return new ProofValue(this.id);
     }
 }

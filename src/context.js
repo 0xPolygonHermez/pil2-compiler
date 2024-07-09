@@ -13,12 +13,26 @@ module.exports = class Context {
         this.config = {debug: {}, test: {}, ...config};
         this.uses = [];
         this._airGroupName = false;
-        this.airId = false;
-        this.airN = false;
         if (typeof this.config.test.onContextInit === 'function') {
             this.config.test.onContextInit(Context, this);
         }
     }
+    static get air() {
+        return  this._instance._processor.airStack.at(-1) ?? false;
+    }
+    static get airId() {
+        const air = this.air;
+        return air ? air.id : false;
+    }
+    static get airName() {
+        const air = this.air;
+        return air ? air.name : '';
+    }
+    static get rows() {
+        const air = this.air;
+        return air ? air.rows : false;
+    }
+
     static get Fr() {
         return this._instance.Fr;
     }
@@ -56,7 +70,7 @@ module.exports = class Context {
         if (this.airName) {
             return `AIR:${this.airName}`;
         }
-        if (this._aigGroupName) {
+        if (this._airGroupName) {
             return `AIRGROUP:${this._airGroupName}`;
         }
         return 'PROOF';

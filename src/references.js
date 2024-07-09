@@ -12,7 +12,7 @@ module.exports = class References {
     constructor () {
         this.references = {};
         this.types = {};
-        this.visibilityScope = 0;
+        this.visibilityScope = [0,false];
         this.visibilityStack = [];
         this.containers = new Containers(this);
     }
@@ -65,9 +65,9 @@ module.exports = class References {
     closeContainer() {
         this.containers.close();
     }
-    pushVisibilityScope() {
+    pushVisibilityScope(creationScope = false) {
         this.visibilityStack.push(this.visibilityScope);
-        this.visibilityScope = Context.scope.deep;
+        this.visibilityScope = [Context.scope.deep, creationScope];
     }
     popVisibilityScope() {
         if (this.visibilityStack.length < 1) {
@@ -454,10 +454,20 @@ module.exports = class References {
         }
         return reference;
     }
+    getNextVisibilityScope(scopeId) {
+        let index = 0;
+        while (index < this.visibilityStack.length) {
+            this.visibilityStack[index]
+        }
+    }
     isVisible(def) {    
         if (Debug.active) console.log('ISVISIBLE', (def.constructor ?? {name: '_'}).name, def);
-        return !def.scopeId || def.scopeId === 1 || !this.hasScope(def.type) || def.type === 'function' ||
-                def.scopeId >= this.visibilityScope;
+        const res = !def.scopeId || def.scopeId === 1 || !this.hasScope(def.type) || def.type === 'function' ||
+                    def.scopeId >= this.visibilityScope[0] || (this.visibilityScope[1] !== false && def.scopeId <= this.visibilityScope[1]);
+                    // this.visibilityScopes.some((x,i) => def.scopeId >= x && (i === 0 || def.scopeId < this.getNextVisibilityScope(x)));
+        // console.log('**** IS_VISIBLE', def.name, def.scopeId, this.visibilityScope, this.visibilityStack/*, Context.scope*/);
+        return res;
+                // def.scopeId >= this.visibilityScopes;
     }
     /**
      *

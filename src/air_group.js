@@ -11,7 +11,6 @@ module.exports = class AirGroup {
         this.airs = [];
         this.aggregate = aggregate;
         this.name = name;
-        this.blocks = [statements];
 
         this.insideFirstAir = false;
         this.spvDeclaredInFirstAir = {};
@@ -24,15 +23,11 @@ module.exports = class AirGroup {
     setId(id) {
         this.id = id;
     }
-    createAir(rows, options = {}) {
+    createAir(airTemplate, rows, options = {}) {
         const id = this.airs.length;
-        const name = options.name ??  (this.name + (id ? `_${id}`:''));
-        const air = new Air(id, rows, {...options, name});
+        const air = airTemplate.instance(id, this, rows, options);
         this.airs.push(air);
         return air;
-    }
-    addBlock(statements) {
-        this.statements = [...this.statements, ...statements];
     }
     airStart() {
         this.insideAir = true;
@@ -81,18 +76,4 @@ module.exports = class AirGroup {
 
         return this.spvDeclaredInFirstAir[name].res;
     }
-    exec(callInfo, mapInfo) {
-        let res = false;
-        for (const statements of this.blocks) {
-            // REVIEW: clear uses and regular expressions
-            // this.scope.push();
-            res = Context.processor.execute(statements, `AIRGROUP ${this.name}`);
-            if (res instanceof FlowAbortCmd) {
-                assert.instanceOf(res, ReturnCmd);
-                Context.processor.traceLog('[TRACE-BROKE-RETURN]', '38;5;75;48;5;16');
-                res = res.reset();
-            }
-        }
-        return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue(0) : res;
-    }   
 }

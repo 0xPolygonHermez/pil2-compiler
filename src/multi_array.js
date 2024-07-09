@@ -108,7 +108,11 @@ class MultiArray {
     }
     isFullIndexed(indexes) {
         // in case of elements with row-dimension
-        return (indexes.length >= this.dim);
+        return (indexes.length == this.dim);
+    }
+    isSubIndexed(indexes) {
+        // in case of elements with row-dimension
+        return (indexes.length < this.dim);
     }
     locatorIndexesApply(locatorId, indexes) {
         if (Debug.active) console.log([locatorId, indexes, this.dim, this.lengths]);
@@ -130,6 +134,13 @@ class MultiArray {
 
         return offset;
     }
+    insideOfBounds(indexes) {
+        for (let idim = 0; idim < indexes.length; ++idim) {
+            if (Number(indexes[idim]) >= this.lengths[idim]) return false;
+        }
+        return true;
+    }
+
     getIndexesOffset(indexes) {
         if (indexes === null || typeof indexes === 'undefined') {
             // TODO: review

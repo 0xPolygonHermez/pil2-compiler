@@ -88,13 +88,14 @@ class Compiler {
         const parserPerformAction = parser.performAction;
         const parserStateInfo = parser.productions_;
         let compiler = this;
+        let processor = this.processor;
 
         parser.performAction = function (yytext, yyleng, yylineno, yy, yystate, $$, _$ ) {
             const result = parserPerformAction.apply(this, arguments);
             const first = _$[$$.length - 1 - parserStateInfo[yystate][1]];
             const last = _$[$$.length - 1];
             const sourceRef = `${compiler.relativeFileName}:${last.last_line}`;
-            Context.processor.sourceRef = sourceRef;
+            processor.sourceRef = sourceRef ?? '';
             if (typeof this.$ !== 'object')  {
                 return result;
             }

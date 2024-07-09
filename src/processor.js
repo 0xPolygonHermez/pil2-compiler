@@ -18,7 +18,6 @@ const Sequence = require("./sequence.js");
 const List = require("./list.js");
 const Assign = require("./assign.js");
 const Function = require("./function.js");
-const AirGroupFunction = require("./air_group_function.js");
 const AirTemplateFunction = require("./air_template_function.js");
 const PackedExpressions = require("./packed_expressions.js");
 const ProtoOut = require("./proto_out.js");
@@ -65,7 +64,6 @@ module.exports = class Processor {
 
         this.lastAirGroupId = -1;
         this.lastAirId = -1;
-        this.airId = 0;
         this.airGroupId = 0;
 
         this.ints = new Variables('int', DefinitionItems.IntVariable, ExpressionItems.IntValue);
@@ -98,7 +96,7 @@ module.exports = class Processor {
         this.references.register('challenge', this.challenges);
 
         this.proofValues = new Indexable('proofvalue', DefinitionItems.ProofValue, ExpressionItems.ProofValue);
-        ExpressionItem.setManager(ExpressionItems.Proofval, this.proofValues);
+        ExpressionItem.setManager(ExpressionItems.ProofValue, this.proofValues);
         this.references.register('proofvalue', this.proofValues);
 
         this.airGroupValues = new AirGroupValues();
@@ -129,8 +127,11 @@ module.exports = class Processor {
         this.sourceRef = '(built-in-class)';
         this.loadBuiltInClass();
         this.scopeType = 'proof';
+
         this.currentAirGroup = false;
         this.airGroupStack = [];
+
+        this.airStack = [];
 
         this.sourceRef = '(init)';
 
@@ -364,7 +365,7 @@ module.exports = class Processor {
         }
 
         const mapInfo = this.prepareFunctionCall(func, callinfo);
-        this.references.pushVisibilityScope();
+        this.references.pushVisibilityScope(func.creationScope);
         let res = func.exec(callinfo, mapInfo);
         this.references.popVisibilityScope();
         this.finishFunctionCall(func);
@@ -769,9 +770,9 @@ module.exports = class Processor {
     }
     execFunctionDefinition(s) {
         if (Debug.active) console.log('FUNCTION '+s.name);
-        const name = this.currentAirGroup ? `${this.currentAirGroup.name}.${s.name}`: s.name;
+        const name = Context.air ? `${Context.air.name}.${s.name}`: s.name;
         const id = this.references.declare(name, 'function', [], {sourceRef: Context.sourceRef});
-        let func = new Function(id, {...s, name});
+        let func = new Function(id, {...s, name, creationScope: Context.scope.deep});
         this.references.set(func.name, [], func);
     }
     getExprNumber(expr, s, title) {
@@ -860,37 +861,24 @@ module.exports = class Processor {
         }
         airtemplate.addBlock(s.statements);
     }
-    execAirGroupDefinition(s) {
+    execAirGroup(s) {
         const name = s.name ?? false;
         if (name === false) {
             this.error(s, `airgroup not defined correctly`);
         }
 
-        const instance = new AirGroup(name, s.statements, s.aggregate ?? false);
-        this.airGroups.define(name, instance, `airgroup ${name} has been defined previously on ${Context.sourceRef}`);
-
-        const id = this.references.declare(name, 'function', [], {sourceRef: Context.sourceRef});
-        const func = new AirGroupFunction(id, {args: s.args, name, instance, sourceRef: Context.sourceRef});
-        this.references.set(name, [], func);
-    }
-    execAirGroupBlock(s) {
-        const name = s.name ?? false;
-        if (name === false) {
-            this.error(s, `airgroup not defined correctly`);
-        }
-        const airGroup = this.airGroups.get(name);
+        let airGroup = this.airGroups.get(name);
         if (!airGroup) {
-            throw new Error(`airgroup definition ${airGroup} hasn't been defined before air block`);
+            airGroup = new AirGroup(name, [], true);
+            this.airGroups.define(name, airGroup);            
         }
-        airGroup.addBlock(s.statements);
+        this.openAirGroup(airGroup);
+        this.execute(s.statements);
+        this.suspendCurrentAirGroup();
     }
     setAirGroupBuiltIntConstants(airGroup) {
         this.references.set('AIRGROUP', [], airGroup ? airGroup.name : '');  
         this.references.set('AIRGROUP_ID', [], new ExpressionItems.IntValue(airGroup ? airGroup.id : 0));  
-    }
-    setSubproofBuiltIntConstants(subproof) {
-        this.references.set('SUBPROOF', [], subproof ? subproof.name : '');  
-        this.references.set('SUBPROOF_ID', [], new ExpressionItems.IntValue(subproof ? subproof.id : 0));  
     }
     /**
      * method to return id of airgroup, if this id not defined yet, use lastAirGroupId to set it
@@ -948,65 +936,72 @@ module.exports = class Processor {
     * create a new air on current airgroup, take number of rows of N parameter of airgroup
     * if this parameter doesn't exists an error was produced
     */
-    createAir(airGroup) {
+    createAir(airGroup, airTemplate, options = {}) {
         const item = this.references.isDefined('N') ? this.references.getItem('N') : false;
         if (!(item instanceof ExpressionItems.IntValue)) {
             throw new Error(`an int parameter N must be declared as airGroup argument`);
         }
         const rows = item.asInt();
         this.checkRows(rows);
-        this.rows = rows;
+        const air = airGroup.createAir(airTemplate, rows, options);
+        this.airStack.push(air);
+        this.updateAir();
 
-        const air = airGroup.createAir(this.rows);
-        if (this.proto) this.proto.setAir(air.id, air.name, this.rows);
-        Context.airId = air.id
-        Context.airName = air.name;
+        if (this.proto) this.proto.setAir(air.id, air.name, air.rows);
         return air;
     }
     closeAir() {
-        console.log(`END AIR ${Context.airName} (${this.rows}) #${Context.airId}`);
-        Context.airId = false;
-        Context.airName = false;
+        console.log(`END AIR ${Context.airName} #${Context.air.id}`);
+        this.airStack.pop();
+        this.updateAir();
     }
-    setBuiltIntConstants(airGroup, air) {
+    setBuiltInConstants(airGroup, air) {
         // create built-in constants
-        this.references.set('BITS', [], air.bits);
         this.setAirGroupBuiltIntConstants(airGroup);
-        this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id));  
+        this.setAirBuiltInConstants(air);
     }
-    executeAirGroup(airGroup, airGroupFunc, callinfo) {
-        this.openAirGroup(airGroup);
-
+    updateAir() {
+        this.setAirBuiltInConstants(Context.air);
+    }
+    setAirBuiltInConstants(air) {
+        this.references.set('BITS', [], air.bits ?? 0);
+        // TODO: alert to AIR_ID because really was undefined
+        this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? 0));          
+    }
+    executeAirTemplate(airTemplate, airTemplateFunc, callinfo) {
+        const airGroup = this.currentAirGroup;
+        if (!airGroup) {
+            throw new Exceptions.Runtime(`Instance airtemplate ${airTemplate.name} out of airgroup`);
+        }
         // airgroup was a function derivated class
-        const mapinfo = this.prepareFunctionCall(airGroupFunc, callinfo);
-        airGroupFunc.prepare(callinfo, mapinfo);
+        const mapinfo = this.prepareFunctionCall(airTemplateFunc, callinfo);
+        airTemplateFunc.prepare(callinfo, mapinfo);
 
-        const air = this.createAir(airGroup);
+        const air = this.createAir(this.currentAirGroup, airTemplate);
 
-        this.setBuiltIntConstants(airGroup, air);
-        this.context.push(false, airGroup.name);
+        this.context.push(false, airTemplate.name);
         this.scope.pushInstanceType('air');
         airGroup.airStart();
-        let res = airGroup.exec(air.name ,callinfo);
+        let res = airTemplate.exec(air.name ,callinfo);
         this.finalAirScope();
         airGroup.airEnd();
 
         if (this.proto) {
-            this.airGroupProtoOut(airGroup.id, air.id);
+            this.airGroupProtoOut(airTemplate.id, air.id);
         }
 
         this.constraints = new Constraints();
 
         this.clearAirScope(air.name);
-        // this.scope.popInstanceType(['witness', 'fixed', 'im']);
-        this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
+        this.scope.popInstanceType(['witness', 'fixed', 'im']);
+        // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
         this.closeAir(air);
 
         // closing airgroup but no closing final        
-        this.suspendCurrentAirGroup(false);
+        // this.suspendCurrentAirGroup(false);
 
-        this.finishFunctionCall(airGroup);
+        this.finishFunctionCall(airTemplate);
 
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
     }

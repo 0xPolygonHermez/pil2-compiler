@@ -81,7 +81,7 @@ module.exports = class Scope {
         this.purgeLabels();
         // console.log(`POP ${this.deep}`)
     }
-    push(label = false) {
+    push(label = false, visibility = true) {
         ++this.deep;
         // console.log(`PUSH ${this.deep}`)
         this.shadows[this.deep] = {};

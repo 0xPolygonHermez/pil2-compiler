@@ -22,15 +22,11 @@ module.exports = class Defined extends Function {
             if (!value && arg0) {
                 value = arg0.eval();
             }
-            // if (arg0 && arg0.isReference()) {
-            //     const ref = arg0.getReference();
-            //     return this.references.isDefined(ref.name, ref.__indexes) ? 1n : 0n;
-            // }
         } catch (e) {
             if (e instanceof Exceptions.ReferenceNotFound || e instanceof Exceptions.ReferenceNotVisible) {
-                // console.log(`defined(${arg0.toString()}) EXCEPTION `, e.message);
-            } else {
-                throw e;
+                // this case need when defined is called for a container
+            } else if (e instanceof Exceptions.OutOfDims || e instanceof Exceptions.OutOfBounds) {
+                value = false;
             }
         }
         const res = new IntValue(value !== false ? 1n : 0n);

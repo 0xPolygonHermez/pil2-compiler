@@ -1217,15 +1217,9 @@ air_template_definition
         { $$ = { type: 'air_template_block', name: $2, statements: $4.statements } }
     ;
 
-air_group_definition
-    : AIR_GROUP AGGREGATE IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
-        { $$ = { type: 'air_group_definition', aggregate: true, name: $3, ...$5, statements: $8.statements } }
-
-    | AIR_GROUP IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
-        { $$ = { type: 'air_group_definition', aggregate: false, name: $2, ...$4, statements: $7.statements } }
-
-    | AIR_GROUP IDENTIFIER '{' statement_block '}'
-        { $$ = { type: 'air_group_block', aggregate: false, name: $2, statements: $4.statements } }
+air_group_definition     
+    : AIR_GROUP IDENTIFIER '{' statement_block '}'
+        { $$ = { type: 'air_group', aggregate: false, name: $2, statements: $4.statements } }
     ;
 
 expression

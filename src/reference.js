@@ -4,6 +4,7 @@ const RangeIndex = require('./expression_items/range_index.js');
 const IntValue = require('./expression_items/int_value.js');
 const Context = require('./context.js');
 const Debug = require('./debug.js');
+const Exceptions = require('./exceptions.js');
 const assert = require('./assert.js');
 
 /**
@@ -168,7 +169,36 @@ class Reference {
         // other cases managed by getId because they aren't row access
         return [false, this.getId(indexes)];
     }
+    evaluateIndexes(indexes, options) {
+        if (!Array.isArray(indexes) || indexes.length == 0) {
+            return [[], false, false];
+        }
 
+        let fromIndex = false;
+        let toIndex = false;
+        let evaluatedIndexes = [];
+        for (let index = 0; index < indexes.length; ++index) {
+            if (indexes[index].isInstanceOf && indexes[index].isInstanceOf(RangeIndex)) {
+                if (index + 1 !== indexes.length) {
+                    throw new Error(`Range index is valid only in last index ${Context.sourceRef}`);
+                }
+                const rangeIndex = indexes[index].getAloneOperand();
+                fromIndex = rangeIndex.from === false ? false : Number(rangeIndex.from.asInt());
+                toIndex = rangeIndex.to === false ? false : Number(rangeIndex.to.asInt());
+                continue;
+            }
+            if (typeof indexes[index] === 'number') {
+                evaluatedIndexes.push(BigInt(indexes[index]));
+                continue;
+            }
+            if (typeof indexes[index] === 'bigint') {
+                evaluatedIndexes.push(indexes[index]);
+                continue;
+            }
+            evaluatedIndexes.push(indexes[index].asInt());
+        }
+        return [evaluatedIndexes, fromIndex, toIndex];
+    }
     getItem(indexes, options = {}) {
         let locator = this.locator;
         let label = options.label;
@@ -177,35 +207,11 @@ class Reference {
             console.log(indexes);
             console.log(this);
         }
-        // indexes evaluation
-        let evaluatedIndexes = [];
-        let fromIndex = false;
-        let toIndex = false;
+        const [evaluatedIndexes, fromIndex, toIndex] = this.evaluateIndexes(indexes, options);
 
-        if (Array.isArray(indexes) && indexes.length > 0) {
-            for (let index = 0; index < indexes.length; ++index) {
-                if (indexes[index].isInstanceOf && indexes[index].isInstanceOf(RangeIndex)) {
-                    if (index + 1 !== indexes.length) {
-                        throw new Error(`Range index is valid only in last index ${Context.sourceRef}`);
-                    }
-                    const rangeIndex = indexes[index].getAloneOperand();
-                    fromIndex = rangeIndex.from === false ? false : Number(rangeIndex.from.asInt());
-                    toIndex = rangeIndex.to === false ? false : Number(rangeIndex.to.asInt());
-                    continue;
-                }
-                if (typeof indexes[index] === 'number') {
-                    evaluatedIndexes.push(BigInt(indexes[index]));
-                    continue;
-                }
-                if (typeof indexes[index] === 'bigint') {
-                    evaluatedIndexes.push(indexes[index]);
-                    continue;
-                }
-                evaluatedIndexes.push(indexes[index].asInt());
-            }
-            if (label) label = label + '['+evaluatedIndexes.join('],[')+']';
+        if (evaluatedIndexes.length) {
+            label = label + '['+evaluatedIndexes.join('],[')+']';
         }
-
         // if array is defined
         let res = false;
         let runtimeRow = false;
@@ -215,12 +221,20 @@ class Reference {
                 locator = this.array.locatorIndexesApply(this.locator, evaluatedIndexes.slice(0, -1));
                 runtimeRow = evaluatedIndexes[evaluatedIndexes.length - 1];
             }
-            else if (this.array.isFullIndexed(evaluatedIndexes)) {
-                // full access => result an item (non subarray)
-                locator = this.array.locatorIndexesApply(this.locator, evaluatedIndexes);
-            } else {
-                // parcial access => result a subarray
-                res = new ArrayOf(this.type, this.array.createSubArray(evaluatedIndexes, locator, fromIndex, toIndex));
+            else {
+                if (!this.array.insideOfBounds(evaluatedIndexes)) {
+                    throw new Exceptions.OutOfBounds(`Reference ${label} out of bounds`);
+                }
+                if (this.array.isFullIndexed(evaluatedIndexes)) {
+                    // full access => result an item (non subarray)
+                    locator = this.array.locatorIndexesApply(this.locator, evaluatedIndexes);
+                } else if (this.array.isSubIndexed(evaluatedIndexes)) {
+                    // parcial access => result a subarray
+                    res = new ArrayOf(this.type, this.array.createSubArray(evaluatedIndexes, locator, fromIndex, toIndex));
+                } else {
+                    // overindexes, out-of-dim
+                    throw new Exceptions.OutOfDims(`Reference ${label} out of dims`);
+                }
             }
         } else if (evaluatedIndexes.length === 1 && this.instance.runtimeRows) {
             res = this.instance.getRowValue(locator, evaluatedIndexes[0], options);

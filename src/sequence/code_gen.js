@@ -79,7 +79,7 @@ module.exports = class SequenceCodeGen extends SequenceBase {
             throw new Error(`Sequence must be at least one element at ${this.debug}`);
         }
         if (remaingValues === 0) {
-            return [_code. seqSize];
+            return [_code, seqSize];
         }
         let code = `{${_code}`;
         if (remaingValues > 0) {
@@ -96,7 +96,9 @@ module.exports = class SequenceCodeGen extends SequenceBase {
         return [`__values.push(${num}n);\n`, 1];
     }
     createCodeVariable(prefix = '_i') {
-        return prefix+(++this.varIndex);
+        const index = (this.varIndex ?? 0) + 1;
+        this.varIndex = index;
+        return prefix + index;
     }
     repeatSeq(e) {
         if (!e.__cache) {

@@ -183,7 +183,13 @@ module.exports = class Function {
         if (value.array) {            
             lengths = value.array.lengths;
         } else if (Array.isArray(value)) {
-            lengths = [value.length];
+            lengths = [];
+            let values = value;
+            // TODO: happy path implementation
+            while (values.length) {            
+                lengths.push(values.length);
+                values = values[0];
+            }
         }
 
         // REVIEW: use arg.type, but perphaps we need to do a casting

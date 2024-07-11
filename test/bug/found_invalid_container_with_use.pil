@@ -1,4 +1,4 @@
-subproof FoundInvalidContainerWithUse(2**6) {
+air FoundInvalidContainerWithUse(int N = 2**6) {
     callme();
     testme();
 }
@@ -27,3 +27,5 @@ function testme() {
     println(l2);
     // println(air.myfirstcon.L2);
 }
+
+FoundInvalidContainerWithUse();

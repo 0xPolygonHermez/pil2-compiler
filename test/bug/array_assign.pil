@@ -1,7 +1,10 @@
-subproof ArrayAsign(2**16) {
+air ArrayAssign(int N = 2**4) {
     col witness a,b,c,d;
     col fixed L1;
     L1[0] = 10;
+    for (int k = 1; k < N; ++k) {
+        L1[k] = 0;
+    }
     int _a = 18;
     expr conn[2][4];
     // conn[0] = [[L1,3,6,0],[a,1,c,0]:2];
@@ -17,3 +20,5 @@ subproof ArrayAsign(2**16) {
     println(conn[1][2]);
     println(conn[1][3]);
 }
+
+ArrayAssign();

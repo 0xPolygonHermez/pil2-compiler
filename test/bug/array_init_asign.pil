@@ -1,4 +1,4 @@
-subproof ArrayInitAssign(2**4) {
+air ArrayInitAssign(int N = 2**4) {
     const int values[2] = [10, 20];
 
     println(values[0]);
@@ -66,3 +66,5 @@ subproof ArrayInitAssign(2**4) {
     // }
 
 }
+
+ArrayInitAssign();

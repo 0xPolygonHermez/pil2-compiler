@@ -1,4 +1,4 @@
-subproof FixedInsideContainer(2**6) {
+air FixedInsideContainer(int N = 2**6) {
 
     callme();
     fillme();
@@ -11,10 +11,9 @@ function callme() {
     container air.myfirstcon.`id${opid}` {
         col fixed L2;
         col fixed M2[3];
-        col fixed P;
+        col fixed P=[1,GEN[BITS]..*..];
     }
     use air.myfirstcon.`id${opid}`;
-    P = [1,GEN[BITS]..*..];
     println(P[0],P[1],P[2],P[3]);
 }
 
@@ -36,3 +35,5 @@ function fillme() {
     println(_a, a, L2[10]);
     println(air.myfirstcon.`id${opid}`.L2[10]);
 }
+
+FixedInsideContainer();

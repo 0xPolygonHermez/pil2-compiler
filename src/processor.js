@@ -893,7 +893,7 @@ module.exports = class Processor {
         }
         ++this.lastAirGroupId;
         airGroup.setId(this.lastAirGroupId);
-        this.proto.setAirGroup(this.lastAirGroupId, airGroup.name, airGroup.aggregate);
+        this.proto.setAirGroup(this.lastAirGroupId, airGroup.name);
         return this.lastAirGroupId;
     }
     /**

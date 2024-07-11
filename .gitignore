@@ -4,3 +4,4 @@ build
 cache-*.json
 tmp
 *.stats
+*.pilout

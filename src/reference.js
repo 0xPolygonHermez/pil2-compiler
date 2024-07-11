@@ -61,8 +61,8 @@ class Reference {
     set (value, indexes = [], options = {}) {
         if (Debug.active) console.stdebug(`set(${this.name}, [${indexes.join(',')}]`);
         assert.notStrictEqual(value, null); // to detect obsolete legacy uses
-        // if (!this.instance.runtimeRows && (!this.array || this.array.isFullIndexed(indexes))) {
-        if (!this.array || this.array.isFullIndexed(indexes)) {
+        // console.log(indexes.length, this.array.dim);
+        if (!this.array || this.array.isFullIndexed(indexes) || this.array.isOverIndexed(indexes)) {
             return this.setOneItem(value, indexes, options);
         }
         this.setArrayLevel(indexes.length, indexes, [], value, options);

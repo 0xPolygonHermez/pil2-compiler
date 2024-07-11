@@ -31,6 +31,7 @@ const SPV_AGGREGATIONS = ['sum', 'prod'];
 module.exports = class ProtoOut {
     constructor (Fr, options = {}) {
         this.version = 1;
+        this.avoidAirsWithSameName = true;
         this.Fr = Fr;
         this.root = protobuf.loadSync(__dirname + '/pilout.proto');
         this.constants = false;
@@ -137,9 +138,15 @@ module.exports = class ProtoOut {
     saveToFile(filename) {
         fs.writeFileSync(filename, this.data);
     }
-    setAir(airId, name, rows) {
+    setAir(airId, name, rows, aggregable = true) {
         assert.equal(airId, this.currentAirGroup.airs.length);
         this.currentAir = {name, numRows: Number(rows), airId};
+        if (this.version >= 2) {
+            this.currentAir.aggregable = aggregable;
+        }
+        if (this.avoidAirsWithSameName && this.currentAirGroup.airs.some(x => x.name === name)) {
+            this.currentAir.name = `${this.currentAir.name}_${airId}`;
+        }
         this.currentAirGroup.airs.push(this.currentAir);
     }
     useAirGroup(airGroupId) { // TODO: Add subproof value
@@ -150,10 +157,13 @@ module.exports = class ProtoOut {
         }
         this.currentAirGroup = airGroup;
     }
-    setAirGroup(airGroupId, name, aggregable = true) { // TODO: Add air group value
+    setAirGroup(airGroupId, name) { // TODO: Add air group value
         // check if exist a air group with this name, if not create it.
         assert.equal(airGroupId, this.pilOut.subproofs.length);
-        this.currentAirGroup = {name, aggregable, airs: [], airGroupId };
+        this.currentAirGroup = {name, airs: [], airGroupId };
+        if (this.version < 2) {
+            this.currentAirGroup.aggregable = true;
+        }
         this.pilOut.subproofs.push(this.currentAirGroup);
     }
     setAirGroupValues(ids, aggregations) {

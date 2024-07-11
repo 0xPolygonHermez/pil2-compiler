@@ -1,4 +1,4 @@
-subproof ArrayAsign(2**16) {
+airtemplate ArrayAsign(int N = 2**16) {
     col witness a,b,c,d;
     col fixed L1;
     L1[0] = 10;
@@ -16,4 +16,8 @@ subproof ArrayAsign(2**16) {
     println(conn[1][1]);
     println(conn[1][2]);
     println(conn[1][3]);
+}
+
+airgroup ArrayAssign() {
+    ArrayAssign();
 }

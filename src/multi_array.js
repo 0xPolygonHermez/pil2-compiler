@@ -113,6 +113,10 @@ class MultiArray {
         // in case of elements with row-dimension
         return (indexes.length == this.dim);
     }
+    isOverIndexed(indexes) {
+        // in case of elements with row-dimension
+        return (indexes.length > this.dim);
+    }
     isSubIndexed(indexes) {
         // in case of elements with row-dimension
         return (indexes.length < this.dim);

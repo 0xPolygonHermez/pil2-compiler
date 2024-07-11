@@ -1,4 +1,4 @@
-subproof DefineContainer(2**6) {
+air DefineContainer(int N = 2**6) {
     const int opid = 10;
     println(defined(air.myfirstcon.id10));
     println(defined(air.myfirstcon.`id${opid}`));
@@ -17,3 +17,5 @@ function callme() {
         int L2;
     }
 }
+
+DefineContainer();

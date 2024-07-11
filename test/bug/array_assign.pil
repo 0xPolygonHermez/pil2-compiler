@@ -2,6 +2,9 @@ airtemplate ArrayAsign(int N = 2**16) {
     col witness a,b,c,d;
     col fixed L1;
     L1[0] = 10;
+    for (int k = 1; k < N; ++k) {
+        L1[k] = 0;
+    }
     int _a = 18;
     expr conn[2][4];
     // conn[0] = [[L1,3,6,0],[a,1,c,0]:2];

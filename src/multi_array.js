@@ -70,6 +70,9 @@ class MultiArray {
             }
         }
     }
+    getLevelLength(indexes) {
+        return this.getLength(indexes.length);
+    }
     getLocator(baseLocator, indexes = []) {
         const offset = this.indexesToOffset(indexes);
         return baseLocator + offset;

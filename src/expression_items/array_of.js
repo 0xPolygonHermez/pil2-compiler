@@ -47,6 +47,9 @@ module.exports = class ArrayOf extends RuntimeItem {
     getValue(indexes) {
         return this.getItem(indexes).getValue();
     }
+    getLevelLength(indexes) {
+        return this._array.getLevelLength(indexes);
+    }
     toArrays(indexes = []) {        
         let level = indexes.length;
         if (level >= this._array.dim) {

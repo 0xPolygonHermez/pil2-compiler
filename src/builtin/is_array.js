@@ -1,5 +1,7 @@
 const Function = require("../function.js");
-const IntValue = require('../expression_items/int_value.js');
+const ExpressionItems = require('../expression_items.js');
+const Exceptions = require('../exceptions.js');
+const Context = require('../context.js');
 
 module.exports = class IsArray extends Function {
     constructor (parent) {
@@ -10,18 +12,26 @@ module.exports = class IsArray extends Function {
             throw new Error('Invalid number of parameters');
         }
         const arg0 = s.args[0];
-        if (arg0 && arg0.isReference()) {
-            const ref = arg0.getReference();
-            if (!this.references.isDefined(ref.name, ref.__indexes)) {
-                return 0n;
+        let value = false;
+        try { 
+            const reference = arg0.reference;
+            if (reference) {
+                value = Context.references.isContainerDefined(Context.applyTemplates(reference.name));
+            } 
+            if (!value && arg0) {
+                value = arg0.eval();
             }
-            const [instance,rinfo] = this.expressions.getReferenceInfo(arg0);
-            const operand = arg0.getAloneOperand();
-            return (rinfo.array && rinfo.array.dim > operand.dim) ? 1n:0n;
+            value = value instanceof ExpressionItems.ArrayOf;
+        } catch (e) {
+            if (e instanceof Exceptions.ReferenceNotFound || e instanceof Exceptions.ReferenceNotVisible) {
+                // this case need when defined is called for a container
+            } else if (e instanceof Exceptions.OutOfDims || e instanceof Exceptions.OutOfBounds) {
+                value = false;
+            }
         }
-        return 0n;
+        return value ? 1n:0n;
     }
     exec(s, mapInfo) {
-        return new IntValue(mapInfo);
+        return new ExpressionItems.IntValue(mapInfo);
     }
 }

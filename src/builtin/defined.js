@@ -25,7 +25,7 @@ module.exports = class Defined extends Function {
         } catch (e) {
             if (e instanceof Exceptions.ReferenceNotFound || e instanceof Exceptions.ReferenceNotVisible) {
                 // this case need when defined is called for a container
-            } else if (e instanceof Exceptions.OutOfDims || e instanceof Exceptions.OutOfBounds) {
+            } else if (e instanceof Exceptions.OutOfDims || e instanceof Exceptions.OutOfBounds) {                
                 value = false;
             }
         }

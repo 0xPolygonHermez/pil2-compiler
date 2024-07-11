@@ -186,7 +186,7 @@ module.exports = class Processor {
     {        
         if (Context.config.protoOut === false) return;
         this.proto.setPublics(this.publics);
-        this.proto.setProofvalues(this.proofValues);
+        this.proto.setProofValues(this.proofValues);
         this.proto.setChallenges(this.challenges);
         let packed = new PackedExpressions();
         this.globalExpressions.pack(packed);
@@ -987,7 +987,7 @@ module.exports = class Processor {
         airGroup.airEnd();
 
         if (this.proto) {
-            this.airGroupProtoOut(airTemplate.id, air.id);
+            this.airGroupProtoOut(this.currentAirGroup.id, air.id);
         }
 
         this.constraints = new Constraints();

@@ -6,7 +6,7 @@
     IntValue              *     -    -   ValueItem       value           -               value (bigint) [const]
     FixedCol              -     -    *   ProofItem       id              -               id [used]
     FunctionCall          *     *    ?   RuntimeItem     "id",argValues  Function        name,args,return,statements
-    Proofval              -     -    *   ProofItem       id              -               id [used]
+    ProofValue            -     -    *   ProofItem       id              -               id [used]
     Public                -     -    *   ProofItem       id              -               id [used]
     Publictable           -     -    *   ProofItem       id              PublictableDef  id + numCols,maxRows,aggType,rowExpressionId [used]
     *PublictableCol       -     -    *   ProofItem       id,colId        -               [const, used]
@@ -24,7 +24,7 @@
     FeValue              fe             fes (Variables)          value            Variables: new cls(value)
     IntValue             int            ints (Variables)         value            Variables: new cls(value)
     FixedCol             fixed          fixeds (FixedCols)       id               Ids: new cls(id)
-    Proofval             proofvalue     proofValues (Ids)        id               Ids: new cls(id)
+    ProofValue           proofvalue     proofValues (Ids)        id               Ids: new cls(id)
     Public               public         publics (Ids)            id               Ids: new cls(id)
     Publictable          publictable                             id
     *PublictableCol                                              id,colId

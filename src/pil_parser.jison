@@ -1158,13 +1158,7 @@ col_declaration_list
 */
 
 col_declaration
-    : COL stage_definition col_declaration_list
-        { $$ = { type: 'col_declaration', items: $3.items, stage: $2.stage }; }
-
-    | COL stage_definition col_declaration_ident '=' expression  // (1)
-        { $$ = { type: 'col_declaration', items: [$3], stage: $2.stage, init: $5 } }
-
-    | COL WITNESS stage_definition col_declaration_list
+    : COL WITNESS stage_definition col_declaration_list
         { $$ = { type: 'witness_col_declaration', items: $4.items, stage: $3.stage } }
 
     | COL FIXED stage_definition col_declaration_list

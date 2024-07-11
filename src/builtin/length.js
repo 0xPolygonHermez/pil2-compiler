@@ -13,7 +13,7 @@ module.exports = class Length extends Function {
         const arg0 = s.args[0];
         const item = arg0.evalAsItem();
         if (item instanceof StringValue) {
-            return {result: BigInt(item.length)};
+            return {result: BigInt(item.getValue().length)};
         }
         if (item && item.array) {
             return {result: item.array ? BigInt(item.array.getLength(0)) : 0n};

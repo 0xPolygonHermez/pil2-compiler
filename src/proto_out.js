@@ -30,6 +30,7 @@ const REF_TYPE_CHALLENGE = 8;
 const SPV_AGGREGATIONS = ['sum', 'prod'];
 module.exports = class ProtoOut {
     constructor (Fr, options = {}) {
+        this.version = 1;
         this.Fr = Fr;
         this.root = protobuf.loadSync(__dirname + '/pilout.proto');
         this.constants = false;
@@ -38,6 +39,7 @@ module.exports = class ProtoOut {
         this.varbytes = true;
         this.airs = [];
         this.currentAir = null;
+        this.currentAirGroup = null;
         this.witnessId2ProtoId = [];
         this.fixedId2ProtoId = [];
         this.airGroupValueId2ProtoId = []; 
@@ -189,6 +191,16 @@ module.exports = class ProtoOut {
                     ...data,
                     ...sym2proto
                 };
+                if (this.version < 2) {
+                    if (typeof payout.airGroupId !== 'undefined') {
+                        if (typeof payout.subproofId !== 'undefined' && payout.airGroupId !== payout.subproofId) {
+                            throw new Error(`airGroupId(${payout.airGroupId}) and subproofId(${payout.subproofId}) on symbols ${payout.name} not match`);
+                            EXIT_HERE;
+                        }
+                        payout.subproofId = payout.airGroupId;
+                        delete payout.airGroupId;
+                    }
+                }
                 this.pilOut.symbols.push(payout);
             } catch (e) {
                 console.log(e.stack)
@@ -212,9 +224,14 @@ module.exports = class ProtoOut {
                 const [stage, protoId] = this.witnessId2ProtoId[id];
                 return {type: REF_TYPE_WITNESS_COL, id: protoId, stage};
             }
-            case 'subproofvalue': {
+            case 'airgroupvalue': {
                 const protoId = assert.returnTypeOf(this.airGroupValueId2ProtoId[id], 'number');
-                return {type: REF_TYPE_AIR_GROUP_VALUE, id: protoId, subproofId: ref.data.airGroupId};
+                console.log(ref.data);
+                if (this.version >= 2) {
+                    return {type: REF_TYPE_AIR_GROUP_VALUE, id: protoId, airgroupId: ref.data.airGroupId};
+                } else {
+                    return {type: REF_TYPE_AIR_GROUP_VALUE, id: protoId, subproofId: ref.data.airGroupId};
+                }
             }
             case 'proofvalue':
                 return {type: REF_TYPE_PROOF_VALUE, id};
@@ -235,7 +252,7 @@ module.exports = class ProtoOut {
     setPublics(publics) {
         this.pilOut.numPublicValues = publics.length;
     }
-    setProofvalues(proofvalues) {
+    setProofValues(proofvalues) {
         this.pilOut.numProofValues = proofvalues.length;
     }
     setFixedCols(fixedCols) {
@@ -596,7 +613,7 @@ module.exports = class ProtoOut {
         */
     }
     updateSymbolsWithSameName() {
-        console.log(this.pilOut.symbols.map(x => `${x.name}__${x.airGroupId}${typeof x.airId === 'undefined' ? '':('__'+x.airId)}`));
+        console.log(this.pilOut.symbols.map(x => `${x.name}__${this.version >= 2 ? x.airGroupId:x.subproofId}${typeof x.airId === 'undefined' ? '':('__'+x.airId)}`));
     }
 }
 

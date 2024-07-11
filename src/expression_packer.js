@@ -91,7 +91,7 @@ module.exports = class ExpressionPacker {
             // container.pushChallenge(id, stage ?? 1);
             this.container.pushChallenge(id, def.stage);
 
-        } else if (ope instanceof ExpressionItems.Proofval) {
+        } else if (ope instanceof ExpressionItems.ProofValue) {
             // container.pushProofValue(id)
             this.container.pushProofValue(id);
 

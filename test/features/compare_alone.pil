@@ -1,4 +1,4 @@
-air CompareAlone(int N = 2**13) {
+airtemplate CompareAlone(int N = 2**13) {
     col witness a,b,c;
 
     
@@ -129,5 +129,6 @@ function find_col_index(int opid, expr column): int {
 
     error(`Column ${column} has not been found in connect #${opid}`);
 }
-
-CompareAlone();
+airgroup CompareAlone {
+    CompareAlone();
+}

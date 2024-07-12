@@ -1,4 +1,4 @@
-air Dim(int N = 2**23) {
+airtemplate Dim(int N = 2**23) {
     const expr a;
     const expr b[10];
     const expr c[12][38];
@@ -11,4 +11,6 @@ air Dim(int N = 2**23) {
     println(length(c[0]));
 }
 
-Dim(2**10);
+airgroup Dim {
+    Dim(2**10);
+}

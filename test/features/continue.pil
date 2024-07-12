@@ -1,4 +1,4 @@
-subproof ContinueTest(2**23) {
+air ContinueTest(int N = 2**13) {
     for (int i = 0; i < 5; ++i) {
         for (int j = 0; j < 5; ++j) {
             println(`i:${i} of [0..4] j:${j} of [0..4]`);
@@ -11,3 +11,5 @@ subproof ContinueTest(2**23) {
         }
     }
 }
+
+ContinueTest();

@@ -1,4 +1,4 @@
-subproof Functions(2**23) {
+air Functions(int N = 2**10) {
     col witness w;
     int values[12][20];
 
@@ -74,3 +74,5 @@ subproof Functions(2**23) {
     int res6 = defer_definition_2(13, 35);
     assert_eq(res6, 48);
 }
+
+Functions();

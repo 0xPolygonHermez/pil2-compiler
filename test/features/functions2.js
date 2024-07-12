@@ -1,7 +1,7 @@
 const chai = require("chai");
 const { F1Field } = require("ffjavascript");
 const assert = chai.assert;
-const { compile, verifyPil } = require("../../..");
+const compile = require("../../src/compiler.js");
 
 const constraints = {
     processor: null,
@@ -27,7 +27,7 @@ describe("Functions", async function () {
     this.timeout(10000000);
 
     it("Functions Int Reference Test", async () => {
-        constraints.processor = await compile(F, __dirname + "/functions2.pil", null, { processorTest: true });
+        constraints.processor = await compile(F, __dirname + "/functions2.pil", null, { processorTest: true, proto: false });
 
         constraints.it = constraints.processor.constraints[Symbol.iterator]();
 

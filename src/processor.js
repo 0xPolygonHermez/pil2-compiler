@@ -130,8 +130,12 @@ module.exports = class Processor {
 
         this.sourceRef = '(init)';
 
-        this.proto = new ProtoOut(this.Fr);
-        this.proto.setupPilOut(Context.config.name ?? 'noname');
+        if (config.proto === false) {
+            this.proto = false;
+        } else {
+            this.proto = new ProtoOut(this.Fr);
+            this.proto.setupPilOut(Context.config.name ?? 'noname');
+        }
 
         this.transpiler = new Transpiler({processor: this});
         if (typeof Context.config.test.onProcessorInit === 'function') {
@@ -175,7 +179,9 @@ module.exports = class Processor {
         this.finalClosingSubproofs();
         this.finalProofScope();
         this.scope.popInstanceType();
-        this.generateProtoOut();
+        if (this.proto) {
+            this.generateProtoOut();
+        }
     }
     generateProtoOut()
     {        
@@ -868,12 +874,16 @@ module.exports = class Processor {
     getSubproofId(subproof) {    
         const subproofId = subproof.getId();
         if (subproofId !== false) {
-            this.proto.useSubproof(subproofId);
+            if (this.proto) {
+                this.proto.useSubproof(subproofId);
+            }
             return subproofId;
         }
         ++this.lastSubproofId;
         subproof.setId(this.lastSubproofId);
-        this.proto.setSubproof(this.lastSubproofId, subproof.name, subproof.aggregate);
+        if (this.proto) {
+            this.proto.setSubproof(this.lastSubproofId, subproof.name, subproof.aggregate);
+        }
         return this.lastSubproofId;
     }
     /**

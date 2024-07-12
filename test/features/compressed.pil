@@ -1,7 +1,7 @@
-subproof Compress(2**23) {
+air Compress(int N = 2**13) {
     col witness a,b,c,d;
     challenge stage(2) alpha;
-    // challenge stage(2) beta;
+    challenge stage(2) beta;
 
     expr e = a;
     println("e=",e);
@@ -13,7 +13,7 @@ subproof Compress(2**23) {
     println("e=",e);
     e = 0;
 
-    expr cols[10];
+    expr cols[3];
     cols[0] = a;
     cols[1] = b;
     cols[2] = c;
@@ -30,7 +30,7 @@ subproof Compress(2**23) {
         println("e=",e);
     }
 
-/*
+
     int opid = 73;
     expr cols_compressed = 0;
     println("cols", cols);
@@ -67,8 +67,6 @@ subproof Compress(2**23) {
     // println("cols_compressed (out)", cols_compressed);
 
     cols_compressed === 30;
-*/
-/*
 
     function compress_cols(int opid, expr cols[]): expr {
         expr cols_compressed = 0;
@@ -92,5 +90,6 @@ subproof Compress(2**23) {
 
     expr result = compress_cols(13, [a, b, c]);
     println("result=", result);
-*/
 }
+
+Compress();

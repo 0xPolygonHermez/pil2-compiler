@@ -18,7 +18,7 @@ describe("Expressions Test", async function () {
     this.timeout(10000000);
 
     it("Test Expressions", async () => {
-        const processor = await compile(F, __dirname + "/expr.pil", null, { processorTest: true });
+        const processor = await compile(F, __dirname + "/expr.pil", null, { processorTest: true, proto: false });
 
         const N = 2 ** 7;
         const empty = new Array(N).fill(0);

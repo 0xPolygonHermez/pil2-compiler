@@ -76,3 +76,7 @@ airgroup Runtime2 {
     Runtime2();
     Runtime2(2**13);
 }
+Runtime1();
+Runtime1(2**13);
+Runtime2();
+Runtime2(2**13);

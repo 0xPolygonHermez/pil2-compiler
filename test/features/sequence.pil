@@ -1,4 +1,4 @@
-subproof Expressions(2**7) {
+air Expressions(int N = 2**7) {
 
     col fixed BASIC = [1:1,2:2,3:3,4:4,5:5];
     col fixed BASIC2 = [1:1,2:2,3:3,4:4,5:5]...;
@@ -21,3 +21,5 @@ subproof Expressions(2**7) {
     col fixed R_FACTOR_R2 = [16:2,8:2..*..1:2]:10...;
     col fixed R_FACTOR_RF = [8192:10,4096:10..*..];
 }
+
+Expressions();

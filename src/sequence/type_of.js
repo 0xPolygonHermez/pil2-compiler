@@ -15,7 +15,7 @@ module.exports = class SequenceTypeOf extends SequenceBase {
         // all value must be numerics, no sense arithSeq with "non-numeric" values
         let values = [e.t1 instanceof Expression ? e.t1 : e.t1.value, e.t2 instanceof Expression ? e.t2 : e.t2.value];
         if (e.tn) {
-            values.push(e.tn.value);
+            values.push(e.tn instanceof Expression ? e.tn : e.tn.value);
             if (e.tn.times) values.push(e.tn.times);
         }
         if (e.t1.times) values.push(e.t1.times);
@@ -25,7 +25,7 @@ module.exports = class SequenceTypeOf extends SequenceBase {
     checkNumericValues(values) {
         for (const value of values) {
             if (typeof value === 'bigint' || typeof value === 'number') continue;
-            if (!value || typeof value.asInt !== 'method') {
+            if (!value || typeof value.asInt !== 'function') {
             }
             if (value.asInt(false) === false) { 
                 this.isSequence = false;

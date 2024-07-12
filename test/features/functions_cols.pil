@@ -16,7 +16,7 @@ function f1m (const expr p1[][]) {
     //     }
     // }
     for (int i = 0; i < length(p1); ++i) {
-        for (int j = 0; j < length(p1[i]); ++i) {
+        for (int j = 0; j < length(p1[i]); ++j) {
             p1[i][j] === 3113;
         }
     }
@@ -47,14 +47,6 @@ air Functions(int N = 2**10) {
 
     f1v(vec);
     f1m(m);
-
-    for (col witness &p in [...vec]) {
-        p === 300;
-    }
-
-    for (col witness&p in vec) {
-        p === 301;
-    }
 }
 
 Functions();

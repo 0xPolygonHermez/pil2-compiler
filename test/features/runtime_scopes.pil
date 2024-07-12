@@ -1,4 +1,4 @@
-subproof Runtime1(2**18,2**20) {
+air Runtime1(int N = 2**8) {
     int i = 10;
     container proof.`soporte_${i}` alias myalias {
         int containerCounter = 10;
@@ -9,7 +9,7 @@ subproof Runtime1(2**18,2**20) {
     }
     expr subproof.value = 5;
 
-    if (BITS == 18) {
+    if (BITS == 8) {
         assert_eq(myalias._counter, 25);
         assert_eq(subproof.value, 5);
         assert_eq(myalias.containerCounter, 10);
@@ -47,10 +47,10 @@ subproof Runtime1(2**18,2**20) {
     a === 0;
 }
 
-subproof Runtime2(2**21, 2**23) {
+air Runtime2(int N = 2**11) {
     int subproof.counter;
 
-    if (BITS == 21) {
+    if (BITS == 11) {
         assert_eq(subproof.counter, 0);
         assert_eq(counter, 0);
     } else {
@@ -67,3 +67,7 @@ subproof Runtime2(2**21, 2**23) {
     b === 0;
 }
 
+Runtime1();
+Runtime1(2**13);
+Runtime2();
+Runtime2(2**13);

@@ -1,4 +1,4 @@
-subproof Uses(2**23) {
+air Uses(int N = 2**23) {
 
     container subproof.usesA {
         int value = 10;
@@ -111,3 +111,5 @@ subproof Uses(2**23) {
         println(defined(value));
     }
 }
+
+Uses();

@@ -1,4 +1,4 @@
-air Log2(const int N = 2**4) {
+airtemplate Log2(const int N = 2**4) {
     int a = 0;
     println(log2(a));
 
@@ -32,5 +32,6 @@ air Log2(const int N = 2**4) {
     a = -9;
     println(log2(a));
 }
-
-Log2();
+airgroup Log2 {
+    Log2();
+}

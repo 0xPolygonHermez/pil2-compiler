@@ -1,4 +1,4 @@
-air FoundInvalidContainerWithUse(int N = 2**6) {
+airtemplate FoundInvalidContainerWithUse(int N = 2**6) {
     callme();
     testme();
 }
@@ -28,4 +28,6 @@ function testme() {
     // println(air.myfirstcon.L2);
 }
 
-FoundInvalidContainerWithUse();
+airgroup FoundInvalidContainerWithUse {
+    FoundInvalidContainerWithUse();
+}

@@ -51,8 +51,11 @@ module.exports = class PackedExpressions {
     }
     pushAirGroupValue (idx, airGroupId) {
         assert.defined(idx);    
-        this.values.push({subproofValue: {idx, airGroupId}});
-        // TODO: this.values.push({airGroupValue: {idx, airGroupId}});
+        if (this.version >= 2) {
+            this.values.push({airGroupValue: {idx, airGroupId}});
+        } else {
+            this.values.push({subproofValue: {idx, subproofId : airGroupId}});
+        }
     }
     pushProofValue (idx) {
         assert.defined(idx);

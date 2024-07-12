@@ -1,4 +1,4 @@
-airtemplate ArrayAsign(int N = 2**16) {
+airtemplate ArrayAssign(int N = 2**10) {
     col witness a,b,c,d;
     col fixed L1;
     L1[0] = 10;
@@ -21,6 +21,6 @@ airtemplate ArrayAsign(int N = 2**16) {
     println(conn[1][3]);
 }
 
-airgroup ArrayAssign() {
+airgroup ArrayAssign {
     ArrayAssign();
 }

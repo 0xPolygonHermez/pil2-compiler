@@ -1,4 +1,4 @@
-subproof Expressions(2**16) {
+air Expressions(int N = 2**16) {
 
     col witness byteIn;
     col witness bits[8];
@@ -10,3 +10,5 @@ subproof Expressions(2**16) {
     }
     byteFromBits === byteIn;
 }
+
+Expressions();

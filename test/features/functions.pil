@@ -1,4 +1,4 @@
-subproof Functions(2**23) {
+air Functions(int N = 2**13) {
 
     function sum(int a, int b) : int {
         return a + b;
@@ -41,3 +41,5 @@ subproof Functions(2**23) {
 
     c1 === fact(4);
 }
+
+Functions(2**10);

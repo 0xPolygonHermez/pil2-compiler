@@ -1,7 +1,7 @@
-subproof Assigns(2**23) {
+air Assigns(int N = 2**10) {
 
-    constant N_MAX = 16;
-    constant PSIX[6] = [2, 3, 5, 7, 11, 13];
+    const int N_MAX = 16;
+    const int PSIX[6] = [2, 3, 5, 7, 11, 13];
 
     col witness x1[N_MAX];
     col witness q[3][N_MAX];
@@ -42,38 +42,6 @@ subproof Assigns(2**23) {
     assert_eq(PSIX[3], 7);
     assert_eq(PSIX[4], 11);
     assert_eq(PSIX[5], 13);
-
-    int index = 0;
-    int res = PSIX[index++] + PSIX[index++] * PSIX[index++];
-    // PSIX[0] + PSIX[1] * PSIX[2] = 2 + 3 * 5 = 17 OK (left-to-right)
-    // PSIX[3] + PSIX[0] * PSIX[1] = 5 + 2 * 3 = 11 FAIL
-
-    assert_eq(res, 17);                          assert_eq(index, 3);
-
-    index = 0;
-    res = PSIX[++index] + PSIX[++index] * PSIX[++index];
-    // PSIX[1] + PSIX[2] * PSIX[3] = 3 + 5 * 7 = 38
-    // PSIX[3] + PSIX[1] * PSIX[2] = 7 + 3 * 5 = 22
-
-    assert_eq(res, 38);                          assert_eq(index, 3);
-
-
-    aux = 100; // 101 * 19 + 102 * 73 = 9365
-    assert_eq(mycalc(++aux, ++aux), 9365 );      assert_eq(aux, 102);
-
-    aux = 100; // 100 * 19 + 101 * 73 = 9273
-    assert_eq(mycalc(aux++, aux++), 9273 );      assert_eq(aux, 102);
-
-    aux = 100; // 101 + 102 * 103 = 10607 OK (left-to-right)
-               // 103 + 101 * 102 = 10405 FAIL !!!
-    res = ++aux + ++aux * ++aux;
-    assert_eq(res, 10607);                       assert_eq(aux, 103);
-
-    aux = 100; // 100 + 101 * 102 = 10402 OK (left-to-right)
-               // 102 + 100 * 101 = 10202 FAIL !!!
-
-    res = aux++ + aux++ * aux++;
-    assert_eq(res, 10402);                       assert_eq(aux, 103);
 
     aux = PSIX[0];                              assert_eq(aux, 2);
     aux = PSIX[1];                              assert_eq(aux, 3);

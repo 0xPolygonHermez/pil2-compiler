@@ -2,7 +2,7 @@ const chai = require("chai");
 const { F1Field } = require("ffjavascript");
 const assert = chai.assert;
 const compile = require("../../src/compiler.js");
-const {ConstraintVerifier} = require('../compiler_test.js');
+const ConstraintVerifier = require('../compiler_test.js');
 
 
 describe("Functions", async function () {
@@ -11,9 +11,7 @@ describe("Functions", async function () {
     this.timeout(10000000);
 
     it("Functions Base Test", async () => {
-        const cv = new ConstraintVerifier(compile(F, __dirname + "/functions.pil", null, { processorTest: true }));
-
-        console.log('CONSTRAINT', constraints.processor.constraints.constraints);
+        const cv = new ConstraintVerifier(compile(F, __dirname + "/functions.pil", null, { processorTest: true, proto: false }));
 
         cv.verifyNext('c1 - 2','witness@0 - 2');
 

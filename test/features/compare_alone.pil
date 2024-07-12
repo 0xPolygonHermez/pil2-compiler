@@ -1,7 +1,7 @@
-subproof CompareAlone(2**23) {
+air CompareAlone(int N = 2**13) {
     col witness a,b,c;
 
-/*    
+    
     println("expr:");
 
     expr a1 = a;
@@ -69,7 +69,7 @@ subproof CompareAlone(2**23) {
     } else {
         println("const_a1 != c");
     }
-*/
+
     connection_init(1, [a,b,c]);
     println("BEGIN test WITHOUT return");
     find_col_index(1, a);
@@ -89,14 +89,13 @@ function connection_init(int opid, expr cols[]) {
 
     container air.std.connect alias conn {
         int opids_count = 0;
-        int opids[100];
+        int opids[10];
     }
 
     container air.std.connect.`id${opid}` alias connid {
         int closed;
         int cols_num = 0;
-        expr map_cols[100];
-        col fixed PERs[100];
+        expr map_cols[10];
     }
 
     if (connid.cols_num == 0) {
@@ -130,3 +129,5 @@ function find_col_index(int opid, expr column): int {
 
     error(`Column ${column} has not been found in connect #${opid}`);
 }
+
+CompareAlone();

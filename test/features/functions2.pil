@@ -1,4 +1,4 @@
-subproof Functions(2**23) {
+air Functions(int N = 2**13) {
 
     function inc (int &k) {
         k = k + 1;
@@ -102,3 +102,5 @@ subproof Functions(2**23) {
         }
     }
 }
+
+Functions(2**10);

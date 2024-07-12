@@ -135,8 +135,12 @@ module.exports = class Processor {
 
         this.sourceRef = '(init)';
 
-        this.proto = new ProtoOut(this.Fr);
-        this.proto.setupPilOut(Context.config.name ?? 'noname');
+        if (config.proto === false) {
+            this.proto = false;
+        } else {
+            this.proto = new ProtoOut(this.Fr);
+            this.proto.setupPilOut(Context.config.name ?? 'noname');
+        }
 
         this.transpiler = new Transpiler({processor: this});
         if (typeof Context.config.test.onProcessorInit === 'function') {
@@ -180,7 +184,9 @@ module.exports = class Processor {
         this.finalClosingAirGroups();
         this.finalProofScope();
         this.scope.popInstanceType();
-        this.generateProtoOut();
+        if (this.proto) {
+            this.generateProtoOut();
+        }
     }
     generateProtoOut()
     {        
@@ -888,12 +894,16 @@ module.exports = class Processor {
     getAirGroupId(airGroup) {    
         const id = airGroup.getId();
         if (id !== false) {
-            this.proto.useAirGroup(id);
+            if (this.proto) {
+                this.proto.useAirGroup(id);
+            }
             return id;
         }
         ++this.lastAirGroupId;
         airGroup.setId(this.lastAirGroupId);
-        this.proto.setAirGroup(this.lastAirGroupId, airGroup.name);
+        if (this.proto) {
+            this.proto.setAirGroup(this.lastAirGroupId, airGroup.name);
+        }
         return this.lastAirGroupId;
     }
     /**

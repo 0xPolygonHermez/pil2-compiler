@@ -27,6 +27,7 @@ const AirGroupValues = require("./air_group_values.js");
 const Iterator = require("./iterator.js");
 const Context = require("./context.js");
 const Runtime = require("./runtime.js");
+const Exceptions = require('./exceptions.js');
 const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js")
 
 const ExpressionItems = require("./expression_items.js");
@@ -749,7 +750,7 @@ module.exports = class Processor {
         if (!s.contents) {
             // to support dynamic includes, add some internal statements need to compile inside airgroup
             // but after take compiled statements. TODO: analyze use current airgroup name
-            const sts = this.compiler.loadInclude(s.file.asString(), {preSrc: 'air __(int N=2**2) {\n', postSrc: '\n};\n'});
+            const sts = this.compiler.loadInclude(s.file.asString(), {preSrc: 'airtemplate __(int N=2**2) {\n', postSrc: '\n};\n'});
             if (sts === false) {
                 throw new Error(`ERROR loading include ${s.file.asString()}`);
             }
@@ -761,7 +762,7 @@ module.exports = class Processor {
         const requireId = s.file.asString();
         if (!s.contents) {
             // TODO: check if sense use dynamic requires
-            const sts = this.compiler.loadInclude(requireId, {preSrc: 'air __(int N=2**2) {\n', postSrc: '\n};\n'});
+            const sts = this.compiler.loadInclude(requireId, {preSrc: 'airtemplate __(int N=2**2) {\n', postSrc: '\n};\n'});
             if (sts === false) {
                 return;
             }

@@ -1,4 +1,4 @@
-air Expressions(int N = 2**7) {
+airtemplate Expressions(int N = 2**7) {
 
     col fixed BASIC = [1:1,2:2,3:3,4:4,5:5];
     col fixed BASIC2 = [1:1,2:2,3:3,4:4,5:5]...;
@@ -22,4 +22,6 @@ air Expressions(int N = 2**7) {
     col fixed R_FACTOR_RF = [8192:10,4096:10..*..];
 }
 
-Expressions();
+airgroup Expressions {
+    Expressions();
+}

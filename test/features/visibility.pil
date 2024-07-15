@@ -10,7 +10,7 @@ function sum(int a, int b) : int {
     return a + b + K; //  + c;
 }
 
-air Visibility(int N = 2**8) {
+airtemplate Visibility(int N = 2**8) {
 
     int c = 13;
     println(sum(10, 20));
@@ -19,4 +19,6 @@ air Visibility(int N = 2**8) {
     println(sum2(10, c));
 }
 
-Visibility();
+airgroup Visibility {
+    Visibility();
+}

@@ -22,7 +22,7 @@ function f1m (const expr p1[][]) {
     }
 }
 
-air Functions(int N = 2**10) {
+airtemplate Functions(int N = 2**10) {
 
     col witness c1,c2;
     col witness vec[10];
@@ -49,4 +49,6 @@ air Functions(int N = 2**10) {
     f1m(m);
 }
 
-Functions();
+airgroup Functions {
+    Functions();
+}

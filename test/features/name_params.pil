@@ -1,5 +1,5 @@
-air NamedParams(const int bits = 10,
-                const int N = 2**23) {
+airtemplate NamedParams(const int bits = 10,
+                        const int N = 2**23) {
 
     if (!defined(inc)) {
         function inc (int a = 0, int b = 100, int c = 1000):int {
@@ -14,7 +14,8 @@ air NamedParams(const int bits = 10,
 }
 
 
-
-NamedParams(bits: 12, N: 2**16);
-NamedParams(bits: 14, N: 2**18);
+airgroup NamedParams {
+    NamedParams(bits: 12, N: 2**16);
+    NamedParams(bits: 14, N: 2**18);
+}
 

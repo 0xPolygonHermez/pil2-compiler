@@ -1,4 +1,4 @@
-air Uses(int N = 2**23) {
+airtemplate Uses(int N = 2**13) {
 
     container subproof.usesA {
         int value = 10;
@@ -112,4 +112,6 @@ air Uses(int N = 2**23) {
     }
 }
 
-Uses();
+airgroup Uses {
+    Uses();
+}

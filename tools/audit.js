@@ -1,7 +1,7 @@
 const fs = require('fs');
 const protobuf = require('protobufjs');
 const argv = require("yargs")
-    .usage("airout <pilout.file>")
+    .usage("pilout_audit <pilout.file>")
     .argv;
 
 const AGGREGATION_TYPES = {
@@ -34,13 +34,14 @@ const log = {
 
 class AirOut {
     constructor(airoutFilename) {
-        log.info("[AirOut    ]", "··· Loading airout...");
+        log.info("[audit]", "··· Loading airout...");
 
         const airoutEncoded = fs.readFileSync(airoutFilename);
         const AirOut = protobuf.loadSync(airoutProto).lookupType("PilOut");
 
         const decoded = AirOut.decode(airoutEncoded);
         Object.assign(this, AirOut.toObject(decoded));
+        this.fixUndefinedData();
 
         this.preprocessAirout();
 
@@ -49,6 +50,14 @@ class AirOut {
         this.verifyHints();
     }   
 
+    fixUndefinedData() {
+        if (typeof this.subproofs === 'undefined') this.subproofs = [];
+        if (typeof this.symbols === 'undefined') this.symbols = [];
+        if (typeof this.hints === 'undefined') this.hints = [];
+        if (typeof this.publicTables === 'undefined') this.publicTables = [];
+        if (typeof this.expressions === 'undefined') this.expressions = [];
+        if (typeof this.constraints === 'undefined') this.constraints = [];
+    }
     preprocessAirout() {
         for(let i=0; i<this.subproofs.length; i++) {
             const subproof = this.subproofs[i];
@@ -74,34 +83,34 @@ class AirOut {
     }
 
     printInfo() {
-        log.info("[AirOut    ]", `··· AirOut Info`);
-        log.info("[AirOut    ]", `    Name: ${this.name}`);
-        log.info("[AirOut    ]", `    #Subproofs: ${this.subproofs.length}`);
+        log.info("[audit]", `··· AirOut Info`);
+        log.info("[audit]", `    Name: ${this.name}`);
+        log.info("[audit]", `    #Subproofs: ${this.subproofs.length}`);
 
-        log.info("[AirOut    ]", `    #ProofValues: ${this.numProofValues}`);
-        log.info("[AirOut    ]", `    #PublicValues: ${this.numPublicValues}`);
+        log.info("[audit]", `    #ProofValues: ${this.numProofValues}`);
+        log.info("[audit]", `    #PublicValues: ${this.numPublicValues}`);
 
-        if(this.publicTables) log.info("[AirOut    ]", `    #PublicTables: ${this.publicTables.length}`);
-        if(this.expressions) log.info("[AirOut    ]", `    #Expressions: ${this.expressions.length}`);
-        if(this.constraints) log.info("[AirOut    ]", `    #Constraints: ${this.constraints.length}`);
-        if(this.hints) log.info("[AirOut    ]", `    #Hints: ${this.hints.length}`);
-        if(this.symbols) log.info("[AirOut    ]", `    #Symbols: ${this.symbols.length}`);
+        if (this.publicTables) log.info("[audit]", `    #PublicTables: ${this.publicTables.length}`);
+        if (this.expressions) log.info("[audit]", `    #Expressions: ${this.expressions.length}`);
+        if (this.constraints) log.info("[audit]", `    #Constraints: ${this.constraints.length}`);
+        if (this.hints) log.info("[audit]", `    #Hints: ${this.hints.length}`);
+        if (this.symbols) log.info("[audit]", `    #Symbols: ${this.symbols.length}`);
 
-        for(const subproof of this.subproofs) this.printSubproofInfo(subproof);
+        for (const subproof of this.subproofs) this.printSubproofInfo(subproof);
     }
 
     printSubproofInfo(subproof) {
-        log.info("[AirOut    ]", `    > Subproof '${subproof.name}':`);
+        log.info("[audit]", `    > Subproof '${subproof.name}':`);
 
         for(const air of subproof.airs) this.printAirInfo(air);
     }
 
     printAirInfo(air) {
-        log.info("[AirOut    ]", `       + Air '${air.name}'`);
-        log.info("[AirOut    ]", `         NumRows:     ${air.numRows}`);
-        log.info("[AirOut    ]", `         Stages:      ${air.stageWidths.length}`);
-        log.info("[AirOut    ]", `         Expressions: ${air.expressions.length}`);
-        log.info("[AirOut    ]", `         Constraints: ${air.constraints.length}`);
+        log.info("[audit]", `       + Air '${air.name}'`);
+        log.info("[audit]", `         NumRows:     ${air.numRows}`);
+        log.info("[audit]", `         Stages:      ${air.stageWidths.length}`);
+        if (air.expressions) log.info("[audit]", `         Expressions: ${air.expressions.length}`);
+        if (air.constraints) log.info("[audit]", `         Constraints: ${air.constraints.length}`);
     }
 
     get numSubproofs() {
@@ -288,7 +297,7 @@ class AirOut {
         ctx.path = _ctxpath;
     }
     verifyAirExpressions(subproofId, airId) {
-        const expressions = this.subproofs[subproofId].airs[airId].expressions;
+        const expressions = this.subproofs[subproofId].airs[airId].expressions ?? [];
         const expressionsCount = expressions.length;
         // TODO: detect circular dependencies   
         let referenced = new Array(expressionsCount).fill(false);

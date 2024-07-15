@@ -1,4 +1,4 @@
-air IncDec(int N = 2**16) {
+airtemplate IncDec(int N = 2**16) {
     int i = 100;
     println(i);
     ++i;
@@ -39,5 +39,6 @@ air IncDec(int N = 2**16) {
     println(e);
     e--;
 }
-
-IncDec();
+airgroup IncDec {
+    IncDec();
+}

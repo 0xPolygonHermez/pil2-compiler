@@ -2,7 +2,7 @@
 public input1;
 
 
-air Hints(int N = 2**16) {
+airtemplate Hints(int N = 2**16) {
 
     col witness byte_in, byte_out;
     col witness bytes[16];
@@ -27,4 +27,6 @@ air Hints(int N = 2**16) {
     @my_hint4 {value_zz: byte_in + 2}
 }
 
-Hints(2**10);
+airgroup Hints {
+    Hints(2**10);
+}

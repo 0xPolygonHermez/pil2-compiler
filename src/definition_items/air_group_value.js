@@ -1,21 +1,20 @@
 const ProofItem = require("./proof_item.js");
 const assert = require('../assert.js');
-module.exports = class Subproofval extends ProofItem {
+module.exports = class AirGroupValue extends ProofItem {
     constructor (id, data = {}) {
         super(id);
-        const subproofId = data.subproofId ?? false;
-        assert.strictEqual(typeof data.subproofId, 'number');
-        this.subproofId = subproofId;
+        const airGroupId = data.airGroupId ?? false;
+        assert.strictEqual(typeof data.airGroupId, 'number');
+        this.airGroupId = airGroupId;
         this.aggregateType = data.aggregateType;
         this.sourceRef = data.sourceRef;
-        this.subproofId = data.subproofId;
         this.label = data.label;
         this.relativeId = data.relativeId ?? false;
     }
     clone() {
-        return new Subproofval(this.id, {aggregateType: this.aggregateType,
+        return new AirGroupValue(this.id, {aggregateType: this.aggregateType,
                                          sourceRef: this.sourceRef,
-                                         subproofId: this.subproofId,
+                                         airGroupId: this.airGroupId,
                                          label: (this.label && typeof this.label.clone === 'function') ? this.label.clone : this.label});
     }
 }

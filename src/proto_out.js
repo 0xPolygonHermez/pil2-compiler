@@ -22,7 +22,7 @@ const REF_TYPE_FIXED_COL = 1;
 const REF_TYPE_PERIODIC_COL = 2;
 const REF_TYPE_WITNESS_COL = 3;
 const REF_TYPE_PROOF_VALUE = 4;
-const REF_TYPE_SUBPROOF_VALUE = 5;
+const REF_TYPE_AIR_GROUP_VALUE = 5;
 const REF_TYPE_PUBLIC_VALUE = 6;
 const REF_TYPE_PUBLIC_TABLE = 7;
 const REF_TYPE_CHALLENGE = 8;
@@ -30,6 +30,8 @@ const REF_TYPE_CHALLENGE = 8;
 const SPV_AGGREGATIONS = ['sum', 'prod'];
 module.exports = class ProtoOut {
     constructor (Fr, options = {}) {
+        this.version = 1;
+        this.avoidAirsWithSameName = true;
         this.Fr = Fr;
         this.root = protobuf.loadSync(__dirname + '/pilout.proto');
         this.constants = false;
@@ -38,9 +40,10 @@ module.exports = class ProtoOut {
         this.varbytes = true;
         this.airs = [];
         this.currentAir = null;
+        this.currentAirGroup = null;
         this.witnessId2ProtoId = [];
         this.fixedId2ProtoId = [];
-        this.subproofvalId2ProtoId = []; 
+        this.airGroupValueId2ProtoId = []; 
         this.options = options;
         this.bigIntType = options.bigIntType ?? 'Buffer';
         this.toBaseField = this.mapBigIntType();
@@ -59,7 +62,7 @@ module.exports = class ProtoOut {
     }
     buildTypes() {
         this.PilOut = this.root.lookupType('PilOut');
-        this.Subproof = this.root.lookupType('Subproof');
+        this.AirGroup = this.root.lookupType('Subproof');
         this.BasicAir = this.root.lookupType('BasicAir');
         this.PublicTable = this.root.lookupType('PublicTable');
         this.GlobalExpression = this.root.lookupType('GlobalExpression');
@@ -72,7 +75,7 @@ module.exports = class ProtoOut {
         this.GlobalExpression_Neg = this.root.lookupType('GlobalExpression.Neg');
         this.GlobalOperand_Constant = this.root.lookupType('GlobalOperand.Constant');
         this.GlobalOperand_Challenge = this.root.lookupType('GlobalOperand.Challenge');
-        this.GlobalOperand_SubproofValue = this.root.lookupType('GlobalOperand.SubproofValue');
+        this.GlobalOperand_AirGroupValue = this.root.lookupType('GlobalOperand.SubproofValue');
         this.GlobalOperand_ProofValue = this.root.lookupType('GlobalOperand.ProofValue');
         this.GlobalOperand_PublicValue = this.root.lookupType('GlobalOperand.PublicValue');
         this.GlobalOperand_PublicTableAggregateValue = this.root.lookupType('GlobalOperand.PublicTableAggregatedValue');
@@ -89,7 +92,7 @@ module.exports = class ProtoOut {
         this.Constraint_EveryFrame = this.root.lookupType('Constraint.EveryFrame');
         this.Operand_Constant = this.root.lookupType('Operand.Constant');
         this.Operand_Challenge = this.root.lookupType('Operand.Challenge');
-        this.Operand_SubproofValue = this.root.lookupType('Operand.SubproofValue');
+        this.Operand_AirGropValue = this.root.lookupType('Operand.SubproofValue');
         this.Operand_ProofValue = this.root.lookupType('Operand.ProofValue');
         this.Operand_PublicValue = this.root.lookupType('Operand.PublicValue');
         this.Operand_PeriodicCol = this.root.lookupType('Operand.PeriodicCol');
@@ -135,35 +138,44 @@ module.exports = class ProtoOut {
     saveToFile(filename) {
         fs.writeFileSync(filename, this.data);
     }
-    setAir(airId, name, rows) {
-        assert.equal(airId, this.currentSubproof.airs.length);
+    setAir(airId, name, rows, aggregable = true) {
+        assert.equal(airId, this.currentAirGroup.airs.length);
         this.currentAir = {name, numRows: Number(rows), airId};
-        this.currentSubproof.airs.push(this.currentAir);
-    }
-    useSubproof(subproofId) { // TODO: Add subproof value
-        // check if exist a subproof with this name, if not create it.
-        const subproof = this.pilOut.subproofs.find(sp => sp.subproofId === subproofId);
-        if (typeof subproof === 'undefined') {
-            throw new Error(`Using subproofId ${subproofId} not found on proto`);
+        if (this.version >= 2) {
+            this.currentAir.aggregable = aggregable;
         }
-        this.currentSubproof = subproof;
+        if (this.avoidAirsWithSameName && this.currentAirGroup.airs.some(x => x.name === name)) {
+            this.currentAir.name = `${this.currentAir.name}_${airId}`;
+        }
+        this.currentAirGroup.airs.push(this.currentAir);
     }
-    setSubproof(subproofId, name, aggregable = false) { // TODO: Add subproof value
+    useAirGroup(airGroupId) { // TODO: Add subproof value
         // check if exist a subproof with this name, if not create it.
-        assert.equal(subproofId, this.pilOut.subproofs.length);
-        this.currentSubproof = {name, aggregable, airs: [], subproofId };
-        this.pilOut.subproofs.push(this.currentSubproof);
+        const airGroup = this.pilOut.subproofs.find(sp => sp.airGroupId === airGroupId);
+        if (typeof airGroup === 'undefined') {
+            throw new Error(`Using airGroupId ${airGroupId} not found on proto`);
+        }
+        this.currentAirGroup = airGroup;
     }
-    setSubproofValues(ids, aggregations) {
+    setAirGroup(airGroupId, name) { // TODO: Add air group value
+        // check if exist a air group with this name, if not create it.
+        assert.equal(airGroupId, this.pilOut.subproofs.length);
+        this.currentAirGroup = {name, airs: [], airGroupId };
+        if (this.version < 2) {
+            this.currentAirGroup.aggregable = true;
+        }
+        this.pilOut.subproofs.push(this.currentAirGroup);
+    }
+    setAirGroupValues(ids, aggregations) {
         assert.equal(ids.length, aggregations.length);
-        this.currentSubproof.subproofvalues = [];
+        this.currentAirGroup.subproofvalues = [];
         for (let index = 0; index < ids.length; ++index) {
-            this.subproofvalId2ProtoId[ids[index]] = index;
+            this.airGroupValueId2ProtoId[ids[index]] = index;
             const aggType = SPV_AGGREGATIONS.indexOf(aggregations[index]);
             if (aggType < 0) {
                 throw new Error(`Invalid aggregation type on ${Context.sourceRef}`);
             }
-            this.currentSubproof.subproofvalues.push({aggType});
+            this.currentAirGroup.subproofvalues.push({aggType});
         }
     }
     setGlobalSymbols(symbols) {
@@ -189,6 +201,16 @@ module.exports = class ProtoOut {
                     ...data,
                     ...sym2proto
                 };
+                if (this.version < 2) {
+                    if (typeof payout.airGroupId !== 'undefined') {
+                        if (typeof payout.subproofId !== 'undefined' && payout.airGroupId !== payout.subproofId) {
+                            throw new Error(`airGroupId(${payout.airGroupId}) and subproofId(${payout.subproofId}) on symbols ${payout.name} not match`);
+                            EXIT_HERE;
+                        }
+                        payout.subproofId = payout.airGroupId;
+                        delete payout.airGroupId;
+                    }
+                }
                 this.pilOut.symbols.push(payout);
             } catch (e) {
                 console.log(e.stack)
@@ -212,9 +234,14 @@ module.exports = class ProtoOut {
                 const [stage, protoId] = this.witnessId2ProtoId[id];
                 return {type: REF_TYPE_WITNESS_COL, id: protoId, stage};
             }
-            case 'subproofvalue': {
-                const protoId = assert.returnTypeOf(this.subproofvalId2ProtoId[id], 'number');
-                return {type: REF_TYPE_SUBPROOF_VALUE, id: protoId, subproofId: ref.data.subproofId};
+            case 'airgroupvalue': {
+                const protoId = assert.returnTypeOf(this.airGroupValueId2ProtoId[id], 'number');
+                console.log(ref.data);
+                if (this.version >= 2) {
+                    return {type: REF_TYPE_AIR_GROUP_VALUE, id: protoId, airgroupId: ref.data.airGroupId};
+                } else {
+                    return {type: REF_TYPE_AIR_GROUP_VALUE, id: protoId, subproofId: ref.data.airGroupId};
+                }
             }
             case 'proofvalue':
                 return {type: REF_TYPE_PROOF_VALUE, id};
@@ -235,7 +262,7 @@ module.exports = class ProtoOut {
     setPublics(publics) {
         this.pilOut.numPublicValues = publics.length;
     }
-    setProofvalues(proofvalues) {
+    setProofValues(proofvalues) {
         this.pilOut.numProofValues = proofvalues.length;
     }
     setFixedCols(fixedCols) {
@@ -373,7 +400,7 @@ module.exports = class ProtoOut {
                 }
                 break;
             case 'subproofValue': {
-                    const protoId = this.subproofvalId2ProtoId[ope.subproofValue.idx] ?? false;
+                    const protoId = this.airGroupValueId2ProtoId[ope.subproofValue.idx] ?? false;
                     if (protoId === false) {
                         throw new Error(`Translate: Found invalid subproofValue idx ${ope.subproofValue.idx}`);
                     }
@@ -446,12 +473,12 @@ module.exports = class ProtoOut {
         }
     }
     addHints(hints, packed, options) {
-        const subproofId = options.subproofId ?? false;
+        const airGroupId = options.airGroupId ?? false;
         const airId = options.airId ?? false;
         for (const hint of hints) {
             let payload = {name: hint.name};
-            if (subproofId !== false) {
-                payload.subproofId = subproofId;
+            if (airGroupId !== false) {
+                payload.subproofId = airGroupId;
                 payload.airId = airId;
             }
             const res = this.toHintField(hint.data, {...options, hints, packed})
@@ -596,7 +623,7 @@ module.exports = class ProtoOut {
         */
     }
     updateSymbolsWithSameName() {
-        console.log(this.pilOut.symbols.map(x => `${x.name}__${x.subproofId}${typeof x.airId === 'undefined' ? '':('__'+x.airId)}`));
+        console.log(this.pilOut.symbols.map(x => `${x.name}__${this.version >= 2 ? x.airGroupId:x.subproofId}${typeof x.airId === 'undefined' ? '':('__'+x.airId)}`));
     }
 }
 

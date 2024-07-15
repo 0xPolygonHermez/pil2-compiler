@@ -1,4 +1,4 @@
-air Functions(int N = 2**10) {
+airtemplate Functions(int N = 2**10) {
     col witness w;
     int values[12][20];
 
@@ -75,4 +75,6 @@ air Functions(int N = 2**10) {
     assert_eq(res6, 48);
 }
 
-Functions();
+airgroup Functions {
+    Functions();
+}

@@ -1,13 +1,12 @@
 const ProofItem = require("./proof_item.js");
-
-module.exports = class Proofval extends ProofItem {
+module.exports = class AirGroupValue extends ProofItem {
     constructor (id) {
         super(id);
     }
     getTag() {
-        return 'proofvalue';
+        return 'airgroupvalue';
     }
     cloneInstance() {
-        return new Proofval(this.id);
+        return new AirGroupValue(this.id);
     }
 }

@@ -1,34 +1,39 @@
-air AirA(int N = 2**16, int type = 0) {
+airtemplate AirA(int N = 2**16, int type = 0) {
     col witness a,b,c,d;
 
-    container subproof.mycontainer alias mc {
-        subproofval aggregate(sum) typeg;
+    container airgroup.mycontainer alias mc {
+        airgroupval aggregate(sum) typeg;
     }
     container air.myair alias ma {
         col witness aa;
         col fixed AA = [1,2,3]...;
     }
     if (type == 0) {
-        subproofval aggregate(prod) type0;
+        airgroupval aggregate(prod) type0;
         type0 === a * b + ma.aa * ma.AA;
         mc.typeg === a * c;
     } else {
-        subproofval aggregate(prod) type0;
+        airgroupval aggregate(prod) type0;
         type0 === a * a + ma.aa * ma.AA;
         mc.typeg === a * c;
     }
 }
 
-air AirB(int N = 2**16) {
+airtemplate AirB(int N = 2**16) {
     col witness a,b;
 
-    subproofval aggregate(sum) typeb;
+    airgroupval aggregate(sum) typeb;
     typeb === a * b;
 }
 
-AirA(2**3, 0);
-AirA(2**4, 1);
-AirB(2**3);
+airgroup AirA {
+    AirA(2**3, 0);
+    AirA(2**4, 1);
+}
+
+airgroup AirB {
+    AirB(2**3);
+}
 
 proofval pvalue;
 

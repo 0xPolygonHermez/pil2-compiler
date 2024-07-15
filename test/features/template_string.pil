@@ -2,7 +2,7 @@ const int A = 100;
 const int B = 200;
 const int C = 300;
 
-air TemplateString(int N = 2**16) {
+airtemplate TemplateString(int N = 2**16) {
     const int _A = 150;
     col witness wA;
     col witness wB;
@@ -17,5 +17,6 @@ air TemplateString(int N = 2**16) {
     println(`K=${K}`);
 }
 
-
-TemplateString();
+airgroup TemplateString {
+    TemplateString();
+}

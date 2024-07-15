@@ -52,8 +52,8 @@ module.exports = class Indexable {
         return null;
     }
     reserve(count, label, multiarray, data) {
-        if (this.type === 'subproofvalue' && Debug.active) {
-            console.log(['SUBPROOFVALUE-R', data]);
+        if (this.type === 'airgroupvalue' && Debug.active) {
+            console.log(['AIRGROUP-VALUE-R', data]);
         }
         const id = this.values.length;
         for (let index = 0; index < count; ++index) {

@@ -12,7 +12,7 @@ module.exports = class References {
     constructor () {
         this.references = {};
         this.types = {};
-        this.visibilityScope = 0;
+        this.visibilityScope = [0,false];
         this.visibilityStack = [];
         this.containers = new Containers(this);
     }
@@ -65,9 +65,9 @@ module.exports = class References {
     closeContainer() {
         this.containers.close();
     }
-    pushVisibilityScope() {
+    pushVisibilityScope(creationScope = false) {
         this.visibilityStack.push(this.visibilityScope);
-        this.visibilityScope = Context.scope.deep;
+        this.visibilityScope = [Context.scope.deep, creationScope];
     }
     popVisibilityScope() {
         if (this.visibilityStack.length < 1) {
@@ -127,12 +127,12 @@ module.exports = class References {
             return {scope, name, parts};
         }
         const isProofScope = parts[0] === 'proof';
-        const isSubproofScope = parts[0] === 'subproof';
+        const isAirGroupScope = parts[0] === 'airgroup';
         const isAirScope = parts[0] === 'air';
-        const absoluteScope = isProofScope || isSubproofScope || isAirScope;
-        let res = {isProofScope, isSubproofScope, isAirScope, absoluteScope, parts};
+        const absoluteScope = isProofScope || isAirGroupScope || isAirScope;
+        let res = {isProofScope, isAirGroupScope, isAirScope, absoluteScope, parts};
         if (absoluteScope) {
-            // if absolute scope (proof, subproof or air) and has more than 2 parts, means at least 3 parts,
+            // if absolute scope (proof, airgroup or air) and has more than 2 parts, means at least 3 parts,
             // the middle part was container.
             if (parts.length > 2) {
                 return {...res, scope: parts[0], name: parts.slice(-1), container: parts.slice(0, -1).join('.')};
@@ -153,7 +153,7 @@ module.exports = class References {
         const res = this.decodeName(name);
         if (res.absoluteScope) {
             if (res.isProofScope) return 'proof';
-            if (res.isSubproofScope) return 'subproof';
+            if (res.isAirGroupScope) return 'airgroup';
             if (res.isAirScope) return 'air';
         }
         if (useCurrentContainer) {
@@ -235,7 +235,7 @@ module.exports = class References {
         let data = {...options};
         delete data.const;
 
-        const label = (!container || nameInfo.parts.length > 1) ? nameInfo.name : `${Context.subproofName}.${nameInfo.name}`;
+        const label = (!container || nameInfo.parts.length > 1) ? nameInfo.name : `${Context.airGroupName}.${nameInfo.name}`;
         const refProperties = {container, scope, isStatic: nameInfo.isStatic, data, const: constProperty, label};
 
         // TODO: reserve need array for labels?
@@ -265,7 +265,7 @@ module.exports = class References {
     }
     hasScope(type) {
         // TODO: inside function ??
-        return ['public', 'proofvalue', 'challenge', 'subproofvalue', 'publictable'].includes(type) === false;
+        return ['public', 'proofvalue', 'challenge', 'airgroupvalue', 'publictable'].includes(type) === false;
     }
 
     get (name, indexes = []) {
@@ -429,7 +429,7 @@ module.exports = class References {
         if (!explicitContainer) {
             reference = this.containers.getReferenceInsideCurrent(lname, false);
         } else {            
-            if (['proof', 'subproof', 'air'].includes(explicitContainer)) {
+            if (['proof', 'airgroup', 'air'].includes(explicitContainer)) {
                 const scopeId = Context.scope.getScopeId(explicitContainer);
                 if (scopeId === false) {
                     throw new Error(`not found scope ${explicitContainer}`);
@@ -454,10 +454,20 @@ module.exports = class References {
         }
         return reference;
     }
+    getNextVisibilityScope(scopeId) {
+        let index = 0;
+        while (index < this.visibilityStack.length) {
+            this.visibilityStack[index]
+        }
+    }
     isVisible(def) {    
         if (Debug.active) console.log('ISVISIBLE', (def.constructor ?? {name: '_'}).name, def);
-        return !def.scopeId || def.scopeId === 1 || !this.hasScope(def.type) || def.type === 'function' ||
-                def.scopeId >= this.visibilityScope;
+        const res = !def.scopeId || def.scopeId === 1 || !this.hasScope(def.type) || def.type === 'function' ||
+                    def.scopeId >= this.visibilityScope[0] || (this.visibilityScope[1] !== false && def.scopeId <= this.visibilityScope[1]);
+                    // this.visibilityScopes.some((x,i) => def.scopeId >= x && (i === 0 || def.scopeId < this.getNextVisibilityScope(x)));
+        // console.log('**** IS_VISIBLE', def.name, def.scopeId, this.visibilityScope, this.visibilityStack/*, Context.scope*/);
+        return res;
+                // def.scopeId >= this.visibilityScopes;
     }
     /**
      *
@@ -468,7 +478,7 @@ module.exports = class References {
      */
     getReference(name, defaultValue, debug = {}) {
         // if more than one name is sent, use the first one (mainName). Always first name it's directly
-        // name defined on source code, second optionally could be name with subproof, because as symbol is
+        // name defined on source code, second optionally could be name with airgroup, because as symbol is
         // stored with full name.
         const mainName = Array.isArray(name) ? name[0]:Context.applyTemplates(name);
         const nameInfo = this.decodeName(mainName);
@@ -477,7 +487,7 @@ module.exports = class References {
             // if scope is specified on mainName, the other names don't make sense
             names = [mainName];
         } else if (!nameInfo.absoluteScope && nameInfo.parts.length == 2) {
-            // absoluteScope means that first scope was proof, subproof or air. If a non absolute
+            // absoluteScope means that first scope was proof, airgroup or air. If a non absolute
             // scope is defined perhaps was an alias.
             const container = this.containers.getFromAlias(nameInfo.parts[0], false);
             if (container) {

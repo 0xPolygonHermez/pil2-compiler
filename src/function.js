@@ -14,6 +14,7 @@ module.exports = class Function {
         this.id = id;
         this.initialized = [data.args, data.returns, data.statements, data.name].some(x => typeof x !== 'undefined');
         this.name = data.name;
+        this.creationScope = data.creationScope ?? [];
         this.nargs = 0;
         
         if (data.args) {
@@ -149,7 +150,7 @@ module.exports = class Function {
         }
     }
     declareAndInitializeArguments(eargs) {        
-        Context.processor.sourceRef = this.sourceRef;
+        // Context.processor.sourceRef = this.sourceRef;
         let iarg = 0;
         for (const name in this.args) {
             if (typeof eargs[iarg] === 'undefined') {

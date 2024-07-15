@@ -91,15 +91,13 @@ module.exports = class ExpressionPacker {
             // container.pushChallenge(id, stage ?? 1);
             this.container.pushChallenge(id, def.stage);
 
-        } else if (ope instanceof ExpressionItems.Proofval) {
+        } else if (ope instanceof ExpressionItems.ProofValue) {
             // container.pushProofValue(id)
             this.container.pushProofValue(id);
 
-        } else if (ope instanceof ExpressionItems.Subproofval) {
-            // container.pushSubproofValue(id)
+        } else if (ope instanceof ExpressionItems.AirGroupValue) {
             const def = Context.references.getDefinitionByItem(ope);
-//            this.container.pushSubproofValue(def.relativeId, def.subproofId);
-            this.container.pushSubproofValue(def.id, def.subproofId);
+            this.container.pushAirGroupValue(def.id, def.airGroupId);
         } else if (ope instanceof ExpressionItems.ExpressionReference) {
             const defvalue = Context.references.getDefinitionByItem(ope).getValue();
             if (defvalue.isExpression) {

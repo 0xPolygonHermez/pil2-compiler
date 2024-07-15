@@ -1,4 +1,4 @@
-air Assigns(int N = 2**10) {
+airtemplate Assigns(int N = 2**10) {
 
     const int N_MAX = 16;
     const int PSIX[6] = [2, 3, 5, 7, 11, 13];
@@ -72,6 +72,7 @@ air Assigns(int N = 2**10) {
     assert_eq(suma(i, aux), 19);
 
     for (i = 0; i < length(valA); ++i) {
+    for (i = 0; i < length(valA); ++i) {
         valA[i] = (i+1)*10+i;
         println(valA[i]);
         assert(valA[i] == (i+1)*10+i);
@@ -116,4 +117,6 @@ air Assigns(int N = 2**10) {
     println("Done!!");
 }
 
-Assigns();
+airgroup Assigns {
+    Assigns();
+}

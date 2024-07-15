@@ -1,4 +1,4 @@
-air Functions(int N = 2**13) {
+airtemplate Functions(int N = 2**13) {
 
     function inc (int &k) {
         k = k + 1;
@@ -103,4 +103,6 @@ air Functions(int N = 2**13) {
     }
 }
 
-Functions(2**10);
+airgroup Functions {
+    Functions(2**10);
+}

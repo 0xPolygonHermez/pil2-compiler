@@ -1,4 +1,4 @@
-air NextPrior(int N = 2**16) {
+airtemplate NextPrior(int N = 2**16) {
 
     col witness byteIn, byteOut;
 
@@ -6,4 +6,6 @@ air NextPrior(int N = 2**16) {
     2'byteIn === byteOut;
 }
 
-NextPrior();
+airgroup Main {
+    NextPrior();
+}

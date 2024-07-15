@@ -1,4 +1,4 @@
-air ExprIntEqual(int N = 2**13) {
+airtemplate ExprIntEqual(int N = 2**13) {
     const int a = 1;
     const int b = 2;
     compare_int(a);
@@ -21,4 +21,6 @@ function compare_expr(expr evalue) {
     if (evalue != 1) println(evalue, "evalue(expr) is not equal to 1");
 }
 
-ExprIntEqual(N: 2**10);
+airgroup ExprIntEqual {
+    ExprIntEqual(N: 2**10);
+}

@@ -1,4 +1,4 @@
-air Expressions(int N = 2**16) {
+airtemplate Expressions(int N = 2**16) {
 
     col witness byteIn;
     col witness bits[8];
@@ -11,4 +11,6 @@ air Expressions(int N = 2**16) {
     byteFromBits === byteIn;
 }
 
-Expressions();
+airgroup Expressions {
+    Expressions();
+}

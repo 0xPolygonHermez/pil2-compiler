@@ -47,7 +47,7 @@ module.exports = class ProtoOut {
         this.options = options;
         this.bigIntType = options.bigIntType ?? 'Buffer';
         this.toBaseField = this.mapBigIntType();
-
+        this.airStack = [];
         this.buildTypes();
     }
     mapBigIntType() {
@@ -138,8 +138,11 @@ module.exports = class ProtoOut {
     saveToFile(filename) {
         fs.writeFileSync(filename, this.data);
     }
-    setAir(airId, name, rows, aggregable = true) {
+    pushAir(airId, name, rows, aggregable = true) {
         assert.equal(airId, this.currentAirGroup.airs.length);
+        if (this.currentAir !== null) {
+            this.airStack.push(this.currentAir);
+        }
         this.currentAir = {name, numRows: Number(rows), airId};
         if (this.version >= 2) {
             this.currentAir.aggregable = aggregable;
@@ -148,6 +151,13 @@ module.exports = class ProtoOut {
             this.currentAir.name = `${this.currentAir.name}_${airId}`;
         }
         this.currentAirGroup.airs.push(this.currentAir);
+    }
+    popAir() {
+        if (this.airStack.length) {
+            this.currentAir = this.airStack.pop();
+        } else {
+            this.currentAir = null;
+        }
     }
     useAirGroup(airGroupId) { // TODO: Add subproof value
         // check if exist a subproof with this name, if not create it.
@@ -265,7 +275,7 @@ module.exports = class ProtoOut {
     setProofValues(proofvalues) {
         this.pilOut.numProofValues = proofvalues.length;
     }
-    setFixedCols(fixedCols) {
+    setFixedCols(fixedCols) {    
         this.setConstantCols(fixedCols, this.currentAir.numRows, false);
     }
     setPeriodicCols(periodicCols) {
@@ -428,7 +438,7 @@ module.exports = class ProtoOut {
             throw new Error('Current air not defined');
         }
         if (typeof this.currentAir[propname] !== 'undefined') {
-            throw new Error(`Property ${propname} already defined on current air`);
+            throw new Error(`Property ${propname} already defined on current air ${this.currentAir.name || 'unnamed'}`);
         }
         this.currentAir[propname] = init;
         return this.currentAir[propname];

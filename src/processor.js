@@ -958,12 +958,13 @@ module.exports = class Processor {
         this.airStack.push(air);
         this.updateAir();
 
-        if (this.proto) this.proto.setAir(air.id, air.name, air.rows);
+        if (this.proto) this.proto.pushAir(air.id, air.name, air.rows);
         return air;
     }
     closeAir() {
         console.log(`END AIR ${Context.airName} #${Context.air.id}`);
         this.airStack.pop();
+        if (this.proto) this.proto.popAir();
         this.updateAir();
     }
     setBuiltInConstants(airGroup, air) {
@@ -980,9 +981,10 @@ module.exports = class Processor {
         this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? 0));          
     }
     executeAirTemplate(airTemplate, airTemplateFunc, callinfo) {
+        const name = airTemplate.name;
         const airGroup = this.currentAirGroup;
         if (!airGroup) {
-            throw new Exceptions.Runtime(`Instance airtemplate ${airTemplate.name} out of airgroup`);
+            throw new Exceptions.Runtime(`Instance airtemplate ${name} out of airgroup`);
         }
         // airgroup was a function derivated class
         const mapinfo = this.prepareFunctionCall(airTemplateFunc, callinfo);
@@ -1053,7 +1055,7 @@ module.exports = class Processor {
                 labelsByType: {
                     witness: this.witness.labelRanges,
                     fixed: this.fixeds.labelRanges,
-                    airgrou: (id, options) => this.airGroupValues.getRelativeLabel(airGroupId, id, options)
+                    airgroup: (id, options) => this.airGroupValues.getRelativeLabel(airGroupId, id, options)
                 },
                 expressions: this.expressions
             });
@@ -1067,7 +1069,7 @@ module.exports = class Processor {
                 airGroupId,
                 airId
             });
-        this.proto.setExpressions(packed);
+        this.proto.setExpressions(packed);        
     }
     finalAirScope() {
         this.callDelayedFunctions('air', 'final');

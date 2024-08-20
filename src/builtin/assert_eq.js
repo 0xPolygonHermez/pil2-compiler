@@ -15,9 +15,9 @@ module.exports = class AssertEq extends Function {
         assert.instanceOf(s.args[1], Expression);
         const arg0 = s.args[0].eval();
         const arg1 = s.args[1].eval();
-        console.log(arg0);
-        console.log(arg1);
         if (!arg0.equals(arg1)) {
+            console.log(arg0);
+            console.log(arg1);
             throw new Error(`Assert fails (${arg0} === ${arg1}) on ${Context.sourceRef}`);
         }
         return 0n;

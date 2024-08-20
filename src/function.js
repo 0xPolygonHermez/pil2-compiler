@@ -154,6 +154,9 @@ module.exports = class Function {
         let iarg = 0;
         for (const name in this.args) {
             if (typeof eargs[iarg] === 'undefined') {
+                if (typeof this.args[name].defaultValue === 'undefined') { 
+                    throw new Error(`Argument ${name} without default value isn't specified in call of function ${this.name}`);
+                }
                 this.setDefaultArgument(name);
             } else {
                 this.setArgument(name, eargs[iarg]);
@@ -176,7 +179,9 @@ module.exports = class Function {
                 else console.log(v);
             }
         }
-
+        if (typeof value === 'undefined') { 
+            throw new Error(`Invalid value for argument ${name} on function ${this.name}`);
+        }
         if (value instanceof Expression && value.isAlone()) {
             value = value.getAloneOperand();
         }
@@ -210,7 +215,9 @@ module.exports = class Function {
         if (Debug.active) console.log(Context.constructor.name);
         let res = Context.processor.execute(this.statements, `FUNCTION ${this.name}`);
         if (res instanceof FlowAbortCmd) {
-            assert.instanceOf(res, ReturnCmd);
+            if (!(res instanceof ReturnCmd)) {
+                throw new Error(`Invalid type of flow-abort ${res.constructor.name} as function return at ${res.sourceRef}`);
+            }   
             Context.processor.traceLog('[TRACE-BROKE-RETURN]', '38;5;75;48;5;16');
             res = res.reset();
         }

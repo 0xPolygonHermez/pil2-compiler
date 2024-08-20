@@ -47,6 +47,9 @@ class StringValue extends RuntimeItem {
     evalInside(options = {}) {
         return this.clone();
     }
+    equals(value) {
+        return this.constructor.name === value.constructor.name && this.value === value.value;
+    }
 }
 
 RuntimeItem.registerClass('StringValue', StringValue);

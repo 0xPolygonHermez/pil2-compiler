@@ -512,6 +512,7 @@ module.exports = class Processor {
     execSwitch(s) {
         // switch must cases value must be constant values
         // TODO: check no constant variable values
+        let res = false;
         if (!s.__cached_values) {
             this.prepareSwitchCase(s);
         }
@@ -525,9 +526,10 @@ module.exports = class Processor {
         }
         if (caseIndex !== false) {
             this.scope.push();
-            this.execute(s.cases[caseIndex].statements, `SWITCH CASE ${value} ${this.sourceRef}`);
+            res = this.execute(s.cases[caseIndex].statements, `SWITCH CASE ${value} ${this.sourceRef}`);
             this.scope.pop();
         }
+        return res;
     }
     execWhile(s) {
         let index = 0;

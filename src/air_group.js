@@ -40,7 +40,12 @@ module.exports = class AirGroup {
         if (!this.insideFirstAir) {
             const spvNonDeclared = Object.keys(this.spvDeclaredInsideThisAir).filter(name => this.spvDeclaredInsideThisAir[name] === false);
             for (const name of spvNonDeclared) {
-                if (this.spvDeclaredInFirstAir[name].insideAirGroupContainer) continue;
+                const airGroupValue = this.spvDeclaredInFirstAir[name];
+                if (airGroupValue.insideAirGroupContainer) continue;
+                if (airGroupValue.data.defaultValue !== false) {
+                    this.defineAirGroupValueDefaultConstraints(airGroupValue);
+                    continue;
+                }
                 throw new Error(`airgroupval ${name} declared on previous ${this.name} instance, isn't declared on current air instance`);
             }
         }
@@ -55,20 +60,36 @@ module.exports = class AirGroup {
             throw new Error(`airgroupval ${name} must be declared inside airgroup (air)`);
         }
         if (this.insideFirstAir) {
-            // this.colDeclaration(s, 'airgroupvalue', true, false, {aggregateType: s.aggregateType});
             const res = Context.references.declare(fullname, 'airgroupvalue', lengths, data);
-            this.spvDeclaredInFirstAir[name] = {res, lengths: [...lengths], insideAirGroupContainer};
+            const definition = Context.references.get(fullname);
+            const reference = Context.references.getReference(fullname);
+            this.spvDeclaredInFirstAir[name] = {res, definition, reference, lengths: [...lengths], insideAirGroupContainer, data};
             return res;
         }
 
         // insideFirsAir = false. Check airgroupval it's same declared on first air "execution"
-        const previousLengths = (this.spvDeclaredInFirstAir[name] ?? {lengths: false}).lengths;
-        if (previousLengths === false) {
+        const previous = this.spvDeclaredInFirstAir[name] ?? false;
+        if (previous === false) {
             throw new Error(`airgroupval ${name} not declared on first air execution`);
         }
-        const sameLengths = previousLengths.length === lengths.length && previousLengths.every((length, index) => lengths[index] === length);
+        const sameLengths = previous.lengths.length === lengths.length && previous.lengths.every((length, index) => lengths[index] === length);
         if (!sameLengths) {
-            throw new Error(`airgroupval ${name} has different index lengths [${previousLengths.join('][')}] declared than now [${lengths.join('][')}]`);
+            throw new Error(`airgroupval ${name} has different previous index lengths [${previous.lengths.join('][')}] declared at ${previous.data.sourceRef} than now [${lengths.join('][')}] at ${data.sourceRef}`);
+        }
+
+        if (previous.data.aggregateType !== data.aggregateType) {
+            throw new Error(`airgroupval ${name} has different previous aggregation type '${previous.data.aggregateType}' declared at ${previous.data.sourceRef} than now '${data.aggregateType}' at ${data.sourceRef}`);
+
+        }
+
+        if (previous.data.stage != data.stage) {
+            throw new Error(`airgroupval ${name} has different previous stage ${previous.data.stage} declared at ${previous.data.sourceRef} than now ${data.stage} at ${data.sourceRef}`);
+        }
+
+        if (previous.data.defaultValue !== data.defaultValue) {
+            const previousDefaultValue = previous.data.defaultValue === false ? '(no specified)': previous.data.defaultValue;
+            const dataDefaultValue = data.defaultValue === false ? '(no specified)': data.defaultValue;
+            throw new Error(`airgroupval ${name} has different previous defaultValue ${previousDefaultValue} declared at ${previous.data.sourceRef} than now ${dataDefaultValue} at ${data.sourceRef}`);
         }
 
         // mark this airgroupval as declared
@@ -76,4 +97,18 @@ module.exports = class AirGroup {
 
         return this.spvDeclaredInFirstAir[name].res;
     }
+    defineAirGroupValueDefaultConstraints(airGroupValue) {
+        const reference = airGroupValue.reference;
+        const size = reference.getArraySize();
+        const defaultValue = new ExpressionItems.IntValue(airGroupValue.definition.defaultValue);
+        if (size === 0) {
+            Context.processor.defineConstraint(reference.getItem(), defaultValue);
+            return;
+        }
+        // define a constraint for each item in the array
+        for (let nth = 0; nth < size; ++nth) {
+            Context.processor.defineConstraint(reference.getNthItem(nth), defaultValue);
+        }
+    }
 }
+    

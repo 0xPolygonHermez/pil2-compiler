@@ -1,5 +1,6 @@
 const fs = require('fs');
 const protobuf = require('protobufjs');
+const util = require('util');
 const argv = require("yargs")
     .usage("pilout_audit <pilout.file>")
     .argv;
@@ -34,6 +35,21 @@ const log = {
 
 class AirOut {
     constructor(airoutFilename) {
+        this.color = {
+            parentesis: '\x1b[36m',
+            array: '\x1b[1;36m',
+            operation: '\x1b[33m',
+            constant: '\x1b[32m',
+            intermediate: '\x1b[35m',
+            off: '\x1b[0m'
+        }
+        // this.color = {
+        //     parentesis: '',
+        //     operation: '',
+        //     constant: '',
+        //     intermediate: '',
+        //     off: ''
+        // }
         log.info("[audit]", "··· Loading airout...");
 
         const airoutEncoded = fs.readFileSync(airoutFilename);
@@ -253,6 +269,13 @@ class AirOut {
         for (let subproofId = 0; subproofId < this.subproofs.length; ++subproofId) {
             for (let airId = 0; airId < this.subproofs[subproofId].airs.length; ++airId) {
                 this.verifyAirExpressions(subproofId, airId);
+                this.verifyAirConstraints(subproofId, airId);                
+
+
+                break;
+
+
+
             }
         }
     }
@@ -267,14 +290,14 @@ class AirOut {
             let ctx = {path: '', subproofId, airId, expressions, referenced};
             for (let hintFieldId = 0; hintFieldId < hint.hintFields.length; ++hintFieldId) {
                 ctx.path = `[S:${subproofId} A:${airId}] ${name} [${hintFieldId}]`;
-                console.log(`VERIFY HINT FIELD ${ctx.path} subproof:${subproofId} air:${airId}`);
+                // console.log(`VERIFY HINT FIELD ${ctx.path} subproof:${subproofId} air:${airId}`);
                 this.verifyHintField(ctx, hintFieldId, hint.hintFields[hintFieldId]);
             }
         }
     }
     verifyHintField(ctx, index, hintField) {
         const name = (hintField.name ?? '#noname#') + '[' + index + ']';
-        const cls = Object.keys(hintField).filter(x => x !== 'name')[0];
+        const cls = Object.keys(hintField).filter(x => x !== 'name')[0];        
         const data = hintField[cls];
         const _ctxpath = ctx.path;
         switch (cls) {       
@@ -297,14 +320,35 @@ class AirOut {
         ctx.path = _ctxpath;
     }
     verifyAirExpressions(subproofId, airId) {
-        const expressions = this.subproofs[subproofId].airs[airId].expressions ?? [];
+        const air = this.subproofs[subproofId].airs[airId];
+        const expressions = air.expressions ?? [];
         const expressionsCount = expressions.length;
         // TODO: detect circular dependencies   
         let referenced = new Array(expressionsCount).fill(false);
-        let ctx = {path: `[subproof:${subproofId} air:${airId}]`, referenced, expressions};
+        let ctx = {path: `[subproof:${subproofId} air:${airId}]`, air: air.name, referenced, expressions, subproofId, airId};
         for (let expressionId = 0; expressionId < expressionsCount; ++expressionId) {
             ctx.referenced[expressionId] = true;            
             this.verifyExpression(ctx, expressionId, expressions[expressionId]);
+            ctx.referenced[expressionId] = false;            
+        }        
+    }
+    verifyAirConstraints(subproofId, airId) {
+        const air = this.subproofs[subproofId].airs[airId];
+        const expressions = air.expressions ?? [];
+        const constraints = air.constraints ?? [];
+        const expressionsCount = expressions.length;
+        // TODO: detect circular dependencies   
+        let referenced = new Array(expressionsCount).fill(false);
+        let ctx = {path: `[subproof:${subproofId} air:${airId}]`, air: air.name, referenced, expressions, subproofId, airId};
+        console.log(`\x1B[1;36m##### AIR: ${air.name}  #####\x1B[0m`);
+        for (let constraintId = 0; constraintId < constraints.length; ++constraintId) {
+            const constraint = constraints[constraintId];
+            const frame = Object.keys(constraint)[0];
+            const expressionId = constraint[frame].expressionIdx.idx;
+            ctx.referenced[expressionId] = true;            
+            const res = this.expressionToString(ctx, expressionId, expressions[expressionId]);
+            const degree = this.expressionDegree(ctx, expressionId, expressions[expressionId]);
+            console.log(`CONSTRAINT.${constraintId} [${degree > 3 ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
             ctx.referenced[expressionId] = false;            
         }        
     }
@@ -378,6 +422,241 @@ class AirOut {
                 throw new Error(`invalid cls:${cls}`);
         }
     }
+
+    expressionToString(ctx, id, expression) {
+        let res = this._expressionToString(ctx, id, expression);
+        res = res.replace(/\s+/g, ' ')
+                .replace(/\(\s+\(/g, '((')
+                .replace(/\)\s+\)/g, '))')
+                .replace(/\(\s+/g, '(')
+                .replace(/\s+\)/g, ')')
+ //               .replace(/([\[\]])/g, this.color.array + '$1' + this.color.off)
+                .replace(/(\W)([0-9]+)(\W)/g, '$1' + this.color.constant + '$2' + this.color.off + '$3')
+                .replace(/([\(\)]+)/g, this.color.parentesis + '$1' + this.color.off)
+                .replace(/([\+\*\-]+)/g, this.color.operation + '$1' + this.color.off);
+        return res;
+    }
+
+    _expressionToString(ctx, id, expression, parentOperation = false) {
+        const cls = Object.keys(expression)[0];
+        const data = expression[cls];
+        const OP2CLS = {add: '+', sub: '-', mul: '*', neg: '-'};    
+        const op = OP2CLS[cls] ?? '???';
+        switch (cls) {
+            case 'add':
+            case 'sub':
+            case 'mul': 
+                const lhs = this.operandToString(ctx, id, data.lhs, cls);
+                const rhs = this.operandToString(ctx, id, data.rhs, cls);
+                if (typeof lhs === 'undefined' || typeof rhs === 'undefined') {
+                    console.log(util.inspect(expression, true, null, true));
+                    EXIT_HERE;
+                }
+                const noParentesis = parentOperation === false || 
+                                     (parentOperation == 'add' && cls == 'add') || (parentOperation == 'mul' && cls == 'mul');
+                                     (parentOperation == 'add' && cls == 'mul') || (parentOperation == 'sub' && cls == 'mul');
+                return `${noParentesis ? ' ':'('}${lhs} ${op} ${rhs}${noParentesis ? ' ':')'}`;
+            case 'neg':
+                console.log(data);
+                EXIT_HERE;
+                ctx.path = _ctxpath + `[@${idx} ${id, cls} value]`;
+                this.verifyExpressionOperand(ctx, id, data.value);
+                break;
+            default:
+                throw new Error(`${_ctxpath} @${idx} invalid cls:${cls}`);
+        }
+        // ctx.path = _ctxpath;
+    }
+    getSymbol(ctx, id, stage, type, defaultResult) {
+        // TODO: row_offset
+        if (typeof type === 'undefined') {
+            console.log(id, stage, type);
+            EXIT_HERE;
+        }
+        let res = defaultResult;
+        for (let index = 0; index < this.symbols.length; ++index) {
+            let symbol = this.symbols[index];
+            if (symbol.type !== type) continue;
+            if (typeof symbol.subproofId !== 'undefined' && symbol.subproofId !== ctx.subproofId) continue;
+            if (typeof symbol.airId !== 'undefined' && symbol.airId !== ctx.airId) continue;
+            if (typeof symbol.stage !== 'undefined' && symbol.stage !== stage) continue;
+            if (symbol.dim) {
+                if (id < symbol.id) continue;
+                this.initOffsets(symbol);
+                if (id >= (symbol.id + symbol._size)) continue;
+                res = symbol.name + this.offsetToIndexesString(id - symbol.id, symbol);
+                break;
+            } else if (id == symbol.id) {
+                res = symbol.name;
+                break;
+            }
+        }
+        if (typeof res !== 'undefined') {
+            if (typeof res === 'string' && res.startsWith(ctx.air + '.')) {
+                return res.substring(ctx.air.length + 1);
+            }
+            return res;
+        }
+        console.log(`NOT FOUND SYMBOL g:${ctx.subproofId} a:${ctx.airId} s:${stage} t:${type} id:${id})`);
+        EXIT_HERE;
+    }
+    buf2bint(buf) {
+        let value = 0n;
+        let offset = 0;
+        while ((buf.length - offset) >= 8) {
+            value = (value << 64n) + buf.readBigUInt64BE(offset);
+            offset += 8;
+        }
+        while ((buf.length - offset) >= 4) {
+            value = (value << 32n) + BigInt(buf.readUInt32BE(offset));
+            offset += 4;
+        }
+        while ((buf.length - offset) >= 2) {
+            value = (value << 16n) + BigInt(buf.readUInt16BE(offset));
+            offset += 2;
+        }
+        while ((buf.length - offset) >= 1) {
+            value = (value << 8n) + BigInt(buf.readUInt8(offset));
+            offset += 1;
+        }
+        return value;
+    }
+    operandToString(ctx, id, operand, parentOperation = false) {
+        let res = this._operandToString(ctx, id, operand, parentOperation);
+        if (operand.rowOffset) {
+            if (operand.rowOffset > 0) {
+                res = `${res}'${operand.rowOffset == 1 ? '':operand.rowOffset}`;
+            } else {
+                res = `${operand.rowOffset == -1 ? '':-operand.rowOffset}'${res}` ;
+            }
+        }
+        return res;
+    }
+    _operandToString(ctx, id, operand, parentOperation = false) {
+        const cls = Object.keys(operand)[0];
+        const data = operand[cls];
+        switch (cls) {
+            case 'constant':
+                if (data.value instanceof Buffer) {
+                    return this.buf2bint(data.value).toString();
+                }
+                EXIT_HERE;
+                return data.value.toString();
+            case 'challenge':
+                return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.CHALLENGE);
+            case 'proofValue':
+                return this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.PROOF_VALUE);
+            case 'subproofValue':
+                return this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.SUBPROOF_VALUE);
+            case 'publicValue':
+                return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.PUBLIC_VALUE);
+            case 'periodicCol':
+                return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.PERIODIC_COL);
+            case 'witnessCol':
+                return this.getSymbol(ctx, data.colIdx, data.stage, SYMBOL_TYPES.WITNESS_COL);
+            case 'fixedCol':                
+                return this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.FIXED_COL);
+            case 'expression': {
+                    const idx = data.idx;
+                    const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false);
+                    if (intermediate !==  false) {
+                        return '@@@'+intermediate;
+                    }
+                    if (idx >= ctx.expressions.length) {
+                        console.log(cls, idx, data);
+                        throw new Error(`${ctx.path} invalid expression idx:${idx}`);
+                        // console.log(`ERROR !!! ${ctx.path} invalid expression idx:${idx} [max:${ctx.expressions.length - 1}]`);
+                        // break;
+                    }
+                    if (ctx.referenced[idx]) {
+                        console.log(cls, idx, data);
+                        throw new Error(`${ctx.path} circular reference idx:${idx}`);
+                    }
+                    ctx.referenced[idx] = true;
+                    const res = this._expressionToString(ctx, idx, ctx.expressions[idx], parentOperation);
+                    ctx.referenced[idx] = false;
+                    return res;
+                }
+                break;
+            default:
+                throw new Error(`invalid cls:${cls}`);
+        }
+    }
+
+    offsetToIndexesString(offset, info) {
+        return '['+this.offsetToIndexes(offset, info).join('][')+']';
+    }
+    offsetToIndexes(offset, info) {
+        let level = 0;
+        let indexes = [];
+        while (level < info.dim) {
+            info._size = info._offsets[level];
+            indexes.push(Math.floor(offset/info._size));
+            offset = offset % info._size;
+            ++level;
+        }
+        return indexes;
+    }
+    initOffsets(info) {
+        if (!info.dim || typeof info._offset !== 'undefined') return;
+        info._offsets = [1];
+        let size = 1;
+        for (let idim = info.dim - 1; idim > 0; --idim) {
+            size = size * info.lengths[idim];
+            info._offsets.unshift(size);
+        }
+        // for size multiplies first offset by length of first dimension
+        info._size = size * info.lengths[0];
+    }
+    expressionDegree(ctx, id, expression) {
+        const cls = Object.keys(expression)[0];
+        const data = expression[cls];
+        switch (cls) {
+            case 'add':
+            case 'sub':
+            case 'mul': 
+                const lhs = this.operandDegree(ctx, id, data.lhs);
+                const rhs = this.operandDegree(ctx, id, data.rhs);
+                if (cls === 'mul') return lhs + rhs;
+                return lhs > rhs ? lhs : rhs;
+            case 'neg':
+                console.log(data);
+                EXIT_HERE;
+            default:
+                throw new Error(`${_ctxpath} @${idx} invalid cls:${cls}`);
+        }
+    }
+    operandDegree(ctx, id, operand) {
+        const cls = Object.keys(operand)[0];
+        const data = operand[cls];
+        switch (cls) {
+            case 'constant':
+            case 'challenge':
+            case 'proofValue':
+            case 'subproofValue':
+            case 'publicValue':
+                return 0;
+            case 'periodicCol':
+            case 'witnessCol':
+            case 'fixedCol':  
+                return 1;              
+            case 'expression': {
+                    const idx = data.idx;
+                    const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false);
+                    if (ctx.referenced[idx]) {
+                        console.log(cls, idx, data);
+                        throw new Error(`${ctx.path} circular reference idx:${idx}`);
+                    }
+                    ctx.referenced[idx] = true;
+                    const res = this.expressionDegree(ctx, idx, ctx.expressions[idx]);
+                    ctx.referenced[idx] = false;
+                    return res;
+                }
+            default:
+                throw new Error(`invalid cls:${cls}`);
+        }
+    }
+
 }
 
 module.exports = {

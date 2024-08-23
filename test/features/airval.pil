@@ -1,7 +1,7 @@
 airtemplate TestA(int N = 2**18) {
     airval stage(1) test;
-    airgroupval aggregate(sum) default(4) pepa;
-    airgroupval aggregate(sum) default(3) pepe[2];
+    airgroupval aggregate(sum) stage(36) default(4) pepa;
+    airgroupval aggregate(sum) stage(36) default(3) pepe[2];
     // println("TestA");    
     col witness k;
     k === 2;

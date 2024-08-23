@@ -1174,6 +1174,7 @@ module.exports = class Processor {
 
         // resolve compiler expression
         const stage = this.value2num(s.stage, 'stage');
+        console.log(['STAGE', stage, s.stage]);
         const defaultValue = (typeof s.defaultValue === 'undefined' || s.defaultValue === false) ? false : this.value2bint(s.defaultValue, 'default');
 
         for (const value of s.items) {

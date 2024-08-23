@@ -271,12 +271,6 @@ class AirOut {
             for (let airId = 0; airId < this.airGroups[airGroupId].airs.length; ++airId) {
                 this.verifyAirExpressions(airGroupId, airId);
                 this.verifyAirConstraints(airGroupId, airId);                
-
-
-                break;
-
-
-
             }
         }
     }
@@ -343,6 +337,7 @@ class AirOut {
         let ctx = {path: `[airGroup:${airGroupId} air:${airId}]`, air: air.name, referenced, expressions, airGroupId, airId};
         console.log(`\x1B[1;36m##### AIR: ${air.name}  #####\x1B[0m`);
         for (let constraintId = 0; constraintId < constraints.length; ++constraintId) {
+            console.log(`--- constraint ${constraintId+1}/${constraints.length} ---`);
             const constraint = constraints[constraintId];
             const frame = Object.keys(constraint)[0];
             const expressionId = constraint[frame].expressionIdx.idx;
@@ -475,6 +470,7 @@ class AirOut {
             EXIT_HERE;
         }
         let res = defaultResult;
+        console.log(this.symbols);
         for (let index = 0; index < this.symbols.length; ++index) {
             let symbol = this.symbols[index];
             if (symbol.type !== type) continue;

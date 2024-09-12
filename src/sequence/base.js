@@ -76,8 +76,6 @@ module.exports = class SequenceBase {
         return [this.e2num(e.from), this.e2num(e.to), fromTimes];
     }
     getTermSeqInfo(e) {
-        if (e._cache_getTermSeqInfo) return e._cache_getTermSeqInfo;
-
         const t1Times = e.t1.times ? this.toNumber(this.e2num(e.t1.times)): 1;
         const t2Times = e.t2.times ? this.toNumber(this.e2num(e.t2.times)): 1;
         const tnTimes = e.tn.times === false ? false : (e.tn.times ? this.toNumber(this.e2num(e.t2.times)): 1);
@@ -91,8 +89,7 @@ module.exports = class SequenceBase {
         if (t1 === t2) {
             throw new Error(`In term sequence, t1(${t1}), t2(${t2}) must be different`);
         }
-        e._cache_getTermSeqInfo = [t1, t2, tn, t1Times];
-        return e._cache_getTermSeqInfo;
+        return [t1, t2, tn, t1Times];
     }
     calculateGeomN(ratio, ti, tf) {
         const ratioAsNum = this.toNumber(ratio);

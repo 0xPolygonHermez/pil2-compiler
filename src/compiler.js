@@ -100,7 +100,7 @@ class Compiler {
                 return result;
             }
 
-            this.$.debug = `${compiler.relativeFileName}:${last.last_line} ${first.first_column}:${last.last_line}:${last.last_column}`;
+            this.$.debug = `${compiler.relativeFileName}:${last.last_line}`; // ${first.first_column}:${last.last_line}:${last.last_column}`;
             // this.$.__debug = `${compiler.relativeFileName} (${first.first_line}, ${first.first_column}) (${last.last_line}, ${last.last_column})`;
             // this.$.__contents = compiler.srcLines[first.first_line - 1].substring(first.first_column + 1, last.last_column);
             this.$.__yystate = `${yystate} ${yylineno}`        

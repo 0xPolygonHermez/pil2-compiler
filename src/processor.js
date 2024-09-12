@@ -369,6 +369,8 @@ module.exports = class Processor {
         }
         if (func.isBridge) {   
             return func.exec(callinfo, {}, options);
+        } else if (options.alias) {
+            throw new Error(`Alias can not be used on function calls at ${Context.sourceRef}`);
         }
 
         const mapInfo = this.prepareFunctionCall(func, callinfo);

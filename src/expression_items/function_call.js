@@ -59,7 +59,7 @@ module.exports = class FunctionCall extends RuntimeItem {
             this.dumpArgs(this.args, `CALL ${this.name}`);
         }        
         const definition = Context.references.get(this.name, options);
-        const res = Context.processor.executeFunctionCall(this.name, this);
+        const res = Context.processor.executeFunctionCall(this.name, this, options);
         if (Debug.active) console.log(this.name, res);
         return res;
     }

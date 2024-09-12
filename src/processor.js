@@ -357,7 +357,7 @@ module.exports = class Processor {
         this.callstack.pop();
         if (Debug.active) console.log(`END CALL ${func.name}`, res);
     }
-    executeFunctionCall(name, callinfo) {
+    executeFunctionCall(name, callinfo, options = {}) {
         const func = this.builtIn[name] ?? this.references.get(name);
         if (Debug.active) {
             console.log(`CALL ${name}`);
@@ -368,7 +368,9 @@ module.exports = class Processor {
             this.error({}, `Undefined function ${name}`);
         }
         if (func.isBridge) {   
-            return func.exec(callinfo);
+            return func.exec(callinfo, {}, options);
+        } else if (options.alias) {
+            throw new Error(`Alias can not be used on function calls at ${Context.sourceRef}`);
         }
 
         const mapInfo = this.prepareFunctionCall(func, callinfo);
@@ -982,8 +984,8 @@ module.exports = class Processor {
         // TODO: alert to AIR_ID because really was undefined
         this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? 0));          
     }
-    executeAirTemplate(airTemplate, airTemplateFunc, callinfo) {
-        const name = airTemplate.name;
+    executeAirTemplate(airTemplate, airTemplateFunc, callinfo, options = {}) {
+        const name = options.alias ? options.alias : airTemplate.name;
         const airGroup = this.currentAirGroup;
         if (!airGroup) {
             throw new Exceptions.Runtime(`Instance airtemplate ${name} out of airgroup`);
@@ -992,9 +994,9 @@ module.exports = class Processor {
         const mapinfo = this.prepareFunctionCall(airTemplateFunc, callinfo);
         airTemplateFunc.prepare(callinfo, mapinfo);
 
-        const air = this.createAir(this.currentAirGroup, airTemplate);
+        const air = this.createAir(this.currentAirGroup, airTemplate, {...options, name});
 
-        this.context.push(false, airTemplate.name);
+        this.context.push(false, name);
         this.scope.pushInstanceType('air');
         airGroup.airStart();
         let res = airTemplate.exec(air.name ,callinfo);
@@ -1205,7 +1207,11 @@ module.exports = class Processor {
         this.delayedCalls[_scope][event][fname].sourceRefs.push(Context.sourceRef);
     }
     execExpr(s) {
-        s.expr.eval();
+        let options = {};
+        if (s.alias) {
+            options.alias = this.getAsString(s.alias);
+        }
+        s.expr.eval(options);
         // this.expressions.eval(s.expr);
     }
     decodeNameAndLengths(s) {
@@ -1323,6 +1329,15 @@ module.exports = class Processor {
                 // this.references.set(name, [], initValue);
             }
         }
+    }
+    getAsString(s) {
+        if (typeof s === 'string') return s;
+        if (s.type === 'string') {
+            if (!s.template) return s.value;
+            return this.expandTemplates(s.value);
+        }
+        console.log(s);
+        throw new Error('Invalid value to getAsString');
     }
     expandTemplates(text) {
         if (!text.includes('${')) {

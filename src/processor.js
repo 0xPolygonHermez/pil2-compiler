@@ -938,6 +938,7 @@ module.exports = class Processor {
         // get airGroupId because during closing process this.airGroupId is set to false
         const airGroupId = this.airGroupId;
         this.finalAirGroupScope();
+        this.currentAirGroup.end();
         this.suspendCurrentAirGroup();
         this.references.clearScope('airgroup');
     }
@@ -1004,10 +1005,10 @@ module.exports = class Processor {
 
         this.context.push(false, name);
         this.scope.pushInstanceType('air');
-        airGroup.airStart();
+        airGroup.airStart(air.id);
         let res = airTemplate.exec(air.name ,callinfo);
         this.finalAirScope();
-        airGroup.airEnd();
+        airGroup.airEnd(air.id);
 
         if (this.proto) {
             this.airGroupProtoOut(this.currentAirGroup.id, air.id);
@@ -1182,7 +1183,7 @@ module.exports = class Processor {
         for (const value of s.items) {
             const lengths = this.decodeLengths(value);
             const data = {aggregateType: s.aggregateType, airGroupId: this.airGroupId, sourceRef: this.sourceRef, stage, defaultValue};
-            const res = this.currentAirGroup.declareAirGroupValue(value.name, lengths, data);
+            const res = this.currentAirGroup.declareAirGroupValue(value.name, lengths, data, this.currentAir.id);
         }
     }
     value2num(value, label) {

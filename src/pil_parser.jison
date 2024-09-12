@@ -585,6 +585,12 @@ statement_no_closed
 
     | use_directive
         { $$ = $1 }
+
+    | function_call ALIAS IDENTIFIER
+        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$1}), alias: $3} }
+
+    | function_call ALIAS flexible_string
+        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$1}), alias: $3} }
     ;
 
 

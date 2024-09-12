@@ -16,8 +16,8 @@ module.exports = class AirTemplateFunction extends Function {
         this.declareAndInitializeArguments(mapInfo.eargs);
     }
 
-    exec(callInfo, mapInfo) {
-        const res = Context.processor.executeAirTemplate(this.airTemplate, this, callInfo);
+    exec(callInfo, mapInfo = {}, options = {}) {
+        const res = Context.processor.executeAirTemplate(this.airTemplate, this, callInfo, options);
         return res === false ? new ExpressionItems.IntValue(0) : res;
     }    
     declareArgument(name, type, lengths, options, value) {

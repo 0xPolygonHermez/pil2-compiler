@@ -1,7 +1,3 @@
-const int A = 100;
-const int B = 200;
-const int C = 300;
-
 airtemplate MyAir(int N = 2**16) {
     const int n2 = N * 2;
 }

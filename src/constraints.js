@@ -4,9 +4,13 @@ const assert = require('./assert.js');
 module.exports = class Constraints {
     constructor (expressions = false) {
         this.constraints = [];
+        this.stack = [];
+        // only used for global constraints
         this.expressions = expressions;
     }
-
+    get length() { 
+        return this.constraints.length;
+    }
     getExpressions() {
         return this.expressions ? this.expressions : Context.expressions;
     }
@@ -18,7 +22,17 @@ module.exports = class Constraints {
         }
         return cloned;
     }
-
+    clear() {
+        this.constraints = [];
+    }
+    push(label = '') {
+        this.stack.push(this.constraints);
+        this.clear();
+    }
+    pop(label = '') {    
+        this.constraints = this.stack[this.stack.length - 1];
+        this.stack.pop();
+    }
     get(id) {
         return {...this.constraints[id]};
     }
@@ -100,6 +114,7 @@ module.exports = class Constraints {
             }
             return info;
         } catch (e) {
+            console.log(e);
             throw new Error(`ERROR generation debug info for constraint ${constraint.sourceRef}: ${e.message}`)
         }
     }

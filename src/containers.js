@@ -8,6 +8,7 @@ module.exports = class Containers {
         this.uses = [];
         this.aliases = [];
         this.airGroupContainers = [];
+        this.stack = [];
     }
     addScopeAlias(alias, value) {
         // NOTE: there is no need to check for aliases because by grammatical definition,
@@ -50,11 +51,33 @@ module.exports = class Containers {
     }
     clearScope(proofScope) {
         // const previousScopes = Object.keys(this.containers).map(name => `${name}(${this.containers[name].scope})`).join();
-        const _containers = Object.keys(this.containers).map(name => [name, this.containers[name].scope]);
-        this.containers = Object.keys(this.containers)
-            .filter(name => this.containers[name].scope !== proofScope)
-            .reduce((containers, name) => { containers[name] = this.containers[name]; return containers; }, {});
+        // const _containers = Object.keys(this.containers).map(name => [name, this.containers[name].scope]);
+        // this.containers = Object.keys(this.containers)
+        //     .filter(name => this.containers[name].scope !== proofScope)
+        //     .reduce((containers, name) => { containers[name] = this.containers[name]; return containers; }, {});
+        for (const name in this.containers) {
+            if (this.containers[name].scope === proofScope) {
+                delete this.containers[name];
+            }
+        }
         // console.log(`clearScope(Container) ${proofScope}: ` + _containers.filter(c => typeof this.containers[c[0]] === 'undefined').map(c => `${c[0]}(${c[1]})`).join(', '));
+    }
+    pushScope(proofScope) { 
+        let containers = {};
+        for (const name in this.containers) {
+            if (this.containers[name].scope === proofScope) {
+                containers[name] = this.containers[name];
+            }
+        }
+        this.stack.push(containers);
+        this.clearScope(proofScope);
+    }
+    popScope(proofScope) {
+        const containers = this.stack[this.stack.length - 1];
+        for (const name in containers) {
+            this.containers[name] = containers[name];
+        }
+        this.stack.pop();
     }
     create(name, alias = false)
     {

@@ -11,13 +11,29 @@ module.exports = class Expressions {
         this.expressions = [];
         this.packedIds = [];
         this.labelRanges = new LabelRanges();
-    }
+        this.stack = [];
+    }    
     clone() {
         let cloned = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
         cloned.expressions = this.expressions.map(x => x.clone());
         cloned.labelRanges = this.labelRanges.clone();
 
         return cloned;
+    }
+    get length() {
+        return this.expressions.length;
+    }   
+    push(label = '') {
+        console.log(`\x1B[1;34mEXPRESSIONS PUSH ${label} exprs:${this.expressions.length}\x1B[0m`);
+        this.stack.push({expressions: this.expressions, labelRanges: this.labelRanges, packedIds: this.packedIds});
+        this.clear();
+    }
+    pop(label = '') {
+        this.expressions = this.stack[this.stack.length - 1].expressions;
+        this.labelRanges = this.stack[this.stack.length - 1].labelRanges;
+        this.packedIds = this.stack[this.stack.length - 1].packedIds;   
+        console.log(`\x1B[1;34mEXPRESSIONS POP ${label} exprs:${this.expressions.length}\x1B[0m`);
+        this.stack.pop();
     }
     reserve(count, label, multiarray) {
         const id = this.expressions.length;
@@ -212,8 +228,13 @@ module.exports = class Expressions {
         if (container && typeof this.packedIds[id] === 'undefined') {
             if (typeof this.expressions[id] === 'undefined') {
                 debugger;
-            }
+            }            
             const packer = new ExpressionPacker(container, this.expressions[id]);
+            if (packer.expression === false) {
+                console.log(id);
+                console.log(this.expressions.length);
+                console.log(this.expressions[id]);
+            }
             this.packedIds[id] = assert.returnTypeOf(packer.pack(options), 'number');
         }
         return this.packedIds[id];

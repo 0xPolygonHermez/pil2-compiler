@@ -15,6 +15,7 @@ module.exports = class References {
         this.visibilityScope = [0,false];
         this.visibilityStack = [];
         this.containers = new Containers(this);
+        this.stack = [];
     }
     isContainerDefined(name) {
         return this.containers.isDefined(name);
@@ -84,12 +85,15 @@ module.exports = class References {
             instance
         }
     }
-    clearType(type, label) {
+    getTypeInstance(type) {
         const typeInfo = this.types[type];
         if (typeof typeInfo === 'undefined') {
             throw new Error(`type ${type} not registered`);
         }
-        typeInfo.instance.clear(label);
+        return typeInfo;
+    }
+    clearType(type, label) {
+        this.getTypeInstance(type).clear(label);
         // TODO: remove references
         for (const name in this.references) {
             if (this.references[name].type !== type) continue;
@@ -98,6 +102,35 @@ module.exports = class References {
     }
     clearScope(proofScope) {
         this.containers.clearScope(proofScope);
+    }
+    pushType(type, label) {
+        this.getTypeInstance(type).push(label);
+        // TODO: remove references
+        let references = {};
+        for (const name in this.references) {
+            if (this.references[name].type !== type) continue;
+            references[name] = this.references[name];
+        }
+        this.stack.push(references);
+        this.clearType(type, label);
+    }
+    pushScope(proofScope) {
+        this.containers.pushScope(proofScope);
+        this.clearScope(proofScope);
+    }
+    popType(type, label) {
+        this.getTypeInstance(type).pop(label);
+        const references = this.stack[this.stack.length - 1];
+        for (const name in references) {
+            if (this.references[name]) {
+                throw new Error(`Reference ${name} pop but already exists`);
+            }
+            this.references[name] = references[name];
+        }        
+        this.stack.pop();
+    }
+    popScope(proofScope) {
+        this.containers.popScope(proofScope);
     }
     isReferencedType(type) {
         return type.at(0) === '&'

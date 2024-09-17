@@ -18,7 +18,7 @@ module.exports = class ExpressionPacker {
         return this.container.pop(1)[0];
     }
     pack(options) {
-        if (!this.expression.stack) console.log(this.expression);
+        if (!this.expression.stack) console.trace(this.expression);
         assert.ok(this.expression.stack.length);
         let top = this.expression.stack.length-1;
         return this.stackPosPack(top, options);

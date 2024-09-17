@@ -959,16 +959,24 @@ module.exports = class Processor {
         const rows = item.asInt();
         this.checkRows(rows);
         const air = airGroup.createAir(airTemplate, rows, options);
+        console.log(`PUSH-AIR #${air.id} ${air.name}`);
         this.airStack.push(air);
         this.updateAir();
 
-        if (this.proto) this.proto.pushAir(air.id, air.name, air.rows);
+        if (this.proto) {
+            console.log(`PUSH-PROTO-AIR #${air.id} ${air.name}`);
+            this.proto.pushAir(air.id, air.name, air.rows);
+        }
         return air;
     }
     closeAir() {
         console.log(`END AIR ${Context.airName} #${Context.air.id}`);
+        console.log(`POP-AIR`);
         this.airStack.pop();
-        if (this.proto) this.proto.popAir();
+        if (this.proto) {
+            console.log(`POP-PROTO-AIR`);
+            this.proto.popAir();
+        }
         this.updateAir();
     }
     setBuiltInConstants(airGroup, air) {
@@ -996,6 +1004,7 @@ module.exports = class Processor {
 
         const air = this.createAir(this.currentAirGroup, airTemplate, {...options, name});
 
+        this.pushAirScope(air.name);
         this.context.push(false, name);
         this.scope.pushInstanceType('air');
         airGroup.airStart();
@@ -1007,9 +1016,7 @@ module.exports = class Processor {
             this.airGroupProtoOut(this.currentAirGroup.id, air.id);
         }
 
-        this.constraints = new Constraints();
-
-        this.clearAirScope(air.name);
+        this.popAirScope(air.name);
         this.scope.popInstanceType(['witness', 'fixed', 'im']);
         // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
@@ -1053,6 +1060,7 @@ module.exports = class Processor {
                                      this.airGroupValues.getAggreationTypesByAirGroupId(this.airGroupId));
 
         // this.expressions.pack(packed, {instances: [air.fixeds, air.witness]});
+        console.log([this.expressions.length, this.fixeds.length, this.witness.length, this.constraints.length]);
         this.expressions.pack(packed, {instances: [this.fixeds, this.witness]});
         this.proto.setConstraints(this.constraints, packed,
             {
@@ -1084,6 +1092,22 @@ module.exports = class Processor {
         this.references.clearScope('air');
         this.expressions.clear(label);
         this.hints.clear();
+    }
+    pushAirScope(label = '') {
+        this.references.pushType('fixed', label);
+        this.references.pushType('witness', label);
+        this.references.pushScope('air');
+        this.constraints.push(label);
+        this.expressions.push(label);
+        this.hints.push();
+    }
+    popAirScope(label = '') {
+        this.references.popType('fixed', label);
+        this.references.popType('witness', label);
+        this.references.popScope('air');
+        this.constraints.pop(label);
+        this.expressions.pop(label);
+        this.hints.pop();
     }
     finalAirGroupScope() {
         this.callDelayedFunctions('airgroup', 'final');

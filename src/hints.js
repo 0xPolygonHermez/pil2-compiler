@@ -7,6 +7,7 @@ module.exports = class Hints {
         this.Fr = Fr;
         this.expressions = expressions;
         this.hints = [];
+        this.stack = [];
     }
     clone() {
         let cloned = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
@@ -19,6 +20,14 @@ module.exports = class Hints {
     }
     clear() {
         this.hints = [];
+    }
+    push() {
+        this.stack.push(this.hints);
+        this.clear();
+    }
+    pop () {
+        this.hints = this.stack[this.stack.length - 1];
+        this.stack.pop();
     }
     cloneHint(data, options = {}) {
         const path = options.path ?? '';

@@ -17,6 +17,7 @@ module.exports = class Indexable {
         assert.instanceOf(this.expressionItemClass.prototype, ExpressionItem);
         this.labelRanges = new LabelRanges();
         this.debug = false;
+        this.stack = [];
     }
     get length() {
         return this.values.length;
@@ -41,6 +42,18 @@ module.exports = class Indexable {
         if (Debug.active) console.log(`CLEARING ${label} (${this.type})`);
         this.values = [];
         this.labelRanges = new LabelRanges();
+    }
+    push(label = '') {
+        this.stack.push({values: this.values, labelRanges: this.labelRanges});
+        this.clear(label);
+    }
+    pop(label = '') {
+        if (this.stack.length === 0) {
+            throw new Error(`Empty stack at ${label} (${this.type})`);
+        }
+        this.values = this.stack[this.stack.length - 1].values;
+        this.labelRanges = this.stack[this.stack.length - 1].labelRanges;
+        this.stack.pop();
     }
     getType(id) {
         return this.rtype;

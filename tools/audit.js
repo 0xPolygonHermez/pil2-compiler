@@ -124,7 +124,7 @@ class AirOut {
     printAirInfo(air) {
         log.info("[audit]", `       + Air '${air.name}'`);
         log.info("[audit]", `         NumRows:     ${air.numRows}`);
-        log.info("[audit]", `         Stages:      ${air.stageWidths.length}`);
+        log.info("[audit]", `         Stages:      ${air.stageWidths ? air.stageWidths.length : "(no-stages)"}`);
         if (air.expressions) log.info("[audit]", `         Expressions: ${air.expressions.length}`);
         if (air.constraints) log.info("[audit]", `         Constraints: ${air.constraints.length}`);
     }
@@ -269,13 +269,7 @@ class AirOut {
         for (let subproofId = 0; subproofId < this.subproofs.length; ++subproofId) {
             for (let airId = 0; airId < this.subproofs[subproofId].airs.length; ++airId) {
                 this.verifyAirExpressions(subproofId, airId);
-                this.verifyAirConstraints(subproofId, airId);                
-
-
-                break;
-
-
-
+                this.verifyAirConstraints(subproofId, airId);               
             }
         }
     }
@@ -338,6 +332,7 @@ class AirOut {
         const constraints = air.constraints ?? [];
         const expressionsCount = expressions.length;
         // TODO: detect circular dependencies   
+        console.log(this.getWitnessSymbolsByStage(subproofId, airId, 1).map(x => `${x.id}:\x1B[0;32m${x.name}\x1B[0m`).join('\x1B[36m|\x1B[0m') + (air.stageWidths ? ` #:${air.stageWidths[0]}` : ''));
         let referenced = new Array(expressionsCount).fill(false);
         let ctx = {path: `[subproof:${subproofId} air:${airId}]`, air: air.name, referenced, expressions, subproofId, airId};
         console.log(`\x1B[1;36m##### AIR: ${air.name}  #####\x1B[0m`);
@@ -350,7 +345,7 @@ class AirOut {
             const degree = this.expressionDegree(ctx, expressionId, expressions[expressionId]);
             console.log(`CONSTRAINT.${constraintId} [${degree > 3 ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
             ctx.referenced[expressionId] = false;            
-        }        
+        }     
     }
     verifyExpression(ctx, idx, expression) {
         const cls = Object.keys(expression)[0];

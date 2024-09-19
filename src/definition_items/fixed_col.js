@@ -29,6 +29,10 @@ module.exports = class FixedCol extends ProofItem {
         if (this.sequence) {
             throw new Error(`setting a row value but assigned a sequence previously ${Context.sourceTag}`);
         }
+        if (this.values.length === 0){
+            this.rows = Context.rows;
+            this.values = new Array(this.rows);
+        }
         this.values[row] = value;
     }
     getRowValue(row) {

@@ -1,4 +1,3 @@
-const { performance } = require('perf_hooks');
 const Scope = require("./scope.js");
 const Expressions = require("./expressions.js");
 const Expression = require("./expression.js");
@@ -40,6 +39,7 @@ const util = require('util');
 const Debug = require('./debug.js');
 const Transpiler = require('./transpiler.js');
 const assert = require('./assert.js');
+const { performance } = require('perf_hooks');
 
 const MAX_SWITCH_CASE_RANGE = 512;
 module.exports = class Processor {
@@ -186,7 +186,11 @@ module.exports = class Processor {
         this.finalProofScope();
         this.scope.popInstanceType();
         if (this.proto) {
+            const t1 = performance.now();
+            console.log('PROTO-OUT-BEGIN');
             this.generateProtoOut();
+            const t2 = performance.now();
+            console.log('PROTO-OUT-END TIME(ms):', t2-t1);
         }
     }
     generateProtoOut()
@@ -585,25 +589,55 @@ module.exports = class Processor {
         this.execute(s.init, `FOR ${this.sourceRef} INIT`);
         let index = 0;
         // while (this.expressions.e2bool(s.condition)) {
+        let tmark = performance.now();
+        let ttotal = 0;
+        let tcount = 0;
+        let mesure = true;
+        let t = [0,0,0,0];
+        let large = false;
         while (true) {
             if (index % 10000 === 0 && index) {
-                console.log(`inside FOR ${this.sourceRef} index:${index}`);
+                large = true;
+                let tmark2 = performance.now();
+                const ms = tmark2 - tmark;
+                ttotal += ms;
+                tcount += 1;
+                console.log(`inside FOR ${this.sourceRef} index:${index} time(ms):${Math.trunc(tmark2-tmark)} avg(ms):${Math.trunc(ttotal/tcount)} total(s):${Math.trunc(ttotal/1000)}`);
+                tmark = tmark2;
+                // if (index == 10000) mesure = true;
             }
+            //if (mesure) { 
+            //    t[0] = performance.now(); 
+            //    t[1] = performance.now();
+            //}
             const loopCond = s.condition.eval().asBool();
             if (Debug.active) console.log('FOR.CONDITION', loopCond, s.condition.toString(), s.condition);
             if (!loopCond) break;
             // if only one statement, scope will not create.
             // if more than one statement, means a scope_definition => scope creation
+            // if (mesure) { t[2] = performance.now(); }
             result = this.execute(s.statements, `FOR ${this.sourceRef} I:${index}`);
             ++index;
+            // if (mesure) { t[3] = performance.now(); }
             if (this.abortInsideLoop(result)) {
                 result = result.getResult();
                 break;
             }
             if (Debug.active) console.log('INCREMENT', s.increment);
             this.execute(s.increment);
+            //if (mesure) { 
+            //    t[4] = performance.now(); 
+            //    console.log(`PARTIAL TIMES T0:${t[1]-t[0]}ms T1:${t[2]-t[1]}ms T2:${t[3]-t[2]}ms T3:${t[4]-t[3]}ms`);   
+            //    mesure = false;
+            //}
+        }
+        tmark = performance.now();
+        if (large) {
+            console.log('OUT-OF-LARGE-FOR:' + Context.sourceRef)
         }
         this.scope.pop();
+        const tmark2 = performance.now();
+        console.log('BEFORE-RETURN/OUT-OF-LARGE-FOR:' + Context.sourceRef + ' time(ms):' + Math.trunc(tmark2-tmark));
         return this.clearLoopAbort(result);
     }
     clearLoopAbort(result) {
@@ -1000,25 +1034,36 @@ module.exports = class Processor {
         this.scope.pushInstanceType('air');
         airGroup.airStart();
         let res = airTemplate.exec(air.name ,callinfo);
+        console.log('AIR-TEMPLATE-FINISH-EXEC');
         this.finalAirScope();
         airGroup.airEnd();
-
+    
         if (this.proto) {
+            const t1 = performance.now();
+            console.log('PROTO-AIRGROUP-OUT-BEGIN');
             this.airGroupProtoOut(this.currentAirGroup.id, air.id);
+            const t2 = performance.now();
+            console.log('PROTO-AIRGROUP-OUT-END TIME(ms):', t2-t1);
         }
 
         this.constraints = new Constraints();
 
+        const t1 = performance.now();
+        console.log('AIR-CLOSE-BEGIN');
         this.clearAirScope(air.name);
         this.scope.popInstanceType(['witness', 'fixed', 'im']);
         // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
         this.closeAir(air);
+        const t2 = performance.now();
+        console.log('AIR-CLOSE-END TIME(ms):', t2-t1);
 
         // closing airgroup but no closing final        
         // this.suspendCurrentAirGroup(false);
 
         this.finishFunctionCall(airTemplate);
+        const t3 = performance.now();
+        console.log('AIR-TEMPLATE-FINAL TIME(ms):', t3-t2);
 
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
     }
@@ -1046,14 +1091,23 @@ module.exports = class Processor {
         if (Context.config.protoOut === false) return;
         
         let packed = new PackedExpressions();
+        let tmark = performance.now();
         this.proto.setFixedCols(this.fixeds);
-        this.proto.setPeriodicCols(this.fixeds);
+        let tmark2 = performance.now();
+        console.log('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS TIME(ms):', tmark2-tmark);    
+        this.proto.setPeriodicCols(this.fixeds);        
+        tmark = performance.now();
+        console.log('PROTO-AIRGROUP-OUT-BEGIN-SET-PERIODIC-COLS TIME(ms):', tmark-tmark2);
         this.proto.setWitnessCols(this.witness);
+        tmark2 = performance.now();
+        console.log('PROTO-AIRGROUP-OUT-BEGIN-SET-WITNESS-COLS TIME(ms):', tmark2-tmark);
         this.proto.setAirGroupValues(this.airGroupValues.getIdsByAirGroupId(this.airGroupId),
                                      this.airGroupValues.getAggreationTypesByAirGroupId(this.airGroupId));
 
         // this.expressions.pack(packed, {instances: [air.fixeds, air.witness]});
         this.expressions.pack(packed, {instances: [this.fixeds, this.witness]});
+        tmark = performance.now();
+        console.log('PROTO-AIRGROUP-OUT-BEGIN-EXPRESSIONS-PACK TIME(ms):', tmark-tmark2);
         this.proto.setConstraints(this.constraints, packed,
             {
                 labelsByType: {
@@ -1063,17 +1117,25 @@ module.exports = class Processor {
                 },
                 expressions: this.expressions
             });
+        tmark2 = performance.now();
+        console.log('PROTO-AIRGROUP-OUT-BEGIN-CONSTRAINTS TIME(ms):', tmark2-tmark);
         const info = {airId, airGroupId};
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.labelRanges, 'fixed', info);
         if (airId == 0) {
             this.proto.setSymbolsFromLabels(this.airGroupValues.labelRanges, 'airgroupvalue', {airGroupId});
         }
+        tmark = performance.now();
+        console.log('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS TIME(ms):', tmark-tmark2);
         this.proto.addHints(this.hints, packed, {
                 airGroupId,
                 airId
             });
+        tmark2 = performance.now();
+        console.log('PROTO-AIRGROUP-OUT-BEGIN-HINTS TIME(ms):', tmark2-tmark);
         this.proto.setExpressions(packed);        
+        tmark = performance.now();
+        console.log('PROTO-AIRGROUP-OUT-BEGIN-EXPRESSIONS TIME(ms):', tmark-tmark2);
     }
     finalAirScope() {
         this.callDelayedFunctions('air', 'final');

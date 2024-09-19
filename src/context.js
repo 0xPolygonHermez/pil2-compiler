@@ -17,6 +17,9 @@ module.exports = class Context {
             this.config.test.onContextInit(Context, this);
         }
     }
+    static get rows() {
+        return this._instance._processor.rows;
+    }
     static get air() {
         return  this._instance._processor.airStack.at(-1) ?? false;
     }

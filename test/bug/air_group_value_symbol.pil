@@ -1,11 +1,13 @@
 airtemplate AirA(int N = 2**16, int type = 0) {
     col witness a,b,c,d;
     airgroupval aggregate(prod) agvA;
+    agvA - a*b*c*d === 0;
 }
 
 airtemplate AirB(int N = 2**16) {
     col witness a,b;
     airgroupval aggregate(prod) agvB;
+    agvB - a*b === 0;
 }
 
 
@@ -15,5 +17,5 @@ airgroup A {
 }
 airgroup B {
     int rows = 2**3;
-    AirB(rows, 0);
+    AirB(rows, 0);    
 }

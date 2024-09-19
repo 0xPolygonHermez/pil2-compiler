@@ -1067,7 +1067,8 @@ module.exports = class Processor {
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.labelRanges, 'fixed', info);
         if (airId == 0) {
-            this.proto.setSymbolsFromLabels(this.airGroupValues.labelRanges, 'airgroupvalue', {airGroupId});
+            
+            this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId), 'airgroupvalue', {airGroupId});
         }
         this.proto.addHints(this.hints, packed, {
                 airGroupId,

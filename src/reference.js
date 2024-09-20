@@ -131,7 +131,7 @@ class Reference {
         } else {
             this.instance.set(id, value);
         }
-        this.markAsInitialized(indexes);
+        // this.markAsInitialized(indexes);
     }
     init (value, indexes = [], options = {}) {
         assert.notStrictEqual(value, null); // to detect obsolete legacy uses

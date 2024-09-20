@@ -307,8 +307,9 @@ module.exports = class ProtoOut {
         const colType = periodic ? 'P':'F';
         for (const col of cols) {
             const colIsPeriodic = col.isPeriodic() && col.rows < rows;
-            if (colIsPeriodic !== periodic) continue;
+            if (colIsPeriodic !== periodic) continue;        
             const _rows = periodic ? col.rows : rows;
+            console.log(`SET ${col.id} ${col.constructor.name} ${_rows} ${colIsPeriodic}`);
             this.fixedId2ProtoId[col.id] = [colType, airCols.length];
             let values = [];
             for (let irow = 0; irow < _rows; ++irow) {

@@ -9,9 +9,12 @@ airtemplate BinaryTable(int N = 2**22) {
     
     col witness multiplicity;
 
+    #pragma timer t1 start
     col fixed A = [0..255]...;                        // Input A    (8 bits)
 
     col fixed B = [0:P2_8..255:P2_8]...;              // Input B    (8 bits)
+
+    // col fixed _CIN = [[0:4..10:4]:4,[5:3..10:3]...];
 
     col fixed CIN = [[0:P2_16,1:P2_16]:(11*2),
                       0:(P2_17*4)]...;
@@ -27,16 +30,12 @@ airtemplate BinaryTable(int N = 2**22) {
                     32:P2_17..35:P2_17]...;
 
 
+    #pragma timer t1 end
     col fixed C;                                      // Output C   (8 bits)
     col fixed COUT;                                   // CarryOut   (1 bits)
     col fixed FLAGS;
 
-    // int j = 0;
-    // for (int i = 0; i < N; i++) {
-    //     j = j + i;
-    // }
-    // println(j);
-
+    #pragma cache_fixed `tmp/binary_table.fixed.cache` C, COUT, FLAGS
     for (int i = 0; i < N; i++) {
         int [plast, op, a, b, cin, c, cout] = [LAST[i], OP[i], A[i], B[i], CIN[i], 0, 0];
         switch (op) {

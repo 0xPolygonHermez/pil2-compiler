@@ -15,6 +15,12 @@ module.exports = class SequenceBase {
     set paddingSize(value) {
         this.parent.setPaddingSize(value);
     }
+    get bytes() {
+        return this.parent.bytes;
+    }
+    get size() {
+        return this.parent.size;
+    }
     execute(e) {
         if (e instanceof Expression) {
             return this.expr(e);

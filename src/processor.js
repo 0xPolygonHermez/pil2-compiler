@@ -1,3 +1,4 @@
+const Performance = require('perf_hooks').performance;
 const Scope = require("./scope.js");
 const Expressions = require("./expressions.js");
 const Expression = require("./expression.js");
@@ -314,12 +315,15 @@ module.exports = class Processor {
                 const name = params[1] ?? false;
                 const action = params[2] ?? 'start';
                 if (action === 'start')  {
-                    this.timers[name] = process.hrtime();
+                    this.timers[name] = Performance.now();
+                    // this.timers[name] = process.hrtime();
                 } else if (action === 'end') {
-                    const now = process.hrtime();
+                    // const now = process.hrtime();
+                    const now = Performance.now();
                     const start = this.timers[name] ?? now;
-                    const milliseconds = (now[0] - start[0]) * 1000 + Math.floor((now[1] - start[1])/1000000);
-                    console.log(`=========================> TIMER ${name} ${milliseconds} ms <===============================`);
+                    // const milliseconds = (now[0] - start[0]) * 1000 + Math.floor((now[1] - start[1])/1000000);
+                    const milliseconds = (now - start);
+                    console.log(`=========================> TIMER ${name} ${Math.round(milliseconds * 100)/100.0} ms <===============================`);
                 }
                 break;
             }
@@ -337,6 +341,8 @@ module.exports = class Processor {
                 value.dump('*************** PRAGMA '+Context.sourceRef+' ***************');
                 break;
             }
+            default:
+                throw new Error(`Prama ${instr} not implemented`);
         }
         
     }

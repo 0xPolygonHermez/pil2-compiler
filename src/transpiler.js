@@ -117,59 +117,6 @@ module.exports = class Transpiler {
         }
         return code;
     }
-    f()
-    {for (let i=0;i < N;++i) {
-    {let [a,b,cin,plast,c,cout,op]=[A*[i],B*[i],CIN*[i],LAST*[i],0,0,OP*[i]];
-    switch (op) {
-
-        case 0:
-    {c=(cin + a + b) & 255;
-    cout=(cin + a + b) >> 8};
-    break;
-
-        case 1:
-    {cout=((a - cin) >= b)?(0):(1);
-    c=((256 * cout + a) - cin) - b};
-    break;
-
-        case 2,3:{
-            if (a < b){
-                cout=1;
-                c=plast
-            } else if (a == b) {
-                cout=cin;
-                c=plast * cin 
-            };
-            if (op == 3 && plast && (a & 128) != (b & 128)){
-                c=a & 128;
-                cout=c
-            }
-            };
-            break;
-
-        case 4: {
-            if (a == b && !cin) c=plast; else cout=1;
-            cout=(plast)?(!cout):(cout)};
-            break;
-
-        case 5:
-    {c=a & b;
-    cout=cin || c};
-    break;
-
-        case 6:
-    {c=a | b};
-    break;
-
-        case 7:
-    {c=a ^ b};
-    break;
-    }
-    ;
-    C[i]=c;
-    COUT[i]=c}
-    }
-    }
     #transpileReference(ref) {
         let code = ref.name;
         if (!ref.dim) {

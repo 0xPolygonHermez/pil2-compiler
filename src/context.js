@@ -12,11 +12,18 @@ module.exports = class Context {
         this.stack = [];        
         this.config = {debug: {}, test: {}, ...config};
         this.uses = [];
+        this.seqCodeType = config.seqCodeType ?? 'fast';
         this._airGroupName = false;
         if (typeof this.config.test.onContextInit === 'function') {
             this.config.test.onContextInit(Context, this);
         }
     }
+    static get SeqCodeType() {
+        return this._instance.seqCodeType;   
+    }
+    static set SeqCodeType(value) {
+        this._instance.seqCodeType = value;
+    }        
     static get rows() {
         return this._instance._processor.rows;
     }

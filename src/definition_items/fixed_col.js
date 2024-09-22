@@ -50,6 +50,7 @@ module.exports = class FixedCol extends ProofItem {
                     this.bytes = 8;
                 }
             }
+            console.log(`allocating ${this.rows} rows of ${this.bytes} bytes`);
             this.values = Buffer.alloc(this.rows * this.bytes);
             this.size = this.rows * this.bytes;
         }

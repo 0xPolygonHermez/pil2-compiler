@@ -6,6 +6,7 @@ const assert = require('./assert.js');
 const Context = require('./context.js');
 const SequenceSizeOf = require('./sequence/size_of.js');
 const SequenceCodeGen = require('./sequence/code_gen.js');
+const SequenceFastCodeGen = require('./sequence/fast_code_gen.js');
 const SequenceExtend = require('./sequence/extend.js');
 const SequenceToList = require('./sequence/to_list.js');
 const SequenceTypeOf = require('./sequence/type_of.js');
@@ -29,7 +30,6 @@ module.exports = class Sequence {
     // TODO: check arith_seq/geom_seq with repetitive
 
     constructor (expression, maxSize) {
-        this.#values = new Values();
         this.padding = false;
         this.expression = expression;
 
@@ -40,17 +40,20 @@ module.exports = class Sequence {
         this.debug = '';
         this.valueCounter = 0;
         this.varIndex = 0;
+        this.bytes = 8;         // by default
         const options = {set: (index, value) => this.#setValue(index, value),
                          get: (index) => this.#values[index]};
         this.engines = {
             sizeOf: new SequenceSizeOf(this, 'sizeOf'),
-            codeGen: new SequenceCodeGen(this, 'codeGen'),
+            codeGen: new SequenceFastCodeGen(this, 'codeGen'),
+                                                    // : new SequenceCodeGen(this, 'codeGen'),
             extend: new SequenceExtend(this, 'extend', options),
             toList: new SequenceToList(this, 'toList', options),
             typeOf: new SequenceTypeOf(this, 'typeOf')
         };
         this.engines.typeOf.execute(this.expression);
         this.sizeOf(this.expression);
+        this.#values = new Values(this.bytes, this.maxSize);
     }
     get isSequence () {
         return this.engines.typeOf.isSequence;
@@ -98,8 +101,10 @@ module.exports = class Sequence {
         } else {
             this.size = size;
         }
+        this.engines.sizeOf.updateMaxSizeWithPadingSize(this.paddingSize);
+        this.bytes = this.engines.sizeOf.getMaxBytes();
         if (Debug.active) console.log(['SIZE', this.size]);
-        return this.size;
+        return this.size; 
     }
     toList() {
         this.engines.toList.execute(this.expression);
@@ -119,12 +124,40 @@ module.exports = class Sequence {
         if (Debug.active) console.log(this.size);
         this.extendPos = 0;
         const [code, count] = this.engines.codeGen.execute(this.expression);
-        let __values = [];
-        const context = {__values}
+        const context = this.engines.codeGen.genContext();
+/*
+        // console.log('CODE', code);
+        let __dbuf = Buffer.alloc(this.size * this.bytes)
+        let context = {__dbuf, __dindex: 0};
+        let __data; 
+        switch (this.bytes) {
+            case 1: __data = new Uint8Array(__dbuf.buffer, 0, this.size); break;
+            case 2: __data = new Uint16Array(__dbuf.buffer, 0, this.size); break;
+            case 4: __data = new Uint32Array(__dbuf.buffer, 0, this.size); break;
+            case 8: __data = new BigInt64Array(__dbuf.buffer, 0, this.size); break;
+        }
+        context.__data = __data;
+*/
         vm.createContext(context);
         vm.runInContext(code, context);
-        this.#values.__setValues(__values);
+        this.#values.__setValues(context.__dbuf, context.__data);
         this.#values.mutable = false;
+        /*
+        let irow = 0;
+        while (irow < this.size) {
+            let _values = ['@'+irow.toString(16).padStart(8, '0')];
+            for (let index = 0; index < 16; ++index) {
+                _values.push(this.#values.getValue(irow + index));
+                // _values.push(__data[irow + index]);
+            }
+            console.log(_values.join('|'));
+            irow += 16;            
+            if (irow === 272) {
+                console.log('....');
+                irow = this.size - 272;
+            }
+        }
+        console.log('(END)');*/
     }
     verify() {
         if (!assert.isEnabled) return;

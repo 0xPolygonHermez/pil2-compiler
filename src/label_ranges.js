@@ -40,6 +40,9 @@ module.exports = class LabelRanges {
             console.log(`[${range.from}-${range.to}] ${range.label}`);
         }
     }
+    toArray() {
+        return this.ranges;
+    }
 
     *[Symbol.iterator]() {
         for (let index = 0; index < this.ranges.length; ++index) {

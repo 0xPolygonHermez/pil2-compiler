@@ -505,6 +505,12 @@ module.exports = class ProtoOut {
         // check if an alone expression to use and translate its single operand
         if (hdata && typeof hdata.pack === 'function') {
             // console.log('HINT', typeof hdata.toString == 'function' ? hdata.constructor.name + ' ==> ' + hdata.toString() : hdata);
+            if (typeof hdata.evalAsValue === 'function') {
+                const value = hdata.evalAsValue();
+                if (value.isString) {
+                    return { stringValue: value.asString() };
+                }
+            }
             const expressionId = hdata.pack(options.packed, options);
             return { operand: { expression: { idx: expressionId } }};
         }

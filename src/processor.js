@@ -1129,7 +1129,8 @@ module.exports = class Processor {
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.labelRanges, 'fixed', info);
         if (airId == 0) {
-            this.proto.setSymbolsFromLabels(this.airGroupValues.labelRanges, 'airgroupvalue', {airGroupId});
+            
+            this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId), 'airgroupvalue', {airGroupId});
         }
         tmark = performance.now();
         console.log('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS TIME(ms):', tmark-tmark2);

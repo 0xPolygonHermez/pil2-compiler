@@ -33,7 +33,7 @@ airtemplate BinaryTable(int N = 2**22) {
 
     #pragma timer t1 end
     #pragma memory print
-ºº    #pragma timer t2 start
+    #pragma timer t2 start
     col fixed C;                                      // Output C   (8 bits)
     col fixed COUT;                                   // CarryOut   (1 bits)
     col fixed FLAGS;

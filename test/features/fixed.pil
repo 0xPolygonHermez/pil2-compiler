@@ -8,7 +8,8 @@ const int P2_19 = 2**19;
 airtemplate BinaryTable(int N = 2**22) {
     
     col witness multiplicity;
-
+    #pragma memory print
+    #pragma memory m1 start
     #pragma timer t1 start
     col fixed A = [0..255]...;                        // Input A    (8 bits)
 
@@ -31,10 +32,11 @@ airtemplate BinaryTable(int N = 2**22) {
 
 
     #pragma timer t1 end
+    #pragma memory print
+ºº    #pragma timer t2 start
     col fixed C;                                      // Output C   (8 bits)
     col fixed COUT;                                   // CarryOut   (1 bits)
     col fixed FLAGS;
-    int k = 0;
     // #pragma cache_fixed `tmp/binary_table.fixed.cache` C, COUT, FLAGS
     #pragma transpile
     for (int i = 0; i < N; i++) {
@@ -121,6 +123,9 @@ airtemplate BinaryTable(int N = 2**22) {
         COUT[i] = cout;
         FLAGS[i] = cout + 2 * USE_CARRY[i];
     }
+    #pragma timer t2 end
+    #pragma memory print
+    #pragma memory m1 end
 }
 
 airgroup Binary {

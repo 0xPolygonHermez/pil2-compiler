@@ -45,7 +45,6 @@ module.exports = class Transpiler {
 /*
         this.#values.__setValues(context.__dbuf, context.__data);
         this.#values.mutable = false;*/
-        EXIT_HERE;
         return code;
     }
     #transpile(st) {

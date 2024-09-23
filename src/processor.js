@@ -265,8 +265,8 @@ module.exports = class Processor {
                 debugger;
             }
             if (this.transpile) {
-                this.transpiler.transpile(st);
-                EXIT_HERE;
+                this.transpile = false;
+                return this.transpiler.transpile(st);
             } else {
                 res = this[method](st);
             }

@@ -62,6 +62,7 @@ module.exports = class Processor {
         this.scope.mark('proof');
         this.delayedCalls = {};
         this.timers = {};
+        this.memory = {};
 
         this.lastAirGroupId = -1;
         this.lastAirId = -1;
@@ -319,6 +320,23 @@ module.exports = class Processor {
                 }
                 break;
             }
+            case 'memory': {
+                const mem = process.memoryUsage();
+                if (params[1] === 'print') {
+                    return this.showMemory(mem);
+                }
+                const name = params[1] ?? false;
+                const action = params[2] ?? 'start';
+                if (action === 'start')  {
+                    this.memory[name] = mem;
+                } else if (action === 'end') {
+                    const start = this.memory[name] ?? mem;
+                    return this.showMemory(start, mem);
+                } else {
+                    throw new Error(`Invalid action ${action} on pragma memory`);
+                }
+                break;
+            }
             case 'debugger':
                 debugger;
                 break;  
@@ -335,6 +353,21 @@ module.exports = class Processor {
             }
         }
         
+    }
+    showMemory(m1, m2 = false) {
+        const prefix = m2 === false ? '' : '(diff) ';
+        const _m2 = m2 === false ? {} : m2;
+        console.log(prefix + `Memory RSS: ${this.getMB(m1.rss, m2.rss)} MB`);
+        console.log(prefix + `Heap Total: ${this.getMB(m1.heapTotal, m2.heapTotal)} MB`);
+        console.log(prefix + `Heap Used: ${this.getMB(m1.heapUsed, m2.heapUsed)} MB`);
+        console.log(prefix + `Extern Memory: ${this.getMB(m1.external, m2.external)} MB`);
+        console.log(prefix + `Array Buffers: ${this.getMB(m1.arrayBuffers, m2.arrayBuffers)} MB`);
+    }
+    getMB(m1,m2) {
+        if (typeof m2 === 'undefined') {
+            return Math.round(m1 / 1048576);
+        }
+        return Math.round((m2-m1) / 1048576);
     }
     execProof(st) {
         this.scope.pushInstanceType('proof');

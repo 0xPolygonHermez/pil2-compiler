@@ -1415,7 +1415,8 @@ module.exports = class Processor {
         return this.evaluateTemplate(text);
     }
 
-    evaluateTemplate(template) {
+    evaluateTemplate(template, options = {}) {  
+        console.log(options);
         const regex = /\${[^}]*}/gm;
         let m;
         let tags = [];

@@ -34,8 +34,9 @@ airtemplate BinaryTable(int N = 2**22) {
     col fixed C;                                      // Output C   (8 bits)
     col fixed COUT;                                   // CarryOut   (1 bits)
     col fixed FLAGS;
-
-    #pragma cache_fixed `tmp/binary_table.fixed.cache` C, COUT, FLAGS
+    int k = 0;
+    // #pragma cache_fixed `tmp/binary_table.fixed.cache` C, COUT, FLAGS
+    #pragma transpile
     for (int i = 0; i < N; i++) {
         int [plast, op, a, b, cin, c, cout] = [LAST[i], OP[i], A[i], B[i], CIN[i], 0, 0];
         switch (op) {
@@ -75,7 +76,7 @@ airtemplate BinaryTable(int N = 2**22) {
             case 0x08: // EQ,EQ_W
                 if (a == b && !cin) c = plast;
                 else cout = 1;
-                cout = plast ? !cout : cout;
+                cout = plast ? (1 - cout) : cout;
 
             case 0x09,0x0a: // MINU,MINU_W,MIN,MIN_W
                 if (a <= b) {

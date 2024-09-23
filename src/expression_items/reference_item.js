@@ -3,6 +3,7 @@ const Context = require('../context.js');
 const RowOffset = require('./row_offset.js');
 const ExpressionItem = require('./expression_item.js');
 const Debug = require('../debug.js');
+const util = require('util');   
 module.exports = class ReferenceItem extends RuntimeItem {
     constructor (name, indexes = [], rowOffset) {
         super();
@@ -24,7 +25,13 @@ module.exports = class ReferenceItem extends RuntimeItem {
     }
     toString(options) {
         const [pre,post] = this.getRowOffsetStrings();
-        return `${pre}${this.name}${this.indexes.length > 0 ? '*['+this.indexes.join(',')+']':''}${post}`;
+        const _indexes = [];
+        if (this.indexes.length) {
+            for (const index of this.indexes) {
+                _indexes.push(index.toString(options));
+            }
+        }
+        return `${pre}${this.name}${this.indexes.length > 0 ? '['+_indexes.join(',')+']':''}${post}`;
     }
     cloneInstance() {
         // console.log(JSON.stringify(this, (key, value) => typeof value === 'bigint' ? value.toString() : value));

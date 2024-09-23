@@ -1,5 +1,6 @@
 const ProofItem = require("./proof_item.js");
 const Context = require('../context.js');
+const fs = require('fs');
 // const Sequence = require("../sequence.js");
 module.exports = class FixedCol extends ProofItem {
     constructor (id) {
@@ -174,5 +175,25 @@ module.exports = class FixedCol extends ProofItem {
             cloned.sequence = this.sequence.clone();
         }
         return cloned;
+    }
+    dumpToFile(filename, bytes) {
+        console.log(`Dumping ${this.id} to ${filename} ......`);
+        if (bytes !== 1) {
+            throw new Error(`Invalid number of bytes ${bytes} for store fixed column ${this.id}`);    
+        }
+        const _values = this.sequence ? this.sequence.getValues() : this.values;
+
+        const buffer = Buffer.alloc(_values.length);
+        const values = new Uint8Array(buffer.buffer, 0, _values.length);
+        for (let i = 0; i < _values.length; ++i) {
+            values[i] = Number(_values[i]);
+        }
+    
+        // const buffer = Buffer.from(this.sequence.getValues());
+        fs.writeFileSync(filename, buffer, (err) => {
+            if (err) {
+                console.log(err);
+                throw new Error(`Error saving file ${filename}: ${err}`);
+            }});
     }
 }

@@ -284,7 +284,7 @@ module.exports = class Processor {
         return res;
     }
     execPragma(st) {
-        const params = st.value.split(/\s+/);
+        let params = st.value.split(/\s+/);
         const instr = params[0] ?? false;
         switch (instr) {
             case 'message':
@@ -343,6 +343,14 @@ module.exports = class Processor {
                 } else {
                     throw new Error(`Invalid action ${action} on pragma memory`);
                 }
+                break;
+            }
+            case 'fixed_dump':{
+                const name = params[1] ?? false;            
+                const filename = params[2] ?? false;
+                const bytes = {byte: 1, word: 2, dword: 4, lword: 4}[params[3]] ?? false;
+                console.log('dumping.....');
+                Context.references.getItem(name).definition.dumpToFile(filename, bytes);
                 break;
             }
             case 'debugger':

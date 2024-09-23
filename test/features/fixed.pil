@@ -33,6 +33,14 @@ airtemplate BinaryTable(int N = 2**22) {
 
     #pragma timer t1 end
     #pragma memory print
+
+    #pragma fixed_dump A dump_A.bin byte 
+    #pragma fixed_dump B dump_B.bin byte 
+    #pragma fixed_dump CIN dump_CIN.bin byte 
+    #pragma fixed_dump LAST dump_LAST.bin byte 
+    #pragma fixed_dump USE_CARRY dump_USE_CARRY.bin byte 
+    #pragma fixed_dump OP dump_OP.bin byte 
+
     #pragma timer t2 start
     col fixed C;                                      // Output C   (8 bits)
     col fixed COUT;                                   // CarryOut   (1 bits)
@@ -126,6 +134,10 @@ airtemplate BinaryTable(int N = 2**22) {
     #pragma timer t2 end
     #pragma memory print
     #pragma memory m1 end
+
+    #pragma fixed_dump C dump_C.bin byte 
+    #pragma fixed_dump COUT dump_COUT.bin byte 
+    #pragma fixed_dump FLAGS dump_FLAGS.bin byte 
 }
 
 airgroup Binary {

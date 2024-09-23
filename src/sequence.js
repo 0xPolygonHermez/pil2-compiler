@@ -142,4 +142,7 @@ module.exports = class Sequence {
     toString() {
         return this.#values.toString();
     }
+    getValues() {
+        return this.#values.getValues();
+    }
 }

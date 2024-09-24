@@ -82,4 +82,7 @@ module.exports = class Values {
         this.#buffer = buffer;
         this.#values = values;
     }
+    getBuffer() {
+        return this.#buffer;
+    }
 }

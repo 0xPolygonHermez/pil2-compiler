@@ -118,6 +118,10 @@ module.exports = class Indexable {
         if (assert.isEnabled) assert.typeOf(itemClass.createFrom, 'function', [this.type, this.constructor.name, itemClass, res, res.value]);
         return itemClass.createFrom(res.value, {id, instance: this});
     }
+    // get expression item to add in a expression
+    getDefinition(id, options = {}) {
+        return this.values[id];
+    }
 
     getLabel(id, options) {
         return this.labelRanges.getLabel(id, options);

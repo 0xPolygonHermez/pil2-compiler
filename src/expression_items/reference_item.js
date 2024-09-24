@@ -31,7 +31,7 @@ module.exports = class ReferenceItem extends RuntimeItem {
                 _indexes.push(index.toString(options));
             }
         }
-        return `${pre}${this.name}${this.indexes.length > 0 ? '['+_indexes.join(',')+']':''}${post}`;
+        return `${pre}${this.name}${this.indexes.length > 0 ? '['+_indexes.join('][')+']':''}${post}`;
     }
     cloneInstance() {
         // console.log(JSON.stringify(this, (key, value) => typeof value === 'bigint' ? value.toString() : value));

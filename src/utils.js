@@ -19,3 +19,14 @@ exports.getRoots = function getRoots(Fr) {
     for (let i=31; i>=0; i--) roots[i] = Fr.square(roots[i+1]);
     return roots;
 }
+
+exports.extractNameAndNumIndexes = function (s) {
+    if (typeof s === 'undefined') return false;
+    const pos = s.indexOf('[');
+    if (pos === -1) {
+        return [s, []];
+    }
+    const name = s.substring(0, pos);
+    const indexes = [...s.matchAll(/\[(\d+)\]/g)].map(match => parseInt(match[1]));
+    return [name, indexes];
+}

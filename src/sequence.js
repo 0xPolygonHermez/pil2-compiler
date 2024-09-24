@@ -68,6 +68,9 @@ module.exports = class Sequence {
         cloned.#values = this.#values.clone();
         return cloned;
     }
+    getIntValue(index) {
+        return this.#values.getValue(index);
+    }
     getValue(index) {
         return new IntValue(this.#values.getValue(index));
     }
@@ -177,5 +180,8 @@ module.exports = class Sequence {
     }
     getValues() {
         return this.#values.getValues();
+    }
+    getBuffer() {
+        return this.#values.getBuffer();
     }
 }

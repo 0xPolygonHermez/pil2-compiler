@@ -41,6 +41,7 @@ const Debug = require('./debug.js');
 const Transpiler = require('./transpiler.js');
 const assert = require('./assert.js');
 const { performance } = require('perf_hooks');
+const utils = require('./utils.js')
 
 const MAX_SWITCH_CASE_RANGE = 512;
 module.exports = class Processor {
@@ -137,6 +138,7 @@ module.exports = class Processor {
         this.airStack = [];
 
         this.sourceRef = '(init)';
+        this.nextFixedBytes = false;        
 
         if (config.proto === false) {
             this.proto = false;
@@ -283,6 +285,7 @@ module.exports = class Processor {
         }
         return res;
     }
+
     execPragma(st) {
         let params = st.value.split(/\s+/);
         const instr = params[0] ?? false;
@@ -313,7 +316,7 @@ module.exports = class Processor {
                 EXIT_HERE;
                 break;
             case 'timer': {
-                const name = params[1] ?? false;
+                const name = params[1] ?? false; 
                 const action = params[2] ?? 'start';
                 if (action === 'start')  {
                     this.timers[name] = Performance.now();
@@ -346,11 +349,20 @@ module.exports = class Processor {
                 break;
             }
             case 'fixed_dump':{
-                const name = params[1] ?? false;            
+                const [name, indexes] = utils.extractNameAndNumIndexes(params[1]);
                 const filename = params[2] ?? false;
                 const bytes = {byte: 1, word: 2, dword: 4, lword: 4}[params[3]] ?? false;
                 console.log('dumping.....');
-                Context.references.getItem(name).definition.dumpToFile(filename, bytes);
+                console.log(name, indexes, filename, bytes);
+                Context.references.getItem(name, indexes).definition.dumpToFile(filename, bytes);
+                break;
+            }
+            case 'fixed_size':{
+                const bytes = {byte: 1, word: 2, dword: 4, lword: 4}[params[1]] ?? false;
+                if (bytes === false) {
+                    throw new Error(`Invalid bytes ${params[1]} on pragma fixed_size (valid values: bytes, word, dword, lword) at ${Context.sourceRef}`);
+                }
+                this.nextFixedBytes = bytes;
                 break;
             }
             case 'debugger':
@@ -1237,7 +1249,12 @@ module.exports = class Processor {
                 if (seq.dump) seq.dump();
                 else console.log(seq);
             }
-            this.declareFullReference(colname, 'fixed', lengths, {global}, seq);
+            let data = {global};
+            if (this.nextFixedBytes !== false) {
+                data.bytes = this.nextFixedBytes;
+                this.nextFixedBytes = false;
+            }
+            this.declareFullReference(colname, 'fixed', lengths, data, seq);
         }
     }
     execDebugger(s) {

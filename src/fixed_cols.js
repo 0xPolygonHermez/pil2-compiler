@@ -8,8 +8,8 @@ module.exports = class FixedCols extends Indexable {
     constructor () {
         super('fixed', FixedCol, FixedColItem);
     }
-    getEmptyValue(id) {
-        return new FixedCol(id);
+    getEmptyValue(id, data) {
+        return new FixedCol(id, data);
     }
     setRowValue(id, row, value) {
         const item = this.get(id);

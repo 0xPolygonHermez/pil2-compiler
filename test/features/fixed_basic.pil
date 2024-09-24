@@ -11,9 +11,8 @@ airtemplate BinaryTable(int N = 2**22) {
     #pragma memory print
     #pragma memory m1 start
     #pragma timer t1 start
-    col fixed A[2];
-    A[0] = [0..255]...;                        // Input A    (8 bits)
-    A[1] = [0:P2_8..255:P2_8]...;              // Input B    (8 bits)
+    col fixed A = [0..255]...;                        // Input A    (8 bits)
+    col fixed B = [0:P2_8..255:P2_8]...;              // Input B    (8 bits)
 
     // col fixed _CIN = [[0:4..10:4]:4,[5:3..10:3]...];
 
@@ -34,25 +33,21 @@ airtemplate BinaryTable(int N = 2**22) {
     #pragma timer t1 end
     #pragma memory print
 
-    #pragma fixed_dump A[0] dump_A.bin byte 
-    #pragma fixed_dump A[1] dump_B.bin byte 
+    #pragma fixed_dump A dump_A.bin byte 
+    #pragma fixed_dump B dump_B.bin byte 
     #pragma fixed_dump CIN dump_CIN.bin byte 
     #pragma fixed_dump LAST dump_LAST.bin byte 
     #pragma fixed_dump USE_CARRY dump_USE_CARRY.bin byte 
     #pragma fixed_dump OP dump_OP.bin byte 
 
     #pragma timer t2 start
-    col fixed C[2];                                      // Output C   (8 bits)
-    // col fixed COUT;                                   // CarryOut   (1 bits)
+    col fixed C;                                      // Output C   (8 bits)
+    col fixed COUT;                                   // CarryOut   (1 bits)
     col fixed FLAGS;
 
-    int _col_cout_index = 1;
-    const int _col_c_index = 0;
-    // #pragma cache_fixed `tmp/binary_table.fixed.cache` C, COUT, FLAGS
-    int count = 0;
     #pragma transpile
     for (int i = 0; i < N; i++) {
-        int [plast, op, a, b, cin, c, cout] = [LAST[i], OP[i], A[0][i], A[1][i], CIN[i], 0, 0];
+        int [plast, op, a, b, cin, c, cout] = [LAST[i], OP[i], A[i], B[i], CIN[i], 0, 0];
         switch (op) {
             case 0x02: // ADD,ADD_W
                 c = (cin + a + b) & 0xFF;
@@ -127,29 +122,20 @@ airtemplate BinaryTable(int N = 2**22) {
 
             case 0x23: // EXT_32
                 c = (a & 0x80) ? 0xFF : 0x00;
-                println(`OPERATION: ${op}`, a, b, op);
 
             default:
                 error(`Invalid operation ${op}`);
         }
-        if (i % 2 == 0) {
-            for (int j = 0; j < 2; j++) {            
-                C[j][i] = j == 0 ? c : cout;
-            }   
-        } else {
-            C[_col_c_index][i] = c;
-            C[_col_cout_index][i] = cout;
-        }
+        C[i] = c;
+        COUT[i] = cout;
         FLAGS[i] = cout + 2 * USE_CARRY[i];
-        ++count;
     }
-    println(count);
     #pragma timer t2 end
     #pragma memory print
     #pragma memory m1 end
 
-    #pragma fixed_dump C[0] dump_C.bin byte 
-    #pragma fixed_dump C[1] dump_COUT.bin byte 
+    #pragma fixed_dump C dump_C.bin byte 
+    #pragma fixed_dump COUT dump_COUT.bin byte 
     #pragma fixed_dump FLAGS dump_FLAGS.bin byte 
 }
 

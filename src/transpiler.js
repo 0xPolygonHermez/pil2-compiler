@@ -1,10 +1,16 @@
 const ExpressionItems = require('./expression_items.js');
 const Expression = require('./expression.js');
 const Context = require('./context.js');
+const utils = require('./utils.js');
 const { util } = require('chai');
 const vm = require('node:vm');
 const Performance = require('perf_hooks').performance;
+const beautify = require('js-beautify').js;
 
+// TODO:
+// - scopes calls pop/up for inside variables
+// - external functions with limitations, used for built-in and user functions, currently only support error and println
+// - dynamic references, to be resolved in transpilation execution
 module.exports = class Transpiler {
     constructor(config = {}) {
         this.processor = config.processor;
@@ -12,40 +18,22 @@ module.exports = class Transpiler {
         this.currentScope = {};
         this.scopes = [];
         this.referenceIndex = 0;
-        this.context = {};
+        this.context = {error: (msg) => console.log('ERROR: '+msg),
+                        println: function () {console.log(...Object.values(arguments))}};
     }
-    transpile(st) {
-        console.log(st);
+    dumpCode(code) {
+        const lines = code.split('\n');
+        const nlines = lines.map((line, index) => `\x1B[35m${(index + 1).toString(10).padStart(4,'0')}:\x1B[0m ${line}`);
+        console.log('\n'+ nlines.join('\n'));
+    }
+    transpile(st, options = {}) {
         this.declared = {};
         const code = this.#transpile(st);
-        console.log(code);
-        const lines = code.split('\n');
-        const nlines = lines.map((line, index) => `${(index + 1).toString(10).padStart(4,'0')}: ${line}`);
-        console.log('\n'+ nlines.join('\n'));
-        // console.log(this.context);
-
-/*
-        // console.log('CODE', code);
-        let __dbuf = Buffer.alloc(this.size * this.bytes)
-        let context = {__dbuf, __dindex: 0};
-        let __data; 
-        switch (this.bytes) {
-            case 1: __data = new Uint8Array(__dbuf.buffer, 0, this.size); break;
-            case 2: __data = new Uint16Array(__dbuf.buffer, 0, this.size); break;
-            case 4: __data = new Uint32Array(__dbuf.buffer, 0, this.size); break;
-            case 8: __data = new BigInt64Array(__dbuf.buffer, 0, this.size); break;
-        }
-        context.__data = __data;
-*/
+        const _format_code = beautify(code, {wrap_line_length: 160});
+        if (true || options.debug) this.dumpCode(_format_code);
+        
         vm.createContext(this.context);
-        const t1 = Performance.now();
-        vm.runInContext(code, this.context);
-        const t2 = Performance.now();
-        console.log('Execution time: ' + (t2 - t1) + ' milliseconds');  
-/*
-        this.#values.__setValues(context.__dbuf, context.__data);
-        this.#values.mutable = false;*/
-        return code;
+        vm.runInContext(options.debug ? _format_code : code, this.context);
     }
     #transpile(st) {
         // console.log(st);
@@ -103,16 +91,16 @@ module.exports = class Transpiler {
                 for (const cvalue of _case.condition.values) {
                     cvalues.push(this.#toString(cvalue));
                 }
-                code += '\n\tcase '+cvalues.join(':\n\tcase ')+':\n';
+                code += '\ncase '+cvalues.join(':\ncase ')+':';
             } else if (_case.default) {
-                code += '\n\tdefault:\n';
+                code += '\ndefault:';
             } else {
                 console.log(_case);
                 EXIT_HERE;
             }
-            code += this.#transpile(_case.statements)+';\nbreak;\n';
+            code += this.#transpile(_case.statements)+';break;';
         }   
-        code += '}\n';
+        code += '}';
         return code;
     }
     #transpileExpr(st) {
@@ -129,8 +117,8 @@ module.exports = class Transpiler {
         for (const increment of st.increment) {
             cincrements.push(this.#transpile(increment));
         }
-        code += 'for ('+cinits.join()+';'+this.#toString(st.condition)+';'+cincrements.join()+')\n';
-        code += this.#braces(this.#transpile(st.statements)) + '\n';
+        code += 'for ('+cinits.join()+';'+this.#toString(st.condition)+';'+cincrements.join()+')';
+        code += this.#braces(this.#transpile(st.statements));
         return code;
     }
     #transpileVariableDeclaration(st) {
@@ -228,7 +216,7 @@ module.exports = class Transpiler {
         this.scopes.pop();
     }
     isDeclaredInsideTranspilation(name) {
-        console.log(`\x1B[42m ${name} \x1B[0m`);   
+        // console.log(`\x1B[42m ${name} \x1B[0m`);   
         if (typeof this.currentScope[name] !== 'undefined') {
             return true;
         }
@@ -242,17 +230,8 @@ module.exports = class Transpiler {
     #mapping(operand, options) {
         const name = operand.name;
         const dim = operand.indexes ? operand.indexes.length : 0;
-        console.log(operand);
         if (operand instanceof ExpressionItems.StringTemplate) {
             return '`'+ operand.value + '`';
-        }
-        if (typeof name === 'undefined') {
-            console.log(operand);
-        } else {
-            if (name === 'error') {
-                console.log(operand);
-            }
-            console.log(`\x1B[44m mapping \x1B[0m ${name}`);
         }
         if (this.isDeclaredInsideTranspilation(operand.name)) {
             // TODO: indexes
@@ -260,7 +239,7 @@ module.exports = class Transpiler {
         }
         const result = operand.toString(options);
         if (operand instanceof ExpressionItems.ReferenceItem) {
-            console.log(`\x1B[41m OPERAND \x1B[0m ${name}`, operand, result);
+            // console.log(`\x1B[41m OPERAND \x1B[0m ${name}`, operand, result);
             if (this.isDeclaredInsideTranspilation(operand.name)) {
                 // TODO: indexes
                 return result;
@@ -269,7 +248,7 @@ module.exports = class Transpiler {
             if (reference) {
                 return this.#mappingGetReference(name, reference, result, dim);
             }
-            console.log(reference);
+            // console.log(reference);
         }
         return result;
     }
@@ -282,48 +261,101 @@ module.exports = class Transpiler {
         return id;
     }
     #mappingGetReference(name, reference, result, dim) {
+        return this.#mappingReference(name, reference, result, dim, false);
+    }
+    #mappingReference(name, reference, result, dim, isSet, value) {
+        if (isSet && typeof value === 'undefined') {
+            throw new Error(`value not defined for set reference ${name}`);
+        }
+        const action = isSet ? 'set':'get';
         const isFixed = reference.instance.type === 'fixed';
+        const optionalValue = isSet ? value :'';
+        const extraArgValue = isSet ? `,${value}`:'';
         if (isFixed) {
-            if (dim === 1) {
-                const indexes = this.#extractIndexes(result);
+            const indexes = this.#extractIndexes(result);
+            console.log(`INDEXES ${name} ${result} ==>`, indexes);
+            if (dim == 1) {
                 let tref = this.createTranspiledObjectReference('fixed', name, reference.instance.getItem(reference.locator).definition);    
-                return tref+`.getRowValue(Number(${indexes.slice(1,-1)})).asInt()`
+                return tref+`.${action}RowValue(Number(${indexes[0]})${extraArgValue})`;
                 // return `getFixed('${name}'`+ (indexes === false ? ')':`,${indexes})`);
+            } if (dim == 2) {
+                if (typeof indexes[0] === 'number') {
+                    let tref = this.createTranspiledObjectReference('fixed', `${name}__${indexes[0]}__`, reference.getItem([indexes[0]]).definition);
+                    return tref+`.${action}RowValue(Number(${indexes[1]})${extraArgValue})`;
+                } else {
+                    const lindex = reference.array.getLength(0);
+                    if (lindex <= 32) {
+                        let references = [];
+                        for (let index = 0; index < lindex; ++index) {
+                            references.push(reference.getItem([index]).definition);
+                        }      
+                        let tref = this.createTranspiledObjectReference('fixed', name, references);
+                        return tref+`[${indexes[0]}].${action}RowValue(Number(${indexes[1]})${extraArgValue})`;
+                    }                    
+                }
+                
+                return `${action}FixedRow('${name}',${indexes[1]})[${indexes[2]}]`;
+            }
+        } else {
+            const type = reference.instance.type;
+            const isInt = type === 'int';
+            if (!isFixed && !isInt) {
+                throw new Error(`not supported (get) reference type ${reference.instance.type}`);
+            }
+
+            if (isInt && (reference.const || reference.name === 'N')) {
+                return reference.instance.get(reference.locator).getValue() + 'n';
+            }
+            if (dim == 0) {
+                const definition = reference.instance.getDefinition(reference.locator);
+                let tref = this.createTranspiledObjectReference(type, name, definition);
+                const _tmp = reference.getItem([]);
+                console.log(tref, definition, reference, definition, _tmp.constructor.name, _tmp);
+                return tref+`.${action}Value(${optionalValue})`;
+                // return `getFixed('${name}'`+ (indexes === false ? ')':`,${indexes})`);
+            } if (dim == 1) {
+                if (typeof indexes[0] === 'number') {
+                    const definition = reference.getItem([indexes[0]]).definition;
+                    let tref = this.createTranspiledObjectReference(type, `${name}__${indexes[0]}__`, definition);
+                    console.log(tref, definition);
+                    return tref+`.${action}Value(${optionalValue})`;
+                } else {
+                    const lindex = reference.array.getLength(0);
+                    if (lindex <= 32) {
+                        let references = [];
+                        for (let index = 0; index < lindex; ++index) {
+                            references.push(reference.getItem([index]).definition);
+                        }      
+                        let tref = this.createTranspiledObjectReference(type, name, references);
+                        return tref+`[${indexes[0]}].${action}Value(${optionalValue})`;
+                    }                    
+                }
             }
         }
-        const isInt = reference.instance.type === 'int';
-        if (!isFixed && !isInt) {
-            throw new Error(`not supported (get) reference type ${reference.instance.type}`);
-        }
-
-        if (isInt && (reference.const || reference.name === 'N')) {
-            return reference.instance.get(reference.locator).getValue() + 'n';
-        }
-        return `getReference('${name}','${reference.instance.type}','${reference.locator}')`;
+        // TODO: implement dynamicReference to resolve in traspilation execution
+        return `${action}DynamicReference('${name}','${reference.instance.type}',${reference.locator}${extraArgValue})`;
     }
     #mappingSetReference(name, reference, result, dim, value) {
-        const isFixed = reference.instance.type === 'fixed';
-        if (isFixed) {
-            if (dim === 1) {
-                const indexes = this.#extractIndexes(result);
-                let tref = this.createTranspiledObjectReference('fixed', name, reference.instance.getItem(reference.locator).definition);    
-                return tref+`.setRowValue(Number(${indexes.slice(1,-1)}), ${value})`
-            }
-        }
-        const isInt = reference.instance.type === 'int';
-        if (!isFixed && !isInt) {
-            throw new Error(`not supported (set) reference type ${reference.instance.type}`);
-        }
-
-        return `setReference('${name}','${reference.instance.type}','${reference.locator}, ${value})`;
+        return this.#mappingReference(name, reference, result, dim, true, value);
     }
-    #extractIndexes(result) {
-        if (typeof result === 'string') {
-            const pos = result.indexOf('[');
-            if (pos >= 0) {
-                return result.substring(pos);
+    #parseIndex(v) {
+        if (v.endsWith('n')) {
+            const _v = v.slice(0,-1);
+            if (!isNaN(_v)) {
+                return Number(_v);
             }
         }
-        return false;
+        return isNaN(v) ? v : Number(v);
+    }
+    #extractIndexes(s) {
+        const pos = s.indexOf('[');
+        if (pos === -1) {
+            return [s, []];
+        }
+        const name = s.substring(0, pos);
+        const indexes = [...s.substring(pos).matchAll(/\[([^\[]+)\]/g)].map(match => this.#parseIndex(match[1]));
+        console.log(s, name, indexes);
+        if (indexes.length === 0) return false;
+        return indexes;
     }
 }

@@ -147,7 +147,6 @@ module.exports = class Processor {
             this.proto.setupPilOut(Context.config.name ?? 'noname');
         }
 
-        this.transpiler = new Transpiler({processor: this});
         if (typeof Context.config.test.onProcessorInit === 'function') {
             Context.config.test.onProcessorInit(this);
         }
@@ -268,7 +267,8 @@ module.exports = class Processor {
             }
             if (this.transpile) {
                 this.transpile = false;
-                return this.transpiler.transpile(st);
+                const transpiler = new Transpiler({processor: this});
+                return transpiler.transpile(st);
             } else {
                 res = this[method](st);
             }

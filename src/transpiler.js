@@ -39,6 +39,7 @@ module.exports = class Transpiler {
         // console.log(st);
         switch(st.type) {
             case 'for': return this.#transpileFor(st);
+            case 'break': return this.#transpileBreak(st);
             case 'code': return this.#transpile(st.statements);
             case 'variable_declaration': return this.#transpileVariableDeclaration(st);
             case 'scope_definition': return this.#transpileScopeDefinition(st);
@@ -48,6 +49,9 @@ module.exports = class Transpiler {
             case 'if': return this.#transpileIf(st);
         }
         throw new Error(`not known how transpile ${st.type}`);
+    }
+    #transpileBreak(st) {
+        return 'break;'
     }
     #transpileIf(st) {
         let code = '';        

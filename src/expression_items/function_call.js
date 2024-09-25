@@ -32,7 +32,6 @@ module.exports = class FunctionCall extends RuntimeItem {
         return this.dump(options);
     }
     dumpArgument(argument, options = {}) {
-        console.log(argument, options);
         return options.map ? options.map(argument, options) : argument.toString(options);
     }
     dump(options) {

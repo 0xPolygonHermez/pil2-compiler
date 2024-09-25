@@ -74,7 +74,6 @@ class Expression extends ExpressionItem {
     get name() {
         if (this.isAlone()) {
             const operand = this.getAloneOperand();
-            console.log(operand);
             return operand.name || false;
         }
         return false;

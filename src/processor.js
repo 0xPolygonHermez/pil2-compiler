@@ -977,7 +977,7 @@ module.exports = class Processor {
             this.airGroups.define(name, airGroup);            
         }
         this.openAirGroup(airGroup);
-        this.execute(s.statements);
+        this.execute(s.statements); 
         this.suspendCurrentAirGroup();
     }
     setAirGroupBuiltIntConstants(airGroup) {
@@ -1474,7 +1474,6 @@ module.exports = class Processor {
     }
 
     evaluateTemplate(template, options = {}) {  
-        console.log(options);
         const regex = /\${[^}]*}/gm;
         let m;
         let tags = [];

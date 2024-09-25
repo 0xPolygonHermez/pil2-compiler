@@ -273,7 +273,6 @@ module.exports = class Transpiler {
         const extraArgValue = isSet ? `,${value}`:'';
         if (isFixed) {
             const indexes = this.#extractIndexes(result);
-            console.log(`INDEXES ${name} ${result} ==>`, indexes);
             if (dim == 1) {
                 let tref = this.createTranspiledObjectReference('fixed', name, reference.instance.getItem(reference.locator).definition);    
                 return tref+`.${action}RowValue(Number(${indexes[0]})${extraArgValue})`;
@@ -354,7 +353,6 @@ module.exports = class Transpiler {
         }
         const name = s.substring(0, pos);
         const indexes = [...s.substring(pos).matchAll(/\[([^\[]+)\]/g)].map(match => this.#parseIndex(match[1]));
-        console.log(s, name, indexes);
         if (indexes.length === 0) return false;
         return indexes;
     }

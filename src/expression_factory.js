@@ -157,7 +157,7 @@ module.exports = class ExpressionFactory {
         return res;
     }
     static _fromCast(obj) {
-        let res = new FunctionCall('cast', [obj.cast, obj.value], []);
+        let res = new FunctionCall('cast', [new StringValue(obj.cast), obj.value], []);
         delete obj.name;
         delete obj.cast;
         delete obj.value;

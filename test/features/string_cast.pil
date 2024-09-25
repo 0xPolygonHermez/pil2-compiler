@@ -1,0 +1,19 @@
+
+airtemplate Htc (int N = 2**8) {
+    col witness a,b;
+
+    expr f = 2*a + b;
+    println(f);
+    f === 0;
+
+    string text = string(f);
+    println(text);
+
+    text = string(100000000000000000000000000000000000);
+    println(text);
+}
+
+
+airgroup Htc2 {
+    Htc();
+}

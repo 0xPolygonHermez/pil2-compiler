@@ -1,0 +1,16 @@
+col witness w0,w1,  w2,w3;
+expr _a = 2 * w2;
+expr _b = 3 * w3;
+int sel = 0;
+#pragma debug on
+expr __res = sel ? w0  : 0 - _a;
+println(__res);
+/*
+int b = 1;
+
+expr __res = b ? w2 : 0 - w2;
+println(__res);
+
+b=0;
+__res = b ? w2 : 0 - w2;
+println(__res);*/

@@ -939,16 +939,63 @@ class Expression extends ExpressionItem {
 
         return false;
     }
+    cleanOrphanFromStack() {
+        const stackLen = this.stack.length;
+        if (stackLen === 0) return; 
 
+        // array with index the stack position and value to purge or not;
+        let purge = new Array(stackLen).fill(true);
+        let pending = [stackLen - 1];
+        let purgeCount = stackLen - 1;
+
+        // this block mark position to purge
+        while (pending.length > 0) {
+            const istack = pending.pop();
+            const st = this.stack[istack];
+            purge[istack] = false;
+            purgeCount--;
+            st.operands.filter(operand => operand instanceof ExpressionItems.StackItem).forEach(operand => {
+                const absPos = operand.getAbsolutePos(istack);
+                if (purge[absPos] !== true || pending.includes(absPos)) return;
+                pending.push(absPos);
+            });
+        }
+        
+        let translate = [];
+        let freeStackPos = 0;
+
+        for (let istack = 0; istack < stackLen; ++istack) {
+            if (purge[istack]) { 
+                translate[istack] = false;
+                continue;
+            }
+            const newPos = freeStackPos++;
+            translate[istack] = newPos
+            this.stack[newPos] = this.stack[istack];
+            this.stack[newPos].operands.filter(x => x instanceof ExpressionItems.StackItem).forEach(operand => {      
+                const newAbsolutePos = translate[operand.getAbsolutePos(istack)];
+                // assert newAbsolutePos(>0)
+                operand.setOffset(newPos - newAbsolutePos);
+            });
+        }
+        this.stack.splice(freeStackPos);
+    }
     // this method compact stack positions with one element where operation
     // was false, replace reference of this stack operation by directly value
     compactStack() {
+        if (Debug.active) this.dump('PRE-CLEAN');
+        this.cleanOrphanFromStack();
+        if (Debug.active) this.dump('POST-CLEAN');
+
         let tt = new TranslationTable();
         let newStackIndex = 0;
         let stackLen = this.stack.length;
         if (Debug.active) this.dump('PRE-COMPACTSTACK');
 
+
         // mark alone stack positions to purge and renumerate no purged positions
+        // CAUTION: when exists a ternary operation, could be some stack positions to
+        // ignore. To avoid this, first of all need to clean non "orphan"
         for (let istack = 0; istack < stackLen; ++istack) {
             const st = this.stack[istack];
             if (st.op === false) {

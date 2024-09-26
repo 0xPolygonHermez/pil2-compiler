@@ -4,10 +4,17 @@ module.exports = class TranslationTable {
     constructor () {
         this.values = [];
     }
+    initWithAllToPurge(originalLength, purge) {        
+        let nextNewPos = 0;
+        for (let pos = 0; pos < originalLength; ++pos) {
+            if (purge[pos]) this.savePurge(pos);
+            else this.translate(pos, nextNewPos++);
+        }
+    }
     translate(pos, newPos) {
         this.values[pos] = {newPos, operand: false, purge: false};
     }
-    savePurge(pos, operand) {
+    savePurge(pos, operand = false) {
         this.values[pos] = {newPos: false, operand, purge: true};
     }
     copyPurge(pos, sourcePos) {

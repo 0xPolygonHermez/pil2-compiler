@@ -1,9 +1,12 @@
 col witness w0,w1,  w2,w3;
 expr _a = 2 * w2;
 expr _b = 3 * w3;
+
+assert(string(_a) == "2 * w2");
+assert(string(_b) == "3 * w3");
+
 int sel = 0;
-#pragma debug on
-expr __res = sel ? w0  : 0 - _a;
+expr __res = sel ? _a : 0 - _b;
 println(__res);
 /*
 int b = 1;

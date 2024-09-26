@@ -2,18 +2,17 @@ col witness w0,w1,  w2,w3;
 expr _a = 2 * w2;
 expr _b = 3 * w3;
 
-assert(string(_a) == "2 * w2");
-assert(string(_b) == "3 * w3");
+assert_eq(string(_a), "2 * w2");
+assert_eq(string(_b), "3 * w3");
 
 int sel = 0;
-expr __res = sel ? _a : 0 - _b;
-println(__res);
-/*
-int b = 1;
+expr _res = sel ? _a : 0 - _b;
+assert_eq(string(_res), "0 - 3 * w3");
 
-expr __res = b ? w2 : 0 - w2;
-println(__res);
+sel = 1;
+_res = _res + (sel ? _a : 0 - _b);
+assert_eq(string(_res), "0 - 3 * w3 + 2 * w2");
 
-b=0;
-__res = b ? w2 : 0 - w2;
-println(__res);*/
+sel = 0;
+_res = sel ? _a : - _b; 
+assert_eq(string(_res), "-(3 * w3)");

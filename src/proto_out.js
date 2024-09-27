@@ -503,6 +503,16 @@ module.exports = class ProtoOut {
     toHintField(hdata, options = {}) {
         const path = options.path ?? '';
         // check if an alone expression to use and translate its single operand
+        if (hdata && hdata.isArray) {
+            hdata = hdata.getAloneOperand().toArrays();
+        }
+        if (Array.isArray(hdata)) {
+            let result = [];
+            for (let index = 0; index < hdata.length; ++index) {
+                result.push(this.toHintField(hdata[index], {...options, path: path + '[' + index + ']'}));
+            }
+            return { hintFieldArray: { hintFields: Array.isArray(result) ? result : [result] }};
+        }
         if (hdata && typeof hdata.pack === 'function') {
             // console.log('HINT', typeof hdata.toString == 'function' ? hdata.constructor.name + ' ==> ' + hdata.toString() : hdata);
             if (typeof hdata.evalAsValue === 'function') {
@@ -521,13 +531,6 @@ module.exports = class ProtoOut {
                 options.hints.getPackedExpressionId(hdata.id, options.packed, options);
             }
             return { operand: { expression: { idx: expressionId } }};
-        }
-        if (Array.isArray(hdata)) {
-            let result = [];
-            for (let index = 0; index < hdata.length; ++index) {
-                result.push(this.toHintField(hdata[index], {...options, path: path + '[' + index + ']'}));
-            }
-            return { hintFieldArray: { hintFields: Array.isArray(result) ? result : [result] }};
         }
         if (typeof hdata === 'bigint' || typeof hdata === 'number') {
             return { operand: {constant: { value: this.bint2buf(BigInt(hdata))}} }

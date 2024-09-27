@@ -418,7 +418,7 @@ module.exports = class Processor {
         this.scope.pop();
         --this.functionDeep;
         this.callstack.pop();
-        if (Debug.active) console.log(`END CALL ${func.name}`, res);
+        if (Debug.active) console.log(`END CALL ${func.name}`);
     }
     executeFunctionCall(name, callinfo, options = {}) {
         const func = this.builtIn[name] ?? this.references.get(name);

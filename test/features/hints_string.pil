@@ -9,6 +9,11 @@ airtemplate Hints(int N = 2**16) {
     @my_hint_with_string3 {value: `bug detected by ${svalue}`}
     @my_hint1 {gsum: gsum2 + 2}
     @my_hint3 {gsum: gsum}
+    string values[3];
+    values[0] = string(3);
+    values[1] = "three";
+    values[2] = "_3_";
+    @my_strings {values: values};
 }
 
 airgroup Hints {

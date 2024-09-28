@@ -5,6 +5,7 @@ const fs = require('fs');
 const util = require('util');
 const assert = require('./assert.js');
 const Context = require('./context.js');
+const StringValue = require('./expression_items/string_value.js');
 
 const MAX_CHALLENGE = 200;
 const MAX_STAGE = 20;
@@ -537,6 +538,9 @@ module.exports = class ProtoOut {
         }
         if (typeof hdata === 'string') {
             return { stringValue: hdata };
+        }
+        if (hdata instanceof StringValue) {
+            return { stringValue: hdata.asString() };
         }
         if (typeof hdata === 'object' && hdata.constructor.name === 'Object') {
             let result = [];

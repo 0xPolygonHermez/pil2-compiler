@@ -313,14 +313,12 @@ module.exports = class Transpiler {
                 const definition = reference.instance.getDefinition(reference.locator);
                 let tref = this.createTranspiledObjectReference(type, name, definition);
                 const _tmp = reference.getItem([]);
-                console.log(tref, definition, reference, definition, _tmp.constructor.name, _tmp);
                 return tref+`.${action}Value(${optionalValue})`;
                 // return `getFixed('${name}'`+ (indexes === false ? ')':`,${indexes})`);
             } if (dim == 1) {
                 if (typeof indexes[0] === 'number') {
                     const definition = reference.getItem([indexes[0]]).definition;
                     let tref = this.createTranspiledObjectReference(type, `${name}__${indexes[0]}__`, definition);
-                    console.log(tref, definition);
                     return tref+`.${action}Value(${optionalValue})`;
                 } else {
                     const lindex = reference.array.getLength(0);

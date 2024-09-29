@@ -4,7 +4,65 @@ const assert = require('../assert.js');
 const Context = require('../context.js');
 const SequenceBase = require('./base.js');
 
-module.exports = class SequenceFastCodeGen extends SequenceBase {
+/*
+    4 bytes: magic + (be) bytes_x_element + (bs) bytes_x_size + type + h_size (2 byte)
+    4 bytes: total_size (2+4 = 2^48=256TB)
+
+    FROM_TO|from|to|delta|times
+    FROM_TO_GEOM|from|to|ratio|times
+    PUT|n|value1|value2|...|valuen
+    REPEAT|last_elements|elements_repeated
+
+    # SHORTS
+
+    FROM_TO_DELTA_1|from|to|times
+    FROM_TO_TIMES_1|from|to|delta
+    FROM_TO_DELTA_TIMES_1|from|to
+
+    PUT1|value1
+    PUT2|value1|value2
+    :
+    PUT16|value1|value2|...|valuek
+
+    REPEAT1|elements_repeated
+ */
+
+module.exports = class SequenceCompression extends SequenceBase {
+    #stack;
+    constructor (parent, label, options = {}) { 
+        super(parent, label, options);
+        this.#stack = [];
+        this.short = options.short ?? true;
+    }
+    beginExecution() {
+        this.pos = 0;
+    }
+    endExecution(res) {
+        if (this.#stack.length === 0) {
+            return res;
+        }
+        return [res[0]  + this.flushStack(), res[1]];
+    }
+    put(op, values, flushStack = true) {
+        let code = '';
+        if (flushStack && this.#stack.length > 0) {
+            code += this.flushStack();
+        }
+        // const res = code + op + `#${this.pos++}|` + values.join('|') + '\n';
+        return code + op + '|' + values.join('|') + '\n';
+    }
+    flushStack() {
+        let code = '';
+        const count = this.#stack.length;
+        for(const value of this.#stack) {
+            code += '|' + value;
+        }
+        this.#stack = [];
+        if (count <= 16) {
+            return `PUT${count}`+code+'\n';
+        }
+        return `PUT|${count}` + code + '\n';
+    }
     fromTo(fromValue, toValue, delta, times, operation = '+') {
         let count = 0;
         if (toValue === false) {            
@@ -13,17 +71,22 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
         } else {
             count = this.calculateSingleCount(fromValue, toValue, delta, operation);
         }
+        const isGeometric = operation === '*' || operation === '/'; 
         count = times * count;
-        const v = this.createCodeVariable('_v');
-        const comparator = ((operation === '+' || operation === '*') && delta > 0n) ? '<=':'>=';
-        let code = `for(let ${v}=${fromValue}n;${v}${comparator}${toValue}n;${v}=${v}${delta > 0n? operation+delta:delta}n){`;
-        code += '__data[__dindex++] = ' + (this.bytes === 8 ? v : `Number(${v})`) + ';';
-        if (times > 1) {
-            const _code = this.#getCodeRepeatLastElements(1, times - 1);
-            code += _code;
+        if (isGeometric) {
+            return [this.put('FROM_TO_GEOM', [fromValue, toValue, delta, times]), count];
         }
-        code += '}\n';
-        return [code, count];
+        const defaultDelta = this.short && (delta !== 1n || delta !== -1n);
+        const defaultTimes = this.short && times === 1n;
+        if (defaultDelta) {
+            if (defaultTimes) {
+                return [this.put('FROM_TO_DELTA_TIMES_1', [fromValue, toValue]), count];
+            }
+            return [this.put('FROM_TO_DELTA_1', [fromValue, toValue, times]), count];
+        } else if (defaultTimes) {
+            return [this.put('FROM_TO_TIMES_1', [fromValue, toValue, delta]), count];
+        }
+        return [this.put('FROM_TO', [fromValue, toValue, delta, times]), count];
     }
 
     rangeSeq(e) {
@@ -56,13 +119,13 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
     }
     seqList(e) {
         let count = 0;
-        let code = e.values.length > 1 ? '{' : '';
+        let code = '';
         for(const value of e.values) {
             const [_code, _count] = this.insideExecute(value);
             count += _count;
             code += _code;
         }
-        return [code + (e.values.length > 1 ? '}' : ''), count];
+        return [code, count];
     }
     sequence(e) {
         return this.seqList(e);
@@ -70,7 +133,7 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
     paddingSeq(e) {        
         // TODO: if last element it's a padding, not need to fill and after when access to
         // a position applies an module over index.
-        const [_code, seqSize] = this.insideExecute(e.value);        
+        const [code, seqSize] = this.insideExecute(e.value);        
         let remaingValues = this.paddingSize - seqSize;
         if (remaingValues < 0) {
             throw new Error(`In padding range must be space at least for one time sequence [paddingSize(${this.paddingSize}) - seqSize(${seqSize}) = ${remaingValues}] at ${this.debug}`);
@@ -79,67 +142,34 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
             throw new Error(`Sequence must be at least one element at ${this.debug}`);
         }
         if (remaingValues === 0) {
-            return [_code, seqSize];
+            return [code, seqSize];
         }
-        let code = `{${_code}`;
-        if (remaingValues > 0) {
-            const v1 = this.createCodeVariable();
-            const base = this.createCodeVariable('_b');
-            code += this.#getCodeRepeatLastElements(seqSize, remaingValues);
-        }
-        code += '}\n';
-        return [code, seqSize + remaingValues];
+        return [code + (remaingValues > 0 ? this.#getCodeRepeatLastElements(seqSize, remaingValues): ''),
+                seqSize + remaingValues];
+    }
+    #pushElement(value) {
+        this.#stack.push(value);
     }
     expr(e) {        
-        // no cache
-        const num = this.e2num(e);
-        const type = this.bytes === 8 ? 'n' :''
-        return [`__data[__dindex++] = ${num}${type};\n`, 1];
-    }
-    createCodeVariable(prefix = '_i') {
-        const index = (this.varIndex ?? 0) + 1;
-        this.varIndex = index;
-        return prefix + index;
-    }
-    byBytes(value) {
-        if (this.bytes === 1) return value;
-        return `(${value}) * ${this.bytes}`
+        this.#pushElement(this.e2num(e));
+        return ['', 1];
     }
     #getCodeRepeatLastElements(count, rlen) {
         // count is the number of elements sequence to repeat
         // rlen is the number of elements to repeteat (ex: rlen = count * times)
-        // data.fill(data.slice(3, 9), 9, 9 + 50000 * 6);
-        if (this.bytes === 1) {
-            return `__dbuf.fill(__dbuf.slice(__dindex - ${count}, __dindex), __dindex, __dindex + ${rlen}); __dindex += ${rlen};`;
+        if (this.short && count === 1) {
+            return this.put('REPEAT1', [rlen]);
         }
-        return `__dbuf.fill(__dbuf.slice((__dindex - ${count})*${this.bytes}, __dindex*${this.bytes}),`+
-               ` __dindex*${this.bytes}, (__dindex + ${rlen})*${this.bytes}); __dindex += ${rlen}*${this.bytes};`;
+        return this.put('REPEAT',[count,rlen]);
     }
     repeatSeq(e) {
-        // TODO, review cache problems.
-        // if (!e.__cache) {
         const times = Number(this.e2num(e.times));
         const [_code, _count] = this.insideExecute(e.value);
         if (times === 1) {
             return [_code, _count];
         }
-        const v = this.createCodeVariable();
-        const code = '{' + _code +';'+this.#getCodeRepeatLastElements(_count, (times-1) * _count) + '}';
+        const code = _code + this.#getCodeRepeatLastElements(_count, (times-1) * _count);
         const count = _count * times;
         return [code, count];
-        //     e.__cache = [code, count];
-        // }
-        // return e.__cache;    
-    }
-    genContext() {
-        let __dbuf = Buffer.alloc(this.size * this.bytes)
-        let context = {__dbuf, __dindex: 0};
-        switch (this.bytes) {
-            case 1: context.__data = new Uint8Array(__dbuf.buffer, 0, this.size); break;
-            case 2: context.__data = new Uint16Array(__dbuf.buffer, 0, this.size); break;
-            case 4: context.__data = new Uint32Array(__dbuf.buffer, 0, this.size); break;
-            case 8: context.__data = new BigInt64Array(__dbuf.buffer, 0, this.size); break;
-        }
-        return context;
     }
 }

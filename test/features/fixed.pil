@@ -30,6 +30,8 @@ airtemplate BinaryTable(int N = 2**22) {
     col fixed OP = [2:P2_18..12:P2_18,
                     32:P2_17..35:P2_17]...;
 
+    col fixed OP2 = [1,2,3,4,5]:20...;
+
 
     #pragma timer t1 end
     #pragma memory print
@@ -127,7 +129,6 @@ airtemplate BinaryTable(int N = 2**22) {
 
             case 0x23: // EXT_32
                 c = (a & 0x80) ? 0xFF : 0x00;
-                println(`OPERATION: ${op}`, a, b, op);
 
             default:
                 error(`Invalid operation ${op}`);

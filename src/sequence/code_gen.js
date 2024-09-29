@@ -58,7 +58,7 @@ module.exports = class SequenceCodeGen extends SequenceBase {
         let count = 0;
         let code = e.values.length > 1 ? '{' : '';
         for(const value of e.values) {
-            const [_code, _count] = this.execute(value);
+            const [_code, _count] = this.insideExecute(value);
             count += _count;
             code += _code;
         }
@@ -70,7 +70,7 @@ module.exports = class SequenceCodeGen extends SequenceBase {
     paddingSeq(e) {        
         // TODO: if last element it's a padding, not need to fill and after when access to
         // a position applies an module over index.
-        const [_code, seqSize] = this.execute(e.value);        
+        const [_code, seqSize] = this.insideExecute(e.value);        
         let remaingValues = this.paddingSize - seqSize;
         if (remaingValues < 0) {
             throw new Error(`In padding range must be space at least for one time sequence [paddingSize(${this.paddingSize}) - seqSize(${seqSize}) = ${remaingValues}] at ${this.debug}`);
@@ -103,7 +103,7 @@ module.exports = class SequenceCodeGen extends SequenceBase {
     repeatSeq(e) {
         if (!e.__cache) {
             const times = this.e2num(e.times);
-            const [_code, _count] = this.execute(e.value);
+            const [_code, _count] = this.insideExecute(e.value);
             const v = this.createCodeVariable();
             const code = `for (let ${v}=0;${v}<${times};++${v}){${_code}}`;
             const count = _count * Number(times);

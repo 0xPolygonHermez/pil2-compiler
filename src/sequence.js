@@ -10,6 +10,7 @@ const SequenceFastCodeGen = require('./sequence/fast_code_gen.js');
 const SequenceExtend = require('./sequence/extend.js');
 const SequenceToList = require('./sequence/to_list.js');
 const SequenceTypeOf = require('./sequence/type_of.js');
+const SequenceCompression = require('./sequence/compression.js');
 const IntValue = require('./expression_items/int_value.js');
 const ExpressionList = require('./expression_items/expression_list.js');
 
@@ -49,7 +50,8 @@ module.exports = class Sequence {
                                                     // : new SequenceCodeGen(this, 'codeGen'),
             extend: new SequenceExtend(this, 'extend', options),
             toList: new SequenceToList(this, 'toList', options),
-            typeOf: new SequenceTypeOf(this, 'typeOf')
+            typeOf: new SequenceTypeOf(this, 'typeOf'),
+            compression: new SequenceCompression(this, 'compression')
         };
         this.engines.typeOf.execute(this.expression);
         this.sizeOf(this.expression);
@@ -123,8 +125,9 @@ module.exports = class Sequence {
         this.paddingCycleSize = size;
         return this.paddingCycleSize;
     }
-    extend() {
+    extend() {        
         if (Debug.active) console.log(this.size);
+        console.log(this.engines.compression.execute(this.expression)[0]);
         this.extendPos = 0;
         const [code, count] = this.engines.codeGen.execute(this.expression);
         const context = this.engines.codeGen.genContext();

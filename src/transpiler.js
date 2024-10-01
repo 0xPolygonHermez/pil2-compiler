@@ -32,7 +32,7 @@ module.exports = class Transpiler {
         const logfile = options.logfile ?? false;
         let _log = false;
         if (logfile) {
-            const bufsize = 10*1024*1024; // 10MB
+            const bufsize = options.bufsize ?? 16*1024*1024; // 10MB
             const logfd = fs.openSync(logfile, 'w');
             _log = { size: 0, fd: logfd, bufsize: bufsize, buffer: Buffer.alloc(bufsize), bufpos: 0, logfile };
             this.context._log = _log;
@@ -40,7 +40,7 @@ module.exports = class Transpiler {
             this.context.log = function () {
                 const data = Object.values(arguments).join(' ')+'\n';
                 const datalen = data.length;
-                if (_log.bufpos - _log.bufsize < (datalen - 1024)) {
+                if ((_log.bufpos - _log.bufsize) < (datalen + 1024)) {
                     const bytes = fs.writeSync(_log.fd, _log.buffer, 0, _log.bufpos);
                     _log.size += bytes;
                     _log.bufpos = 0;

@@ -32,7 +32,7 @@ module.exports = class SequenceCompression extends SequenceBase {
     constructor (parent, label, options = {}) { 
         super(parent, label, options);
         this.#stack = [];
-        this.short = options.short ?? true;
+        this.short = options.short ?? false;
     }
     beginExecution() {
         this.pos = 0;
@@ -58,7 +58,7 @@ module.exports = class SequenceCompression extends SequenceBase {
             code += '|' + value;
         }
         this.#stack = [];
-        if (count <= 16) {
+        if (this.short && count <= 16) {
             return `PUT${count}`+code+'\n';
         }
         return `PUT|${count}` + code + '\n';

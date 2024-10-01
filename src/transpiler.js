@@ -6,6 +6,7 @@ const { util } = require('chai');
 const vm = require('node:vm');
 const Performance = require('perf_hooks').performance;
 const beautify = require('js-beautify').js;
+const fs = require('fs');
 
 // TODO:
 // - scopes calls pop/up for inside variables
@@ -19,7 +20,8 @@ module.exports = class Transpiler {
         this.scopes = [];
         this.referenceIndex = 0;
         this.context = {error: (msg) => console.log('ERROR: '+msg),
-                        println: function () {console.log(...Object.values(arguments))}};
+                        println: function () { console.log(...Object.values(arguments));}
+                    };
     }
     dumpCode(code) {
         const lines = code.split('\n');
@@ -27,6 +29,28 @@ module.exports = class Transpiler {
         console.log('\n'+ nlines.join('\n'));
     }
     transpile(st, options = {}) {
+        const logfile = options.logfile ?? false;
+        let _log = false;
+        if (logfile) {
+            const bufsize = 10*1024*1024; // 10MB
+            const logfd = fs.openSync(logfile, 'w');
+            _log = { size: 0, fd: logfd, bufsize: bufsize, buffer: Buffer.alloc(bufsize), bufpos: 0, logfile };
+            this.context._log = _log;
+            this.context.fs = fs;
+            this.context.log = function () {
+                const data = Object.values(arguments).join(' ')+'\n';
+                const datalen = data.length;
+                if (_log.bufpos - _log.bufsize < (datalen - 1024)) {
+                    const bytes = fs.writeSync(_log.fd, _log.buffer, 0, _log.bufpos);
+                    _log.size += bytes;
+                    _log.bufpos = 0;
+                }
+                const bytes = _log.buffer.write(data, _log.bufpos, 'utf8');
+                _log.bufpos += bytes;
+            }
+        } else {
+            this.context.log = (msg) => {};
+        }
         this.declared = {};
         const code = this.#transpile(st);
         const _format_code = beautify(code, {wrap_line_length: 160});
@@ -34,6 +58,15 @@ module.exports = class Transpiler {
         
         vm.createContext(this.context);
         vm.runInContext(options.debug ? _format_code : code, this.context);
+
+        if (_log !== false) {    
+            if (_log.bufpos > 0) {
+                const bytes = fs.writeSync(_log.fd, _log.buffer, 0, _log.bufpos);
+                _log.size += bytes;
+            }
+            fs.closeSync(_log.fd);
+            console.log(`has written ${_log.size} bytes to ${_log.logfile}`);
+        }
     }
     #transpile(st) {
         // console.log(st);

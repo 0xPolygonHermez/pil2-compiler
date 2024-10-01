@@ -143,6 +143,7 @@ airtemplate BinaryTable(int N = 2**22) {
         }
         FLAGS[i] = cout + 2 * USE_CARRY[i];
         ++count;
+        println("{},{},{},{},{},{},{}", a, b, c, cout);
     }
     println(count);
     #pragma timer t2 end

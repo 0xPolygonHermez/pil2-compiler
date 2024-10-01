@@ -139,6 +139,7 @@ module.exports = class Processor {
 
         this.sourceRef = '(init)';
         this.nextFixedBytes = false;        
+        this.nextTemporalFixed = false;
 
         if (config.proto === false) {
             this.proto = false;
@@ -365,6 +366,10 @@ module.exports = class Processor {
                     throw new Error(`Invalid bytes ${params[1]} on pragma fixed_size (valid values: bytes, word, dword, lword) at ${Context.sourceRef}`);
                 }
                 this.nextFixedBytes = bytes;
+                break;
+            }
+            case 'fixed_tmp':{
+                this.nextTemporalFixed = true;
                 break;
             }
             case 'debugger':
@@ -1193,7 +1198,7 @@ module.exports = class Processor {
         console.log('PROTO-AIRGROUP-OUT-BEGIN-CONSTRAINTS TIME(ms):', tmark2-tmark);
         const info = {airId, airGroupId};
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
-        this.proto.setSymbolsFromLabels(this.fixeds.labelRanges, 'fixed', info);
+        this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
         if (airId == 0) {
             
             this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId), 'airgroupvalue', {airGroupId});
@@ -1267,6 +1272,11 @@ module.exports = class Processor {
                 data.bytes = this.nextFixedBytes;
                 this.nextFixedBytes = false;
             }
+            if (this.nextTemporalFixed !== false) {
+                data.temporal = true;
+                this.nextFixedBytes = false;
+            }
+
             this.declareFullReference(colname, 'fixed', lengths, data, seq);
         }
     }

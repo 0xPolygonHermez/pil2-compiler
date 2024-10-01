@@ -77,8 +77,10 @@ airtemplate BinaryExtensionTable(const int N = 2**19, const int disable_fixed = 
     #pragma timer t2 start
 
     #pragma fixed_size dword
-    col fixed C0;                                           // Output C0  (32 bits)
+    col fixed C0;   
+                                        // Output C0  (32 bits)
     #pragma fixed_size dword
+    #pragma fixed_tmp
     col fixed C1;                                           // Output C1  (32 bits)
 
     #pragma transpile logfile:binary_extension_table.txt

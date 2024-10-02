@@ -139,6 +139,7 @@ module.exports = class Processor {
 
         this.sourceRef = '(init)';
         this.nextFixedBytes = false;        
+        this.nextTemporalFixed = false;
 
         if (config.proto === false) {
             this.proto = false;
@@ -268,7 +269,9 @@ module.exports = class Processor {
             if (this.transpile) {
                 this.transpile = false;
                 const transpiler = new Transpiler({processor: this});
-                return transpiler.transpile(st);
+                const res = transpiler.transpile(st, this.transpileOptions);
+                this.transpileOptions = {};
+                return res;
             } else {
                 res = this[method](st);
             }
@@ -365,11 +368,26 @@ module.exports = class Processor {
                 this.nextFixedBytes = bytes;
                 break;
             }
+            case 'fixed_tmp':{
+                this.nextTemporalFixed = true;
+                break;
+            }
             case 'debugger':
                 debugger;
                 break;  
             case 'transpile':
+                this.transpileOptions = {};
                 this.nextStatementTranspile = true;
+                for (let i = 1; i < params.length; ++i) {
+                    const pos = params[i].indexOf(':');
+                    if (pos < 0) {
+                        this.transpileOptions[params[i]] = true;
+                    } else {
+                        const key = params[i].substr(0, pos);
+                        const value = params[i].substr(pos+1);                        
+                        this.transpileOptions[key] = value;
+                    }
+                }
                 break;
             case 'fixed':
                 this.nextStatementFixed = true;
@@ -1180,7 +1198,7 @@ module.exports = class Processor {
         console.log('PROTO-AIRGROUP-OUT-BEGIN-CONSTRAINTS TIME(ms):', tmark2-tmark);
         const info = {airId, airGroupId};
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
-        this.proto.setSymbolsFromLabels(this.fixeds.labelRanges, 'fixed', info);
+        this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
         if (airId == 0) {
             
             this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId), 'airgroupvalue', {airGroupId});
@@ -1254,6 +1272,11 @@ module.exports = class Processor {
                 data.bytes = this.nextFixedBytes;
                 this.nextFixedBytes = false;
             }
+            if (this.nextTemporalFixed !== false) {
+                data.temporal = true;
+                this.nextFixedBytes = false;
+            }
+
             this.declareFullReference(colname, 'fixed', lengths, data, seq);
         }
     }

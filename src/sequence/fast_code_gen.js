@@ -19,7 +19,7 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
         let code = `for(let ${v}=${fromValue}n;${v}${comparator}${toValue}n;${v}=${v}${delta > 0n? operation+delta:delta}n){`;
         code += '__data[__dindex++] = ' + (this.bytes === 8 ? v : `Number(${v})`) + ';';
         if (times > 1) {
-            const _code = this.#getCodeRepeatLastBytes(1, times - 1);
+            const _code = this.#getCodeRepeatLastElements(1, times - 1);
             code += _code;
         }
         code += '}\n';
@@ -58,7 +58,7 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
         let count = 0;
         let code = e.values.length > 1 ? '{' : '';
         for(const value of e.values) {
-            const [_code, _count] = this.execute(value);
+            const [_code, _count] = this.insideExecute(value);
             count += _count;
             code += _code;
         }
@@ -70,7 +70,7 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
     paddingSeq(e) {        
         // TODO: if last element it's a padding, not need to fill and after when access to
         // a position applies an module over index.
-        const [_code, seqSize] = this.execute(e.value);        
+        const [_code, seqSize] = this.insideExecute(e.value);        
         let remaingValues = this.paddingSize - seqSize;
         if (remaingValues < 0) {
             throw new Error(`In padding range must be space at least for one time sequence [paddingSize(${this.paddingSize}) - seqSize(${seqSize}) = ${remaingValues}] at ${this.debug}`);
@@ -85,7 +85,7 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
         if (remaingValues > 0) {
             const v1 = this.createCodeVariable();
             const base = this.createCodeVariable('_b');
-            code += this.#getCodeRepeatLastBytes(seqSize, remaingValues);
+            code += this.#getCodeRepeatLastElements(seqSize, remaingValues);
         }
         code += '}\n';
         return [code, seqSize + remaingValues];
@@ -105,7 +105,7 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
         if (this.bytes === 1) return value;
         return `(${value}) * ${this.bytes}`
     }
-    #getCodeRepeatLastBytes(count, rlen) {
+    #getCodeRepeatLastElements(count, rlen) {
         // count is the number of elements sequence to repeat
         // rlen is the number of elements to repeteat (ex: rlen = count * times)
         // data.fill(data.slice(3, 9), 9, 9 + 50000 * 6);
@@ -119,12 +119,12 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
         // TODO, review cache problems.
         // if (!e.__cache) {
         const times = Number(this.e2num(e.times));
-        const [_code, _count] = this.execute(e.value);
+        const [_code, _count] = this.insideExecute(e.value);
         if (times === 1) {
             return [_code, _count];
         }
         const v = this.createCodeVariable();
-        const code = '{' + _code +';'+this.#getCodeRepeatLastBytes(_count, (times-1) * _count) + '}';
+        const code = '{' + _code +';'+this.#getCodeRepeatLastElements(_count, (times-1) * _count) + '}';
         const count = _count * times;
         return [code, count];
         //     e.__cache = [code, count];

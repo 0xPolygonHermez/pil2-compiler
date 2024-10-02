@@ -32,4 +32,13 @@ module.exports = class FixedCols extends Indexable {
         }
         return item.getRowValue(row);
     }
+    getNonTemporalLabelRanges() {
+        let res = [];
+        for (const range of this.labelRanges) {
+            const from = range.from;
+            if (this.values[from].temporal) continue;
+            res.push(range);
+        }
+        return res;
+    }
 }

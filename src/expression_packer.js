@@ -81,6 +81,9 @@ module.exports = class ExpressionPacker {
 
         } else if (ope instanceof ExpressionItems.FixedCol) {
             // container.pushFixedCol(id, next ?? 0);
+            if (def.temporal) {
+                throw new Error(`Reference a temporal fixed column ${ope.label}`);
+            }
             this.container.pushFixedCol(id, ope.getRowOffset());
 
         } else if (ope instanceof ExpressionItems.Public) {

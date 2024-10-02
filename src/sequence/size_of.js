@@ -8,7 +8,7 @@ module.exports = class SequenceSizeOf extends SequenceBase {
     seqList(e) {
         let size = 0;
         for(const value of e.values) {
-            size += this.execute(value);
+            size += this.insideExecute(value);
         }
         return size
     }
@@ -19,10 +19,10 @@ module.exports = class SequenceSizeOf extends SequenceBase {
     repeatSeq(e) {
         const times = this.toNumber(Context.processor.getExprNumber(e.times));
         if (Debug.active) console.log(['times', times]);
-        return times  * this.execute(e.value);
+        return times  * this.insideExecute(e.value);
     }
     paddingSeq(e) {
-        const size = this.execute(e.value);
+        const size = this.insideExecute(e.value);
         return this.parent.setPaddingSize(size);
     }
     rangeSeq(e) {

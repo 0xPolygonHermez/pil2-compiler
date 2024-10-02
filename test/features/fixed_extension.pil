@@ -46,8 +46,8 @@ airtemplate BinaryExtensionTable(const int N = 2**19) {
     col fixed OFFSET = [[0:P2_14..(bytes-1):P2_14]:3,       // Offset     (3 bits)
                         [0:P2_8..(bytes-1):P2_8]:4]...;
 
-    col fixed OP = [13:P2_17..15:P2_17,                       // OP         (3 bits)
-                    36:P2_11..39:P2_11]...;
+    const int OP[N] = [13:P2_17..15:P2_17,                       // OP         (3 bits)
+                       36:P2_11..39:P2_11]...;
 
     #pragma timer t1 end
     #pragma memory print

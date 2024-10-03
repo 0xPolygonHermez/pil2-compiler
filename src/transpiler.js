@@ -116,7 +116,7 @@ module.exports = class Transpiler {
         return '{'+code+'}';
     }
     #toString(obj, options = {}) {
-        return obj.toString({...options, intsuffix: 'n', map: (operand, options) => this.#mapping(operand, options)});
+        return obj.toString({...options, allParentheses: true, intsuffix: 'n', map: (operand, options) => this.#mapping(operand, options)});
     }
     #transpileSwitchCase(st) {
         let code = 'switch ('+this.#toString(st.value)+') {\n';

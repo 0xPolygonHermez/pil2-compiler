@@ -1177,7 +1177,7 @@ class Expression extends ExpressionItem {
             console.log(st);
             TODO_EXIT
         }
-        if (parentPrecedence > operationInfo.precedence || (parentOperation === 'sub' && st.op !== 'mul')) {
+        if (options.allParentheses || parentPrecedence > operationInfo.precedence || (parentOperation === 'sub' && st.op !== 'mul')) {
             res = '(' + res + ')';
         }
         return res;

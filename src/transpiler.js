@@ -34,7 +34,7 @@ module.exports = class Transpiler {
     transpile(st, options = {}) {
         const logfile = options.logfile ?? false;
         let _log = false;
-        if (logfile) {
+        if (logfile && Context.config.logFile) {
             const bufsize = options.bufsize ?? 16*1024*1024; // 10MB
             const logfd = fs.openSync(logfile, 'w');
             _log = { size: 0, fd: logfd, bufsize: bufsize, buffer: Buffer.alloc(bufsize), bufpos: 0, logfile };

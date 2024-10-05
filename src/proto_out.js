@@ -308,7 +308,7 @@ module.exports = class ProtoOut {
             if (colIsPeriodic !== periodic) continue;
             if (col.temporal) continue; // ignore temporal columns, only use to help to create other fixed columns
             const _rows = periodic ? col.rows : rows;
-            console.log(`  >  Proto set ${col.id} ${col.constructor.name} ${_rows} ${colIsPeriodic}`);
+            console.log(`  > Proto setting ${periodic?'periodic':'fixed'} col ${col.id} ${_rows} ....`);
             this.fixedId2ProtoId[col.id] = [colType, airCols.length];
             let values = [];
             for (let irow = 0; irow < _rows; ++irow) {

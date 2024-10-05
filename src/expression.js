@@ -1186,7 +1186,8 @@ class Expression extends ExpressionItem {
         if (ope instanceof ExpressionItems.StackItem) {
             return this.stackPosToString(pos-ope.offset, parentOperation, options);
         }
-        return options.map ? options.map(ope, options) : `[${ope.constructor.name}]`+ope.toString(options);
+        // return options.map ? options.map(ope, options) : `[${ope.constructor.name}]`+ope.toString(options);
+        return options.map ? options.map(ope, options) : ope.toString(options);
     }
     pack(container, options) {
         const packer = new ExpressionPacker(container, this);

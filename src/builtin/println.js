@@ -6,7 +6,7 @@ module.exports = class Println extends Function {
         this.nargs = false;
     }
     exec(s, mapInfo) {
-        console.log(`\x1B[1;35mPRINTLN ${mapInfo.eargs.join(' ')}\x1B[0m`);
+        console.log(`\x1B[36m  > ${mapInfo.eargs.join(' ')}\x1B[0m`);
         return new IntValue(0);
     }
 }

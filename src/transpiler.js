@@ -26,7 +26,10 @@ module.exports = class Transpiler {
     dumpCode(code) {
         const lines = code.split('\n');
         const nlines = lines.map((line, index) => `\x1B[35m${(index + 1).toString(10).padStart(4,'0')}:\x1B[0m ${line}`);
-        console.log('\n'+ nlines.join('\n'));
+        console.log(`  > Transpiled code ${Context.sourceTag}`);
+        if (Context.config.debugTraspile) {
+            console.log('\n'+ nlines.join('\n'));
+        }
     }
     transpile(st, options = {}) {
         const logfile = options.logfile ?? false;
@@ -56,8 +59,11 @@ module.exports = class Transpiler {
         const _format_code = beautify(code, {wrap_line_length: 160});
         if (true || options.debug) this.dumpCode(_format_code);
         
+        const t1 = Performance.now();
         vm.createContext(this.context);
         vm.runInContext(options.debug ? _format_code : code, this.context);
+        const t2 = Performance.now();
+        console.log(`  > Traspilation execution time: ${Math.round((t2-t1) * 100)/100.0} ms`);
 
         if (_log !== false) {    
             if (_log.bufpos > 0) {
@@ -65,7 +71,7 @@ module.exports = class Transpiler {
                 _log.size += bytes;
             }
             fs.closeSync(_log.fd);
-            console.log(`has written ${_log.size} bytes to ${_log.logfile}`);
+            console.log(`  > written ${_log.size} bytes to ${_log.logfile}`);
         }
     }
     #transpile(st) {

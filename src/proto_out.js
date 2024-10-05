@@ -111,7 +111,7 @@ module.exports = class ProtoOut {
         this.Hint = this.root.lookupType('Hint');
     }
     setupPilOut(name) {
-        console.log('FR', this.Fr.p, this.toBaseField(this.Fr.p));
+        console.log('Prime Field', '\x1B[0;33m0x' + this.Fr.p.toString(16)+'\x1B[0m');
         this.pilOut = {
             name,
             baseField: this.toBaseField(this.Fr.p, 0, false),
@@ -128,8 +128,6 @@ module.exports = class ProtoOut {
         }
     }
     encode() {
-        this.updateSymbolsWithSameName();
-
         // fs.writeFileSync('tmp/pilout.pre.log', util.inspect(this.pilOut, false, null, false));
         let message = this.PilOut.fromObject(this.pilOut);
         // fs.writeFileSync('tmp/pilout.log', util.inspect(this.pilOut, false, null, false));
@@ -646,9 +644,6 @@ module.exports = class ProtoOut {
         const PilOut = root.lookupType('pilout.PilOut');
         console.log(PilOut);
         */
-    }
-    updateSymbolsWithSameName() {
-        console.log(this.pilOut.symbols.map(x => `${x.name}__${this.version >= 2 ? x.airGroupId:x.subproofId}${typeof x.airId === 'undefined' ? '':('__'+x.airId)}`));
     }
 }
 

@@ -127,43 +127,16 @@ module.exports = class Sequence {
     }
     extend() {        
         if (Debug.active) console.log(this.size);
-        console.log(this.engines.compression.execute(this.expression)[0]);
+        if (Context.config.debugCompress) {
+            console.log(this.engines.compression.execute(this.expression)[0]);
+        }
         this.extendPos = 0;
         const [code, count] = this.engines.codeGen.execute(this.expression);
         const context = this.engines.codeGen.genContext();
-/*
-        // console.log('CODE', code);
-        let __dbuf = Buffer.alloc(this.size * this.bytes)
-        let context = {__dbuf, __dindex: 0};
-        let __data; 
-        switch (this.bytes) {
-            case 1: __data = new Uint8Array(__dbuf.buffer, 0, this.size); break;
-            case 2: __data = new Uint16Array(__dbuf.buffer, 0, this.size); break;
-            case 4: __data = new Uint32Array(__dbuf.buffer, 0, this.size); break;
-            case 8: __data = new BigInt64Array(__dbuf.buffer, 0, this.size); break;
-        }
-        context.__data = __data;
-*/
         vm.createContext(context);
         vm.runInContext(code, context);
         this.#values.__setValues(context.__dbuf, context.__data);
         this.#values.mutable = false;
-        /*
-        let irow = 0;
-        while (irow < this.size) {
-            let _values = ['@'+irow.toString(16).padStart(8, '0')];
-            for (let index = 0; index < 16; ++index) {
-                _values.push(this.#values.getValue(irow + index));
-                // _values.push(__data[irow + index]);
-            }
-            console.log(_values.join('|'));
-            irow += 16;            
-            if (irow === 272) {
-                console.log('....');
-                irow = this.size - 272;
-            }
-        }
-        console.log('(END)');*/
     }
     verify() {
         if (!assert.isEnabled) return;

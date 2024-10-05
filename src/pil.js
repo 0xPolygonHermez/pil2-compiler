@@ -7,7 +7,7 @@ const compile = require("./compiler.js");
 const ffjavascript = require("ffjavascript");
 const tty = require('tty');
 const assert = require('./assert.js');
-const debugConsole = require('./debug_console.js').init();
+const debugConsole = require('./debug_console.js');
 
 const argv = require("yargs")
     .version(version)
@@ -22,6 +22,7 @@ const argv = require("yargs")
     .alias("l", "lib")
     .alias("f", "includePathFirst")
     .alias("a", "asserts")
+    .alias("O", "option")
     .argv;
 
 Error.stackTraceLimit = Infinity;
@@ -42,7 +43,6 @@ async function run() {
     const fileName = path.basename(fullFileName, ".pil");
 
     let config = typeof(argv.config) === "string" ? JSON.parse(fs.readFileSync(argv.config.trim())) : {};
-
 
     if (argv.output) {
         config.outputFile = argv.output;
@@ -84,6 +84,19 @@ async function run() {
     if (argv.includePathFirst) {
         config.includePathFirst = true;
     }
+    if (argv.option) {
+        const options = Array.isArray(argv.option) ? argv.option : [argv.option];
+        for (const option of options) {
+            const posEqual = option.indexOf('=');
+            const key = (posEqual > 0) ? option.substr(0, posEqual) : option;
+            const value = (posEqual > 0) ? option.substr(posEqual + 1) : true;
+            const camelCaseKey = key.replace(/-([a-z])/g, (m, chr) => chr.toUpperCase());
+            config[camelCaseKey] = value;
+        }
+    }
+    if (config.logLines) {
+        debugConsole.init();
+    }   
     const out = compile(F, fullFileName, null, config);
 }    
 

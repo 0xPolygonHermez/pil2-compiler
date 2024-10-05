@@ -42,6 +42,7 @@ const Transpiler = require('./transpiler.js');
 const assert = require('./assert.js');
 const { performance } = require('perf_hooks');
 const utils = require('./utils.js')
+const Chrono = require('./chrono.js');
 
 const MAX_SWITCH_CASE_RANGE = 512;
 module.exports = class Processor {
@@ -142,7 +143,7 @@ module.exports = class Processor {
         this.nextFixedBytes = false;        
         this.nextTemporalFixed = false;
 
-        if (config.proto === false) {
+        if (config.protoOut === false) {
             this.proto = false;
         } else {
             this.proto = new ProtoOut(this.Fr);
@@ -180,6 +181,7 @@ module.exports = class Processor {
         this.references.declare('AIR_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
     }
     startExecution(statements) {
+        const t1 = performance.now();
         this.sourceRef = '(start-execution)';
 
         this.declareBuiltInConstants();
@@ -191,12 +193,22 @@ module.exports = class Processor {
         this.finalProofScope();
         this.scope.popInstanceType();
         if (this.proto) {
+            console.log(`\nGenerating pilout (protobuf) ${Context.config.outputFile} .....`)
             const t1 = performance.now();
-            console.log('PROTO-OUT-BEGIN');
             this.generateProtoOut();
             const t2 = performance.now();
-            console.log('PROTO-OUT-END TIME(ms):', t2-t1);
+            if (fs.fileExistsSync(Context.config.outputFile)) {
+                const stats = fs.statSync(Context.config.outputFile);
+                if (stats.size < 10240*1024) {
+                    console.log(`  > Proto size: ${Math.round(stats.size / 1024)} KB`);
+                } else {
+                    console.log(`  > Proto size: ${Math.round(stats.size / 1024*1024)} MB`);
+                }                
+            }
+            console.log(`  > Proto time: ${Math.round((t2-t1) * 100)/100.0} ms`);
         }
+        const t2 = performance.now();
+        console.log(`  > Total compilation: ${Math.round((t2-t1) / 1000)} seconds`);
     }
     generateProtoOut()
     {        
@@ -332,7 +344,7 @@ module.exports = class Processor {
                     const start = this.timers[name] ?? now;
                     // const milliseconds = (now[0] - start[0]) * 1000 + Math.floor((now[1] - start[1])/1000000);
                     const milliseconds = (now - start);
-                    console.log(`=========================> TIMER ${name} ${Math.round(milliseconds * 100)/100.0} ms <===============================`);
+                    console.log(`  \x1B[36m> Timer ${name} ${Math.round(milliseconds * 100)/100.0} ms\x1B[0m`);
                 }
                 break;
             }
@@ -405,13 +417,14 @@ module.exports = class Processor {
         
     }
     showMemory(m1, m2 = false) {
-        const prefix = m2 === false ? '' : '(diff) ';
+        const concept = m2 === false ? 'use' : 'increment';
         const _m2 = m2 === false ? {} : m2;
-        console.log(prefix + `Memory RSS: ${this.getMB(m1.rss, m2.rss)} MB`);
-        console.log(prefix + `Heap Total: ${this.getMB(m1.heapTotal, m2.heapTotal)} MB`);
-        console.log(prefix + `Heap Used: ${this.getMB(m1.heapUsed, m2.heapUsed)} MB`);
-        console.log(prefix + `Extern Memory: ${this.getMB(m1.external, m2.external)} MB`);
-        console.log(prefix + `Array Buffers: ${this.getMB(m1.arrayBuffers, m2.arrayBuffers)} MB`);
+        console.log(`\x1B[36m  > Memory ${concept}: ${this.getMB(m1.rss, m2.rss)} MB\x1B[0m`);
+        // console.log(prefix + `Memory RSS: ${this.getMB(m1.rss, m2.rss)} MB`);
+        // console.log(prefix + `Heap Total: ${this.getMB(m1.heapTotal, m2.heapTotal)} MB`);
+        // console.log(prefix + `Heap Used: ${this.getMB(m1.heapUsed, m2.heapUsed)} MB`);
+        // console.log(prefix + `Extern Memory: ${this.getMB(m1.external, m2.external)} MB`);
+        // console.log(prefix + `Array Buffers: ${this.getMB(m1.arrayBuffers, m2.arrayBuffers)} MB`);
     }
     getMB(m1,m2) {
         if (typeof m2 === 'undefined') {
@@ -502,10 +515,13 @@ module.exports = class Processor {
         const res = this.processHintData(s.data);
         if (Debug.active) console.log(util.inspect(res, false, null, true));
         if (this.scopeType === 'proof') {
+            if (Context.config.logHints) console.log(`Define global hint \x1B[33m${name}\x1B[0m`)
             this.globalHints.define(name, res);
-            console.log(`defined a global hint ${name}`)
         }
-        else this.hints.define(name, res);
+        else {
+            if (Context.config.logHints) console.log(`  > define hint \x1B[33m${name}\x1B[0m`)            
+            this.hints.define(name, res);
+        }
     }
     processHintData(hdata) {
         if (hdata instanceof Expression) {
@@ -685,14 +701,9 @@ module.exports = class Processor {
                 const ms = tmark2 - tmark;
                 ttotal += ms;
                 tcount += 1;
-                console.log(`inside FOR ${this.sourceRef} index:${index} time(ms):${Math.trunc(tmark2-tmark)} avg(ms):${Math.trunc(ttotal/tcount)} total(s):${Math.trunc(ttotal/1000)}`);
+                console.log(`> inside loop ${this.sourceTag} index:${index} time(ms):${Math.trunc(tmark2-tmark)} avg(ms):${Math.trunc(ttotal/tcount)} total(s):${Math.trunc(ttotal/1000)}`);
                 tmark = tmark2;
-                // if (index == 10000) mesure = true;
             }
-            //if (mesure) { 
-            //    t[0] = performance.now(); 
-            //    t[1] = performance.now();
-            //}
             const loopCond = s.condition.eval().asBool();
             if (Debug.active) console.log('FOR.CONDITION', loopCond, s.condition.toString(), s.condition);
             if (!loopCond) break;
@@ -714,13 +725,12 @@ module.exports = class Processor {
             //    mesure = false;
             //}
         }
-        tmark = performance.now();
         if (large) {
-            console.log('OUT-OF-LARGE-FOR:' + Context.sourceRef)
+            const tend = performance.now();
+            console.log(`> total loop ${this.sourceTag} ${Math.round((tmark-tend) * 100)/100.0} ms`);
         }
         this.scope.pop();
         const tmark2 = performance.now();
-        console.log('BEFORE-RETURN/OUT-OF-LARGE-FOR:' + Context.sourceRef + ' time(ms):' + Math.trunc(tmark2-tmark));
         return this.clearLoopAbort(result);
     }
     clearLoopAbort(result) {
@@ -881,7 +891,7 @@ module.exports = class Processor {
     }
     execRequire(s) {
         const requireId = s.file.asString();
-        if (!s.contents) {
+        if (!s.contents && !this.loadedRequire[requireId]) {
             // TODO: check if sense use dynamic requires
             const sts = this.compiler.loadInclude(requireId, {preSrc: 'airtemplate __(int N=2**2) {\n', postSrc: '\n};\n'});
             if (sts === false) {
@@ -1083,7 +1093,6 @@ module.exports = class Processor {
         return air;
     }
     closeAir() {
-        console.log(`END AIR ${Context.airName} #${Context.air.id}`);
         this.airStack.pop();
         if (this.proto) this.proto.popAir();
         this.updateAir();
@@ -1107,6 +1116,8 @@ module.exports = class Processor {
         if (!airGroup) {
             throw new Exceptions.Runtime(`Instance airtemplate ${name} out of airgroup`);
         }
+        console.log(`\nAIR instance \x1B[33m${name}\x1B[0m in airgroup \x1B[33m${airGroup.name}\x1B[0m`);
+        const ti1 = performance.now();
         // airgroup was a function derivated class
         const mapinfo = this.prepareFunctionCall(airTemplateFunc, callinfo);
         airTemplateFunc.prepare(callinfo, mapinfo);
@@ -1117,36 +1128,42 @@ module.exports = class Processor {
         this.scope.pushInstanceType('air');
         airGroup.airStart();
         let res = airTemplate.exec(air.name ,callinfo);
-        console.log('AIR-TEMPLATE-FINISH-EXEC');
         this.finalAirScope();
+        const witnessCols = this.witness.length;
+        const fixedCols = this.witness.length;
+        const constraints = this.constraints.length;
+        const N = this.rows;
         airGroup.airEnd();
+        const ti2 = performance.now();
+        console.log(`  > Witness cols: ${witnessCols}`);
+        console.log(`  > Fixed cols: ${fixedCols}`);
+        console.log(`  > Constraints: ${constraints}`);
+        console.log(`  > Execution time: ${Math.round((ti2-ti1) * 100)/100.0} ms`);
+
     
         if (this.proto) {
             const t1 = performance.now();
-            console.log('PROTO-AIRGROUP-OUT-BEGIN');
             this.airGroupProtoOut(this.currentAirGroup.id, air.id);
             const t2 = performance.now();
-            console.log('PROTO-AIRGROUP-OUT-END TIME(ms):', t2-t1);
+            console.log(`  > Proto time: ${Math.round((t2-t1) * 100)/100.0} ms`);
         }
 
         this.constraints = new Constraints();
 
         const t1 = performance.now();
-        console.log('AIR-CLOSE-BEGIN');
         this.clearAirScope(air.name);
         this.scope.popInstanceType(['witness', 'fixed', 'im']);
         // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
         this.closeAir(air);
-        const t2 = performance.now();
-        console.log('AIR-CLOSE-END TIME(ms):', t2-t1);
 
         // closing airgroup but no closing final        
         // this.suspendCurrentAirGroup(false);
 
         this.finishFunctionCall(airTemplate);
-        const t3 = performance.now();
-        console.log('AIR-TEMPLATE-FINAL TIME(ms):', t3-t2);
+        const t2 = performance.now();
+        console.log(`  > Closing time: ${Math.round((t2-t1) * 100)/100.0} ms`);
+        console.log(`  > Total time: ${Math.round((t2-ti1) * 100)/100.0} ms`);
 
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
     }
@@ -1174,23 +1191,26 @@ module.exports = class Processor {
         if (Context.config.protoOut === false) return;
         
         let packed = new PackedExpressions();
-        let tmark = performance.now();
+        let chrono = new Chrono(Context.config.chronoProto ?? false);
+
+        chrono.start();
+
         this.proto.setFixedCols(this.fixeds);
-        let tmark2 = performance.now();
-        console.log('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS TIME(ms):', tmark2-tmark);    
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
+
         this.proto.setPeriodicCols(this.fixeds);        
-        tmark = performance.now();
-        console.log('PROTO-AIRGROUP-OUT-BEGIN-SET-PERIODIC-COLS TIME(ms):', tmark-tmark2);
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-PERIODIC-COLS');
+        
         this.proto.setWitnessCols(this.witness);
-        tmark2 = performance.now();
-        console.log('PROTO-AIRGROUP-OUT-BEGIN-SET-WITNESS-COLS TIME(ms):', tmark2-tmark);
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-WITNESS-COLS');
+
         this.proto.setAirGroupValues(this.airGroupValues.getIdsByAirGroupId(this.airGroupId),
                                      this.airGroupValues.getAggreationTypesByAirGroupId(this.airGroupId));
 
         // this.expressions.pack(packed, {instances: [air.fixeds, air.witness]});
         this.expressions.pack(packed, {instances: [this.fixeds, this.witness]});
-        tmark = performance.now();
-        console.log('PROTO-AIRGROUP-OUT-BEGIN-EXPRESSIONS-PACK TIME(ms):', tmark-tmark2);
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-EXPRESSIONS-PACK');
+
         this.proto.setConstraints(this.constraints, packed,
             {
                 labelsByType: {
@@ -1200,8 +1220,8 @@ module.exports = class Processor {
                 },
                 expressions: this.expressions
             });
-        tmark2 = performance.now();
-        console.log('PROTO-AIRGROUP-OUT-BEGIN-CONSTRAINTS TIME(ms):', tmark2-tmark);
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-CONSTRAINTS');
+
         const info = {airId, airGroupId};
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
@@ -1209,17 +1229,16 @@ module.exports = class Processor {
             
             this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId), 'airgroupvalue', {airGroupId});
         }
-        tmark = performance.now();
-        console.log('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS TIME(ms):', tmark-tmark2);
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS');
+
         this.proto.addHints(this.hints, packed, {
                 airGroupId,
                 airId
             });
-        tmark2 = performance.now();
-        console.log('PROTO-AIRGROUP-OUT-BEGIN-HINTS TIME(ms):', tmark2-tmark);
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-HINTS');
         this.proto.setExpressions(packed);        
-        tmark = performance.now();
-        console.log('PROTO-AIRGROUP-OUT-BEGIN-EXPRESSIONS TIME(ms):', tmark-tmark2);
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-EXPRESSIONS');
+        chrono.end('PROTO-AIRGROUP-OUT-END');
     }
     finalAirScope() {
         this.callDelayedFunctions('air', 'final');
@@ -1440,8 +1459,10 @@ module.exports = class Processor {
         } else {
             throw new Error(`Constraint definition on invalid scope (${scopeType}) ${Context.sourceRef}`);
         }
-        console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] > ${expr.toString({hideClass:true, hideLabel:false})} === 0 (${this.sourceRef})\x1B[0m`);
-        console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] (RAW) > ${expr.toString({hideClass:true, hideLabel:true})} === 0 (${this.sourceRef})\x1B[0m`);
+        if (Context.config.outputConstraints) {
+            console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] > ${expr.toString({hideClass:true, hideLabel:false})} === 0 (${this.sourceRef})\x1B[0m`);
+            console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] (RAW) > ${expr.toString({hideClass:true, hideLabel:true})} === 0 (${this.sourceRef})\x1B[0m`);
+        }
     }
     execVariableDeclaration(s) {
         if (Debug.active) console.log('VARIABLE DECLARATION '+Context.sourceRef+' init:'+s.init);

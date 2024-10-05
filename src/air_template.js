@@ -20,7 +20,6 @@ module.exports = class AirTemplate {
     exec(callInfo, mapInfo, options = {}) {
         let res = false;
         for (const statements of this.blocks) {
-            console.log(`AIR ${Context.airName} #${Context.airId} TEMPLATE ${this.name}`);
             res = Context.processor.execute(statements, `AIR ${Context.airName} #${Context.airId} TEMPLATE ${this.name}`);
             if (res instanceof FlowAbortCmd) {
                 assert.instanceOf(res, ReturnCmd);

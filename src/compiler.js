@@ -150,7 +150,6 @@ class Compiler {
     loadInclude(filename, options = {}) {
         const includeFile = filename
         const fullFileNameI = this.config.includePaths ? filename : path.resolve(this.fileDir, includeFile);
-        console.log(fullFileNameI);
 
         if (this.includedFiles[fullFileNameI]) {
             // check if only must be load once
@@ -158,6 +157,11 @@ class Compiler {
                 return false;
             }
         }
+        if (!options.once) {
+            console.trace(options);
+        }
+        console.log(`  > ${options.once?'require':'include'} file \x1B[33m${fullFileNameI}\x1B[0m`);
+
         this.includedFiles[fullFileNameI] = true;
         const previous = [this.cwd, this.relativeFileName, this.fileDir];
 

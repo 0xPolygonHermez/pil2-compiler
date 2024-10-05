@@ -160,7 +160,7 @@ class Compiler {
         if (!options.once) {
             console.trace(options);
         }
-        console.log(`  > ${options.once?'require':'include'} file \x1B[33m${fullFileNameI}\x1B[0m`);
+        console.log(`  > ${options.once?'require':'include'} file \x1B[38;5;208m${fullFileNameI}\x1B[0m`);
 
         this.includedFiles[fullFileNameI] = true;
         const previous = [this.cwd, this.relativeFileName, this.fileDir];

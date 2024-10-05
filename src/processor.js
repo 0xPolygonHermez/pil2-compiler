@@ -515,11 +515,11 @@ module.exports = class Processor {
         const res = this.processHintData(s.data);
         if (Debug.active) console.log(util.inspect(res, false, null, true));
         if (this.scopeType === 'proof') {
-            if (Context.config.logHints) console.log(`Define global hint \x1B[33m${name}\x1B[0m`)
+            if (Context.config.logHints) console.log(`Define global hint \x1B[38;5;208m${name}\x1B[0m`)
             this.globalHints.define(name, res);
         }
         else {
-            if (Context.config.logHints) console.log(`  > define hint \x1B[33m${name}\x1B[0m`)            
+            if (Context.config.logHints) console.log(`  > define hint \x1B[38;5;208m${name}\x1B[0m`)            
             this.hints.define(name, res);
         }
     }
@@ -1116,7 +1116,7 @@ module.exports = class Processor {
         if (!airGroup) {
             throw new Exceptions.Runtime(`Instance airtemplate ${name} out of airgroup`);
         }
-        console.log(`\nAIR instance \x1B[33m${name}\x1B[0m in airgroup \x1B[33m${airGroup.name}\x1B[0m`);
+        console.log(`\nAIR instance \x1B[38;5;208m${name}\x1B[0m in airgroup \x1B[38;5;208m${airGroup.name}\x1B[0m`);
         const ti1 = performance.now();
         // airgroup was a function derivated class
         const mapinfo = this.prepareFunctionCall(airTemplateFunc, callinfo);

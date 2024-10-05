@@ -245,7 +245,6 @@ module.exports = class ProtoOut {
             }
             case 'airgroupvalue': {
                 const protoId = assert.returnTypeOf(this.airGroupValueId2ProtoId[id], 'number');
-                console.log(ref.data);
                 if (this.version >= 2) {
                     return {type: REF_TYPE_AIR_GROUP_VALUE, id: protoId, airgroupId: ref.data.airGroupId};
                 } else {
@@ -309,7 +308,7 @@ module.exports = class ProtoOut {
             if (colIsPeriodic !== periodic) continue;
             if (col.temporal) continue; // ignore temporal columns, only use to help to create other fixed columns
             const _rows = periodic ? col.rows : rows;
-            console.log(`SET ${col.id} ${col.constructor.name} ${_rows} ${colIsPeriodic}`);
+            console.log(`  >  Proto set ${col.id} ${col.constructor.name} ${_rows} ${colIsPeriodic}`);
             this.fixedId2ProtoId[col.id] = [colType, airCols.length];
             let values = [];
             for (let irow = 0; irow < _rows; ++irow) {

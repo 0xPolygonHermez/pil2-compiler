@@ -82,10 +82,10 @@ module.exports = class Sequence {
     }
     setValue(index, value) {
         if ((index >= 0 && (this.maxSize === false || index < this.maxSize) === false)) {
-            console.log(`\x1B[33mERROR Invalid value of extendPos:${index} maxSize:${this.maxSize}  ${this.debug}\x1B[0m`);
+            console.log(`\x1B[31m  > ERROR Invalid value of extendPos:${index} maxSize:${this.maxSize}  ${this.debug}\x1B[0m`);
         }
         if (typeof this.#values.getValue(index) !== 'undefined') {
-            console.log(`\x1B[33mERROR Rewrite index position:${index} ${this.debug}\x1B[0m`);
+            console.log(`\x1B[31m  > ERROR Rewrite index position:${index} ${this.debug}\x1B[0m`);
         }
         ++this.valueCounter;
         return this.#values.setValue(index, value);

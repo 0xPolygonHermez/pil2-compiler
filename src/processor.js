@@ -114,14 +114,15 @@ module.exports = class Processor {
         this.airGroups = new AirGroups();
         this.airTemplates = new AirTemplates();
 
-        this.expressions = new Expressions();
-        this.globalExpressions = new Expressions();
+        this.expressions = new Expressions('air');
+        this.globalExpressions = new Expressions('proof');
 
         this.constraints = new Constraints();
         this.globalConstraints = new Constraints(this.globalExpressions);
 
         this.assign = new Assign(Fr, this, this.context, this.references, this.expressions);
-        this.hints = new Hints(Fr, this.expressions);
+        this.hints = new Hints(this.expressions);
+        this.globalHints = new Hints(this.globalExpressions);
 
         this.executeCounter = 0;
         this.executeStatementCounter = 0;
@@ -206,6 +207,7 @@ module.exports = class Processor {
         let packed = new PackedExpressions();
         this.globalExpressions.pack(packed);
         this.proto.setGlobalConstraints(this.globalConstraints, packed);
+        this.proto.addHints(this.globalHints, packed, {airGroupId: false });        
         this.proto.setGlobalExpressions(packed);
         this.proto.setGlobalSymbols(this.references);
         this.proto.encode();
@@ -499,7 +501,11 @@ module.exports = class Processor {
         if (Debug.active) console.log(util.inspect(s.data, false, null, true));
         const res = this.processHintData(s.data);
         if (Debug.active) console.log(util.inspect(res, false, null, true));
-        this.hints.define(name, res);
+        if (this.scopeType === 'proof') {
+            this.globalHints.define(name, res);
+            console.log(`defined a global hint ${name}`)
+        }
+        else this.hints.define(name, res);
     }
     processHintData(hdata) {
         if (hdata instanceof Expression) {

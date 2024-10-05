@@ -7,7 +7,8 @@ const ExpressionPacker = require('./expression_packer.js');
 const Context = require('./context.js');
 const assert = require('./assert.js');
 module.exports = class Expressions {
-    constructor () {
+    constructor (name = '') {
+        this.name = name;
         this.expressions = [];
         this.packedIds = [];
         this.labelRanges = new LabelRanges();

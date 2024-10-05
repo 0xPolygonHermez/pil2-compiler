@@ -111,7 +111,7 @@ module.exports = class ProtoOut {
         this.Hint = this.root.lookupType('Hint');
     }
     setupPilOut(name) {
-        console.log('Prime Field', '\x1B[0;33m0x' + this.Fr.p.toString(16)+'\x1B[0m');
+        console.log('Prime Field \x1B[38;5;208m0x' + this.Fr.p.toString(16)+'\x1B[0m');
         this.pilOut = {
             name,
             baseField: this.toBaseField(this.Fr.p, 0, false),

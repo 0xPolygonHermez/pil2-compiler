@@ -18,6 +18,9 @@ module.exports = class Context {
             this.config.test.onContextInit(Context, this);
         }
     }
+    static memoryUpdate() {
+        this._instance._processor.memoryUpdate();
+    }
     static get SeqCodeType() {
         return this._instance.seqCodeType;   
     }

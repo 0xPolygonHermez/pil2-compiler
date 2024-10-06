@@ -129,10 +129,13 @@ module.exports = class ProtoOut {
         }
     }
     encode() {
+        Context.memoryUpdate();
         // fs.writeFileSync('tmp/pilout.pre.log', util.inspect(this.pilOut, false, null, false));
         let message = this.PilOut.fromObject(this.pilOut);
         // fs.writeFileSync('tmp/pilout.log', util.inspect(this.pilOut, false, null, false));
+        Context.memoryUpdate();
         this.data = this.PilOut.encode(message).finish();
+        Context.memoryUpdate();
         return this.data;
     }
     saveToFile(filename) {
@@ -308,22 +311,33 @@ module.exports = class ProtoOut {
             const colIsPeriodic = col.isPeriodic() && col.rows < rows;
             if (colIsPeriodic !== periodic) continue;
             if (col.temporal) continue; // ignore temporal columns, only use to help to create other fixed columns
-            const _rows = periodic ? col.rows : rows;
             this.fixedId2ProtoId[col.id] = [colType, airCols.length];
             let values = [];
             if (!Context.config.noProtoFixedData) {
-                console.log(`  > Proto setting ${periodic?'periodic':'fixed'} col ${col.id} ${_rows} ....`);
-                for (let irow = 0; irow < _rows; ++irow) {
-                    const _value = col.getValue(irow);
-                    if (typeof _value === 'undefined') {
-                        console.log(irow, col);
-                        throw new Error(`Error ${col.constructor.name} on row ${irow}`);
-                    }
-                    values.push(this.toBaseField(_value));
+                if (Context.config.compressFixedCols && col.isCompressed) {
+                    values = this.setCompressedConstantsCols(col);
+                } else {
+                    const _rows = periodic ? col.rows : rows;
+                    console.log(`  > Proto setting ${periodic?'periodic':'fixed'} col ${col.id} ${_rows} ....`);
+                    values = this.setRegularConstantsCols(col, _rows);
                 }
             }
             airCols.push({values});
         }
+    }
+    setRegularConstantsCols(col, rows) {
+        let values = [];
+        for (let irow = 0; irow < rows; ++irow) {
+            const _value = col.getValue(irow);
+            if (typeof _value === 'undefined') {
+                console.log(irow, col);
+                throw new Error(`Error ${col.constructor.name} on row ${irow}`);
+            }
+            values.push(this.toBaseField(_value));
+        }
+        return values;
+    }
+    setCompressedConstantsCols(col) {
     }
     setWitnessCols(cols) {
         const stageWidths = this.setupAirProperty('stageWidths');

@@ -43,10 +43,12 @@ const assert = require('./assert.js');
 const { performance } = require('perf_hooks');
 const utils = require('./utils.js')
 const Chrono = require('./chrono.js');
+const units = require('./units.js');
 
 const MAX_SWITCH_CASE_RANGE = 512;
 module.exports = class Processor {
     constructor (Fr, parent, config = {}) {
+        this.memoryInfo = {maxMemory: 0};
         this.lastMs = Math.floor(performance.now());
         this.sourceRef = '(processor constructor)';
         this.compiler = parent;
@@ -151,6 +153,13 @@ module.exports = class Processor {
 
         if (typeof Context.config.test.onProcessorInit === 'function') {
             Context.config.test.onProcessorInit(this);
+        }        
+        this.memoryUpdate();
+    }
+    memoryUpdate() {
+        const mem = process.memoryUsage().rss; 
+        if (mem > this.memoryInfo.maxMemory) {
+            this.memoryInfo.maxMemory = mem;
         }
     }
     loadConfigDefines() {
@@ -189,6 +198,7 @@ module.exports = class Processor {
     }
     startExecution(statements) {
         const t1 = performance.now();
+                
         this.sourceRef = '(start-execution)';
 
         this.declareBuiltInConstants();
@@ -200,28 +210,27 @@ module.exports = class Processor {
         this.finalProofScope();
         this.scope.popInstanceType();
         if (this.proto) {
+            this.memoryUpdate();
             console.log(`\nGenerating pilout (protobuf) ${Context.config.outputFile} .....`)
             const t1 = performance.now();
             this.generateProtoOut();
+            this.memoryUpdate();
             const t2 = performance.now();
             if (fs.existsSync(Context.config.outputFile)) {
                 const stats = fs.statSync(Context.config.outputFile);
-                if (stats.size < 10240*1024) {
-                    console.log(`  > Proto size: ${Math.round(stats.size / 1024)} KB`);
-                } else {
-                    console.log(`  > Proto size: ${Math.round(stats.size / (1024*1024))} MB`);
-                }                
+                console.log('  > Proto size: ' + units.getHumanSize(stats.size));
             }
-            console.log(`  > Proto time: ${Math.round((t2-t1) * 100)/100.0} ms`);
+            console.log('  > Proto time: ' + units.getHumanTime(t2-t1));
         }
         const t2 = performance.now();
-        const seconds = Math.round((t2-t1) / 1000);
-        const elapsedTime = seconds > 90 ? `${Math.trunc(seconds / 60)} minutes ${seconds % 60} seconds` : `${seconds} seconds`;
-        console.log(`  > Total compilation: ${elapsedTime}`);
+        this.memoryUpdate();
+        console.log('  > Memory: ' + units.getHumanSize(this.memoryInfo.maxMemory));
+        console.log('  > Total compilation: ' + units.getHumanTime(t2-t1));
     }
     generateProtoOut()
     {        
         if (Context.config.protoOut === false) return;
+        this.memoryUpdate();
         this.proto.setPublics(this.publics);
         this.proto.setProofValues(this.proofValues);
         this.proto.setChallenges(this.challenges);
@@ -232,7 +241,9 @@ module.exports = class Processor {
         this.proto.setGlobalExpressions(packed);
         this.proto.setGlobalSymbols(this.references);
         this.proto.encode();
+        this.memoryUpdate();
         this.proto.saveToFile(Context.config.outputFile);
+        this.memoryUpdate();
     }
     traceLog(text, color = '') {
         if (!this.trace) return;
@@ -260,15 +271,29 @@ module.exports = class Processor {
         }
         return false;
     }
+    getDirectStatement(st) {        
+        if (st.type === 'code') {
+            return this.getDirectStatement(st.statements);
+        }
+        return st.type;
+    }
     executeStatement(st) {
         const __executeStatementCounter = this.executeStatementCounter++;
-
         let ignoreStatement = this.pragmas.nextStatement.ignore ?? false;
         let activeTranspile = this.pragmas.nextStatement.transpile ?? false;
-        if (activeTranspile) {
-            this.transpile = true;
+        let statementIsPragma = (ignoreStatement || activeTranspile) && this.getDirectStatement(st) === 'pragma';
+
+        if (!statementIsPragma) {
+            if (activeTranspile) {
+                this.transpile = true;
+            }
+            // clean for next statement
+            this.pragmas.nextStatement = {};
+        } else {
+            // clean ignore, need to wait to next, because current statement is pragma
+            ignoreStatement = false;
         }
-        this.pragmas.nextStatement = {};
+
         let res = new ExpressionItems.IntValue(0); // default value if ignore
         if (!ignoreStatement) {
             this.traceLog(`[TRACE] #${__executeStatementCounter} ${st.debug ?? ''} (DEEP:${this.scope.deep})`, '38;5;75');
@@ -321,10 +346,10 @@ module.exports = class Processor {
         const instr = params[0] ?? false;
         switch (instr) {
             case 'message':
-                    const ms = Math.floor(performance.now());
-                    console.log(`\x1B[46m${st.value.slice(8)} (${ms}ms +${ms-this.lastMs}ms)\x1B[0m`);
-                    this.lastMs = ms;
-                    break;
+                const ms = Math.floor(performance.now());
+                console.log(`\x1B[46m${st.value.slice(8)} (${ms}ms +${ms-this.lastMs}ms)\x1B[0m`);
+                this.lastMs = ms;
+                break;
             case 'debug':
                 if (params[1] === 'on') {
                     Debug.active = true;
@@ -433,18 +458,7 @@ module.exports = class Processor {
     showMemory(m1, m2 = false) {
         const concept = m2 === false ? 'use' : 'increment';
         const _m2 = m2 === false ? {} : m2;
-        console.log(`\x1B[36m  > Memory ${concept}: ${this.getMB(m1.rss, m2.rss)} MB\x1B[0m`);
-        // console.log(prefix + `Memory RSS: ${this.getMB(m1.rss, m2.rss)} MB`);
-        // console.log(prefix + `Heap Total: ${this.getMB(m1.heapTotal, m2.heapTotal)} MB`);
-        // console.log(prefix + `Heap Used: ${this.getMB(m1.heapUsed, m2.heapUsed)} MB`);
-        // console.log(prefix + `Extern Memory: ${this.getMB(m1.external, m2.external)} MB`);
-        // console.log(prefix + `Array Buffers: ${this.getMB(m1.arrayBuffers, m2.arrayBuffers)} MB`);
-    }
-    getMB(m1,m2) {
-        if (typeof m2 === 'undefined') {
-            return Math.round(m1 / 1048576);
-        }
-        return Math.round((m2-m1) / 1048576);
+        console.log(`\x1B[36m  > Memory ${concept}: ${units.getMB(m1.rss, m2.rss)} MB\x1B[0m`);
     }
     execProof(st) {
         this.scope.pushInstanceType('proof');
@@ -1145,7 +1159,9 @@ module.exports = class Processor {
         this.context.push(false, name);
         this.scope.pushInstanceType('air');
         airGroup.airStart();
+        this.memoryUpdate();
         let res = airTemplate.exec(air.name ,callinfo);
+        this.memoryUpdate();
         this.finalAirScope();
         const witnessCols = this.witness.length;
         const fixedCols = this.witness.length;
@@ -1153,17 +1169,19 @@ module.exports = class Processor {
         const N = this.rows;
         airGroup.airEnd();
         const ti2 = performance.now();
-        console.log(`  > Witness cols: ${witnessCols}`);
-        console.log(`  > Fixed cols: ${fixedCols}`);
-        console.log(`  > Constraints: ${constraints}`);
-        console.log(`  > Execution time: ${Math.round((ti2-ti1) * 100)/100.0} ms`);
+        console.log('  > Witness cols: ' + witnessCols);
+        console.log('  > Fixed cols: ' + fixedCols);
+        console.log('  > Constraints: ' + constraints);
+        console.log('  > Execution time: ' + units.getHumanTime(ti2-ti1));
 
     
         if (this.proto) {
             const t1 = performance.now();
+            this.memoryUpdate();
             this.airGroupProtoOut(this.currentAirGroup.id, air.id);
+            this.memoryUpdate();
             const t2 = performance.now();
-            console.log(`  > Proto time: ${Math.round((t2-t1) * 100)/100.0} ms`);
+            console.log('  > Proto time: ' + units.getHumanTime(t2-t1));
         }
 
         this.constraints = new Constraints();
@@ -1179,9 +1197,11 @@ module.exports = class Processor {
         // this.suspendCurrentAirGroup(false);
 
         this.finishFunctionCall(airTemplate);
+        this.memoryUpdate();
+
         const t2 = performance.now();
-        console.log(`  > Closing time: ${Math.round((t2-t1) * 100)/100.0} ms`);
-        console.log(`  > Total time: ${Math.round((t2-ti1) * 100)/100.0} ms`);
+        console.log('  > Closing time: ' + units.getHumanTime(t2-t1));
+        console.log('  > Total time: ' + units.getHumanTime(t2-ti1));
 
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
     }

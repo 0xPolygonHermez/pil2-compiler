@@ -159,7 +159,6 @@ async function run() {
     const out = compile(F, fullFileName, null, config);
 }    
 
-
 run().then(()=> {
     process.exitCode = 0;
 }, (err) => {

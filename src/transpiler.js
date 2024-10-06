@@ -7,6 +7,7 @@ const vm = require('node:vm');
 const Performance = require('perf_hooks').performance;
 const beautify = require('js-beautify').js;
 const fs = require('fs');
+const units = require('./units.js');
 
 // TODO:
 // - scopes calls pop/up for inside variables
@@ -63,7 +64,7 @@ module.exports = class Transpiler {
         vm.createContext(this.context);
         vm.runInContext(options.debug ? _format_code : code, this.context);
         const t2 = Performance.now();
-        console.log(`  > Traspilation execution time: ${Math.round((t2-t1) * 100)/100.0} ms`);
+        console.log('  > Traspilation execution time: ' + units.getHumanTime(t2-t1));
 
         if (_log !== false) {    
             if (_log.bufpos > 0) {

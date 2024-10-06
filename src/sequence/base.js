@@ -15,11 +15,26 @@ module.exports = class SequenceBase {
     set paddingSize(value) {
         this.parent.setPaddingSize(value);
     }
-    execute(e) {
-        if (e instanceof Expression) {
-            return this.expr(e);
-        }
-        switch (e.type) {
+    get bytes() {
+        return this.parent.bytes;
+    }
+    get size() {
+        return this.parent.size;
+    }
+    execute(e) {    
+        this.beginExecution();
+        const res = this.insideExecute(e);
+        return this.endExecution(res);
+    }
+    beginExecution(e) {
+    }
+    endExecution(res) {
+        return res;
+    }
+    insideExecute(e) {
+        const type = e instanceof Expression ? 'expr': e.type;
+        switch (type) {
+            case 'expr': return this.expr(e);
             case 'sequence': return this.sequence(e);
             case 'padding_seq': return this.paddingSeq(e);
             case 'seq_list': return this.seqList(e);
@@ -217,5 +232,7 @@ module.exports = class SequenceBase {
             throw new Error(`ERROR geometric seq calculation ${tf} !== ${ti} * (${ratio} ** ${BigInt(n)})`);
         }
         return [this.toNumber(n) + 1, reverse, ti, tf, ratio];
+    }
+    flush() {
     }
 }

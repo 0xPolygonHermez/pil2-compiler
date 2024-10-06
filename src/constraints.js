@@ -6,7 +6,9 @@ module.exports = class Constraints {
         this.constraints = [];
         this.expressions = expressions;
     }
-
+    get length() {
+        return this.constraints.length;
+    }
     getExpressions() {
         return this.expressions ? this.expressions : Context.expressions;
     }

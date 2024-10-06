@@ -53,11 +53,6 @@ class Compiler {
                 this.namespaces[name] = 0;
             }
         }
-        if (this.config.defines && typeof this.config.defines === 'object') {
-            for (const name in this.config.defines) {
-                this.constants.define(name, this.Fr.e(this.config.defines[name]));
-            }
-        }
         let sts = this.parseSource(fileName, true);
         this.processor.startExecution(sts);
         if (config.processorTest) {
@@ -150,7 +145,6 @@ class Compiler {
     loadInclude(filename, options = {}) {
         const includeFile = filename
         const fullFileNameI = this.config.includePaths ? filename : path.resolve(this.fileDir, includeFile);
-        console.log(fullFileNameI);
 
         if (this.includedFiles[fullFileNameI]) {
             // check if only must be load once
@@ -158,6 +152,11 @@ class Compiler {
                 return false;
             }
         }
+        if (!options.once) {
+            console.trace(options);
+        }
+        console.log(`  > ${options.once?'require':'include'} file \x1B[38;5;208m${fullFileNameI}\x1B[0m`);
+
         this.includedFiles[fullFileNameI] = true;
         const previous = [this.cwd, this.relativeFileName, this.fileDir];
 

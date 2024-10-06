@@ -71,6 +71,13 @@ class Expression extends ExpressionItem {
     get isExpression() {
         return true;
     }
+    get name() {
+        if (this.isAlone()) {
+            const operand = this.getAloneOperand();
+            return operand.name || false;
+        }
+        return false;
+    }
     cloneInstance() {
         let cloned = new Expression();
         cloned.fixedRowAccess = this.fixedRowAccess;
@@ -1170,7 +1177,7 @@ class Expression extends ExpressionItem {
             console.log(st);
             TODO_EXIT
         }
-        if (parentPrecedence > operationInfo.precedence || (parentOperation === 'sub' && st.op !== 'mul')) {
+        if (options.allParentheses || parentPrecedence > operationInfo.precedence || (parentOperation === 'sub' && st.op !== 'mul')) {
             res = '(' + res + ')';
         }
         return res;
@@ -1179,7 +1186,8 @@ class Expression extends ExpressionItem {
         if (ope instanceof ExpressionItems.StackItem) {
             return this.stackPosToString(pos-ope.offset, parentOperation, options);
         }
-        return ope.toString(options);
+        // return options.map ? options.map(ope, options) : `[${ope.constructor.name}]`+ope.toString(options);
+        return options.map ? options.map(ope, options) : ope.toString(options);
     }
     pack(container, options) {
         const packer = new ExpressionPacker(container, this);

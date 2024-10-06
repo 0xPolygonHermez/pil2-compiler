@@ -78,7 +78,7 @@ module.exports = class SequenceExtend extends SequenceBase {
     seqList(e) {
         let count = 0;
         for(const value of e.values) {
-            count += this.execute(value);
+            count += this.insideExecute(value);
         }
         return count;
     }
@@ -90,7 +90,7 @@ module.exports = class SequenceExtend extends SequenceBase {
     }
     paddingSeq(e) {        
         let from = this.extendPos;
-        let seqSize = this.execute(e.value);
+        let seqSize = this.insideExecute(e.value);
         let remaingValues = this.paddingSize - seqSize;
         if (remaingValues < 0) {
             throw new Error(`In padding range must be space at least for one time sequence at ${this.debug}`);
@@ -120,7 +120,7 @@ module.exports = class SequenceExtend extends SequenceBase {
         let count = 0;
         const times = this.e2num(e.times);
         for (let itime = 0; itime < times; ++itime) {
-            count += this.execute(e.value);
+            count += this.insideExecute(e.value);
         }
         return count;
     }

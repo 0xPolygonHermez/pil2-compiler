@@ -110,8 +110,9 @@ module.exports = class ProtoOut {
         this.HintFieldArray = this.root.lookupType('HintFieldArray');
         this.Hint = this.root.lookupType('Hint');
     }
-    setupPilOut(name) {
-        console.log('FR', this.Fr.p, this.toBaseField(this.Fr.p));
+    setupPilOut(name) {        
+        console.log('> set pilout name \x1B[38;5;208m0x' + name + '\x1B[0m');
+        console.log('> set prime field \x1B[38;5;208m' + this.Fr.p.toString(16) + '\x1B[0m');
         this.pilOut = {
             name,
             baseField: this.toBaseField(this.Fr.p, 0, false),
@@ -128,12 +129,13 @@ module.exports = class ProtoOut {
         }
     }
     encode() {
-        this.updateSymbolsWithSameName();
-
+        Context.memoryUpdate();
         // fs.writeFileSync('tmp/pilout.pre.log', util.inspect(this.pilOut, false, null, false));
         let message = this.PilOut.fromObject(this.pilOut);
         // fs.writeFileSync('tmp/pilout.log', util.inspect(this.pilOut, false, null, false));
+        Context.memoryUpdate();
         this.data = this.PilOut.encode(message).finish();
+        Context.memoryUpdate();
         return this.data;
     }
     saveToFile(filename) {
@@ -247,7 +249,6 @@ module.exports = class ProtoOut {
             }
             case 'airgroupvalue': {
                 const protoId = assert.returnTypeOf(this.airGroupValueId2ProtoId[id], 'number');
-                console.log(ref.data);
                 if (this.version >= 2) {
                     return {type: REF_TYPE_AIR_GROUP_VALUE, id: protoId, airgroupId: ref.data.airGroupId};
                 } else {
@@ -276,7 +277,7 @@ module.exports = class ProtoOut {
     setProofValues(proofvalues) {
         this.pilOut.numProofValues = proofvalues.length;
     }
-    setFixedCols(fixedCols) {    
+    setFixedCols(fixedCols) {  
         this.setConstantCols(fixedCols, this.currentAir.numRows, false);
     }
     setPeriodicCols(periodicCols) {
@@ -309,19 +310,34 @@ module.exports = class ProtoOut {
         for (const col of cols) {
             const colIsPeriodic = col.isPeriodic() && col.rows < rows;
             if (colIsPeriodic !== periodic) continue;
-            const _rows = periodic ? col.rows : rows;
+            if (col.temporal) continue; // ignore temporal columns, only use to help to create other fixed columns
             this.fixedId2ProtoId[col.id] = [colType, airCols.length];
             let values = [];
-            for (let irow = 0; irow < _rows; ++irow) {
-                const _value = col.getValue(irow);
-                if (typeof _value === 'undefined') {
-                    console.log(irow, col);
-                    throw new Error(`Error ${col.constructor.name} on row ${irow}`);
+            if (!Context.config.noProtoFixedData) {
+                if (Context.config.compressFixedCols && col.isCompressed) {
+                    values = this.setCompressedConstantsCols(col);
+                } else {
+                    const _rows = periodic ? col.rows : rows;
+                    console.log(`  > Proto setting ${periodic?'periodic':'fixed'} col ${col.id} ${_rows} ....`);
+                    values = this.setRegularConstantsCols(col, _rows);
                 }
-                values.push(this.toBaseField(_value));
             }
             airCols.push({values});
         }
+    }
+    setRegularConstantsCols(col, rows) {
+        let values = [];
+        for (let irow = 0; irow < rows; ++irow) {
+            const _value = col.getValue(irow);
+            if (typeof _value === 'undefined') {
+                console.log(irow, col);
+                throw new Error(`Error ${col.constructor.name} on row ${irow}`);
+            }
+            values.push(this.toBaseField(_value));
+        }
+        return values;
+    }
+    setCompressedConstantsCols(col) {
     }
     setWitnessCols(cols) {
         const stageWidths = this.setupAirProperty('stageWidths');
@@ -644,9 +660,6 @@ module.exports = class ProtoOut {
         const PilOut = root.lookupType('pilout.PilOut');
         console.log(PilOut);
         */
-    }
-    updateSymbolsWithSameName() {
-        console.log(this.pilOut.symbols.map(x => `${x.name}__${this.version >= 2 ? x.airGroupId:x.subproofId}${typeof x.airId === 'undefined' ? '':('__'+x.airId)}`));
     }
 }
 

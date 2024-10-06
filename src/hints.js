@@ -3,8 +3,7 @@ const ExpressionId = require('./expression_id.js');
 
 module.exports = class Hints {
 
-    constructor (Fr, expressions) {
-        this.Fr = Fr;
+    constructor (expressions) {
         this.expressions = expressions;
         this.hints = [];
     }

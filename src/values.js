@@ -1,9 +1,18 @@
 module.exports = class Values {
     #values;
     #mutable;
-    constructor () {
-        this.#values = [];
-        this.#mutable = true;
+    #bytes;
+    #buffer;
+    #rows;
+    constructor (bytes, rows, create = true) {
+        this.#bytes = bytes;
+        this.#rows = rows;
+        if (create) {
+            this.createBuffer();
+        } else {
+            this.#buffer = false;
+            this.#values = false;
+        }
     }
     get mutable() {
         return this.#mutable;
@@ -13,7 +22,7 @@ module.exports = class Values {
         if (_value === this.#mutable) {
             return;
         }
-        if (value) {
+        if (value && !this.#values !== false) {
             this.cloneValues();
         }
         this.#mutable = value;
@@ -22,7 +31,7 @@ module.exports = class Values {
         let cloned = new Values();
         cloned.#values = this.#values;
         if (this.#mutable || cloneValues) {
-            cloned.cloneValues(cloneEachValue);
+            if (this.#values !== false) cloned.cloneValues(cloneEachValue);
         } else {
             cloned.#mutable = false;
         }
@@ -36,25 +45,44 @@ module.exports = class Values {
             this.#values.push((cloneEachValue && _value && typeof _value.clone === 'function') ?_value.clone() : _value);
         }
     }
+    initValues() {
+        if (this.#values !== false) return;
+        this.createBuffer();
+    }
+    createBuffer() {
+        this.#buffer = Buffer.alloc(this.#rows * this.#bytes);
+        switch (this.#bytes) {
+            case 1: this.#values = new Uint8Array(this.#buffer.buffer, 0, this.#rows); break;
+            case 2: this.#values = new Uint16Array(this.#buffer.buffer, 0, this.#rows); break;
+            case 4: this.#values = new Uint32Array(this.#buffer.buffer, 0, this.#rows); break;
+            case 8: this.#values = new BigInt64Array(this.#buffer.buffer, 0, this.#rows); break;
+        }
+    }   
     setValue(irow, value) {
         if (!this.#mutable) {
-            throw new Error(`modifying an inmutable values irow = ${row} and value = ${value}`);
+            throw new Error(`modifying an inmutable values irow = ${irow} and value = ${value}`);
         }
-        this.#values[irow] = value;
+        this.__setValue(irow, value);
     }
     __setValue(irow, value) {
-        this.#values[irow] = value;
+        this.initValues();
+        if (this.#bytes === 8) this.#values[irow] = value;
+        else this.#values[irow] = Number(value);
     }
     getValue(irow) {
-        return this.#values[irow];
+        return this.#values === false ? 0n : BigInt(this.#values[irow]);
     }
     getValues() {
         return this.#values;
     }
     toString() {
-        return this.#values.join();
+        return this.#values === false ? '' :  this.#values.join();
     }
-    __setValues(values) {
+    __setValues(buffer, values) {
+        this.#buffer = buffer;
         this.#values = values;
+    }
+    getBuffer() {
+        return this.#buffer;
     }
 }

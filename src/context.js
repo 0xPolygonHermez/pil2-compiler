@@ -12,10 +12,23 @@ module.exports = class Context {
         this.stack = [];        
         this.config = {debug: {}, test: {}, ...config};
         this.uses = [];
+        this.seqCodeType = config.seqCodeType ?? 'fast';
         this._airGroupName = false;
         if (typeof this.config.test.onContextInit === 'function') {
             this.config.test.onContextInit(Context, this);
         }
+    }
+    static memoryUpdate() {
+        this._instance._processor.memoryUpdate();
+    }
+    static get SeqCodeType() {
+        return this._instance.seqCodeType;   
+    }
+    static set SeqCodeType(value) {
+        this._instance.seqCodeType = value;
+    }        
+    static get rows() {
+        return this._instance._processor.rows;
     }
     static get air() {
         return  this._instance._processor.airStack.at(-1) ?? false;

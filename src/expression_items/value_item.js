@@ -31,8 +31,8 @@ module.exports = class ValueItem extends ExpressionItem {
     eval(options = {}) {
         return this.clone();
     }
-    toString() {
-        return `${this.value}`;
+    toString(options = {}) {
+        return `${this.value}${(this.type === 'int' && options.intsuffix) ? options.intsuffix:''}`;   
     }
     equals(value) {
         return this.constructor.name === value.constructor.name && this.value === value.value;

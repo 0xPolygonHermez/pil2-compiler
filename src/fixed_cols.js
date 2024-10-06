@@ -8,8 +8,8 @@ module.exports = class FixedCols extends Indexable {
     constructor () {
         super('fixed', FixedCol, FixedColItem);
     }
-    getEmptyValue(id) {
-        return new FixedCol(id);
+    getEmptyValue(id, data) {
+        return new FixedCol(id, data);
     }
     setRowValue(id, row, value) {
         const item = this.get(id);
@@ -31,5 +31,14 @@ module.exports = class FixedCols extends Indexable {
             throw new Error(`Invalid access at ${Context.sourceTag}`);
         }
         return item.getRowValue(row);
+    }
+    getNonTemporalLabelRanges() {
+        let res = [];
+        for (const range of this.labelRanges) {
+            const from = range.from;
+            if (this.values[from].temporal) continue;
+            res.push(range);
+        }
+        return res;
     }
 }

@@ -4,7 +4,7 @@ const assert = require('../assert.js');
 const Context = require('../context.js');
 const SequenceBase = require('./base.js');
 
-module.exports = class SequenceCodeGen extends SequenceBase {
+module.exports = class SequenceFastCodeGen extends SequenceBase {
     fromTo(fromValue, toValue, delta, times, operation = '+') {
         let count = 0;
         if (toValue === false) {            
@@ -17,12 +17,12 @@ module.exports = class SequenceCodeGen extends SequenceBase {
         const v = this.createCodeVariable('_v');
         const comparator = ((operation === '+' || operation === '*') && delta > 0n) ? '<=':'>=';
         let code = `for(let ${v}=${fromValue}n;${v}${comparator}${toValue}n;${v}=${v}${delta > 0n? operation+delta:delta}n){`;
-        if (times === 1) {
-            code += `__values.push(${v});}\n`;
-        } else {
-            const v2 = this.createCodeVariable();
-            code += `for(let ${v2}=0;${v2}<${times};++${v2}){__values.push(${v})}}\n;`;
+        code += '__data[__dindex++] = ' + (this.bytes === 8 ? v : `Number(${v})`) + ';';
+        if (times > 1) {
+            const _code = this.#getCodeRepeatLastElements(1, times - 1);
+            code += _code;
         }
+        code += '}\n';
         return [code, count];
     }
 
@@ -85,7 +85,7 @@ module.exports = class SequenceCodeGen extends SequenceBase {
         if (remaingValues > 0) {
             const v1 = this.createCodeVariable();
             const base = this.createCodeVariable('_b');
-            code += `let ${base}=__values.length-${seqSize};for (let ${v1}=0;${v1}<${remaingValues};++${v1}){__values.push(__values[${base}+${v1}]);}`;
+            code += this.#getCodeRepeatLastElements(seqSize, remaingValues);
         }
         code += '}\n';
         return [code, seqSize + remaingValues];
@@ -93,22 +93,53 @@ module.exports = class SequenceCodeGen extends SequenceBase {
     expr(e) {        
         // no cache
         const num = this.e2num(e);
-        return [`__values.push(${num}n);\n`, 1];
+        const type = this.bytes === 8 ? 'n' :''
+        return [`__data[__dindex++] = ${num}${type};\n`, 1];
     }
     createCodeVariable(prefix = '_i') {
         const index = (this.varIndex ?? 0) + 1;
         this.varIndex = index;
         return prefix + index;
     }
-    repeatSeq(e) {
-        if (!e.__cache) {
-            const times = this.e2num(e.times);
-            const [_code, _count] = this.insideExecute(e.value);
-            const v = this.createCodeVariable();
-            const code = `for (let ${v}=0;${v}<${times};++${v}){${_code}}`;
-            const count = _count * Number(times);
-            e.__cache = [code, count];
+    byBytes(value) {
+        if (this.bytes === 1) return value;
+        return `(${value}) * ${this.bytes}`
+    }
+    #getCodeRepeatLastElements(count, rlen) {
+        // count is the number of elements sequence to repeat
+        // rlen is the number of elements to repeteat (ex: rlen = count * times)
+        // data.fill(data.slice(3, 9), 9, 9 + 50000 * 6);
+        if (this.bytes === 1) {
+            return `__dbuf.fill(__dbuf.slice(__dindex - ${count}, __dindex), __dindex, __dindex + ${rlen}); __dindex += ${rlen};`;
         }
-        return e.__cache;
+        return `__dbuf.fill(__dbuf.slice((__dindex - ${count})*${this.bytes}, __dindex*${this.bytes}),`+
+               ` __dindex*${this.bytes}, (__dindex + ${rlen})*${this.bytes}); __dindex += ${rlen}*${this.bytes};`;
+    }
+    repeatSeq(e) {
+        // TODO, review cache problems.
+        // if (!e.__cache) {
+        const times = Number(this.e2num(e.times));
+        const [_code, _count] = this.insideExecute(e.value);
+        if (times === 1) {
+            return [_code, _count];
+        }
+        const v = this.createCodeVariable();
+        const code = '{' + _code +';'+this.#getCodeRepeatLastElements(_count, (times-1) * _count) + '}';
+        const count = _count * times;
+        return [code, count];
+        //     e.__cache = [code, count];
+        // }
+        // return e.__cache;    
+    }
+    genContext() {
+        let __dbuf = Buffer.alloc(this.size * this.bytes)
+        let context = {__dbuf, __dindex: 0};
+        switch (this.bytes) {
+            case 1: context.__data = new Uint8Array(__dbuf.buffer, 0, this.size); break;
+            case 2: context.__data = new Uint16Array(__dbuf.buffer, 0, this.size); break;
+            case 4: context.__data = new Uint32Array(__dbuf.buffer, 0, this.size); break;
+            case 8: context.__data = new BigInt64Array(__dbuf.buffer, 0, this.size); break;
+        }
+        return context;
     }
 }

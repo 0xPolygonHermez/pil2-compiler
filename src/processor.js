@@ -197,7 +197,7 @@ module.exports = class Processor {
             const t1 = performance.now();
             this.generateProtoOut();
             const t2 = performance.now();
-            if (fs.fileExistsSync(Context.config.outputFile)) {
+            if (fs.existsSync(Context.config.outputFile)) {
                 const stats = fs.statSync(Context.config.outputFile);
                 if (stats.size < 10240*1024) {
                     console.log(`  > Proto size: ${Math.round(stats.size / 1024)} KB`);

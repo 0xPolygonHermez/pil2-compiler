@@ -514,8 +514,8 @@ module.exports = class Processor {
         if (Debug.active) console.log(util.inspect(s.data, false, null, true));
         const res = this.processHintData(s.data);
         if (Debug.active) console.log(util.inspect(res, false, null, true));
-        if (this.scopeType === 'proof') {
-            if (Context.config.logHints) console.log(`Define global hint \x1B[38;5;208m${name}\x1B[0m`)
+        if (this.scope.getInstanceType() === 'proof') {
+            if (Context.config.logHints) console.log(`  > define global hint \x1B[38;5;208m${name}\x1B[0m`)
             this.globalHints.define(name, res);
         }
         else {
@@ -527,7 +527,9 @@ module.exports = class Processor {
         if (hdata instanceof Expression) {
             const value = hdata.eval();
             if (typeof value === 'bigint') return value;
-            return hdata.instance();
+            const res = hdata.instance();
+            if (Context.config.logHintExpressions) console.log('  > Hint expression: ' + res.toString());
+            return res;
         }
         if (hdata.type === 'array') {
             let result = [];

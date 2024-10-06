@@ -273,7 +273,7 @@ module.exports = class ProtoOut {
     setProofValues(proofvalues) {
         this.pilOut.numProofValues = proofvalues.length;
     }
-    setFixedCols(fixedCols) {    
+    setFixedCols(fixedCols) {  
         this.setConstantCols(fixedCols, this.currentAir.numRows, false);
     }
     setPeriodicCols(periodicCols) {
@@ -308,16 +308,18 @@ module.exports = class ProtoOut {
             if (colIsPeriodic !== periodic) continue;
             if (col.temporal) continue; // ignore temporal columns, only use to help to create other fixed columns
             const _rows = periodic ? col.rows : rows;
-            console.log(`  > Proto setting ${periodic?'periodic':'fixed'} col ${col.id} ${_rows} ....`);
             this.fixedId2ProtoId[col.id] = [colType, airCols.length];
             let values = [];
-            for (let irow = 0; irow < _rows; ++irow) {
-                const _value = col.getValue(irow);
-                if (typeof _value === 'undefined') {
-                    console.log(irow, col);
-                    throw new Error(`Error ${col.constructor.name} on row ${irow}`);
+            if (!Context.config.noProtoFixedData) {
+                console.log(`  > Proto setting ${periodic?'periodic':'fixed'} col ${col.id} ${_rows} ....`);
+                for (let irow = 0; irow < _rows; ++irow) {
+                    const _value = col.getValue(irow);
+                    if (typeof _value === 'undefined') {
+                        console.log(irow, col);
+                        throw new Error(`Error ${col.constructor.name} on row ${irow}`);
+                    }
+                    values.push(this.toBaseField(_value));
                 }
-                values.push(this.toBaseField(_value));
             }
             airCols.push({values});
         }

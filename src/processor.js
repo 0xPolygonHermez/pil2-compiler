@@ -1315,7 +1315,7 @@ module.exports = class Processor {
                 data.bytes = this.pragmas.nextFixed.bytes;
                 this.pragmas.nextFixed.bytes = false;
             }
-            if (this.pragmas.nextFixed.temporal !== false) {
+            if (this.pragmas.nextFixed.temporal) {
                 data.temporal = true;
                 this.pragmas.nextFixed.temporal = false;
             }

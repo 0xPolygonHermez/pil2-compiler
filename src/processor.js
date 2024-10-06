@@ -57,8 +57,8 @@ module.exports = class Processor {
         this.scope = new Scope();
         this.runtime = new Runtime();
         this.context = new Context(this.Fr, this, config);
-        this.nextStatementTranspile = false;
-        this.nextStatementFixed = false;
+        this.pragmas = { nextStatement: {},
+                         nextFixed: {}};
         this.loadedRequire = {};
         this.globalScopeTypes = []; // 'witness', 'fixed', 'airgroupvalue', 'challenge', 'proofvalue', 'public'];
 
@@ -131,6 +131,7 @@ module.exports = class Processor {
         this.callstack = []; // TODO
         this.breakpoints = ['expr.pil:26'];
         this.sourceRef = '(built-in-class)';
+        this.loadConfigDefines();
         this.loadBuiltInClass();
         this.scopeType = 'proof';
 
@@ -140,8 +141,6 @@ module.exports = class Processor {
         this.airStack = [];
 
         this.sourceRef = '(init)';
-        this.nextFixedBytes = false;        
-        this.nextTemporalFixed = false;
 
         if (config.protoOut === false) {
             this.proto = false;
@@ -152,6 +151,14 @@ module.exports = class Processor {
 
         if (typeof Context.config.test.onProcessorInit === 'function') {
             Context.config.test.onProcessorInit(this);
+        }
+    }
+    loadConfigDefines() {
+        const defines = Context.config.defines ?? {};
+        for (const name in defines) {
+            console.log(`> define const int \x1B[38;5;208m${name}\x1B[0m = ${defines[name]}`)
+            const initValue = new ExpressionItems.IntValue(Context.config.defines === true ? 1n : BigInt(defines[name]));
+            this.references.declare(name, 'int', [], { scope: false, sourceRef: '(defines)', const: true }, initValue);
         }
     }
     loadBuiltInClass() {
@@ -208,7 +215,9 @@ module.exports = class Processor {
             console.log(`  > Proto time: ${Math.round((t2-t1) * 100)/100.0} ms`);
         }
         const t2 = performance.now();
-        console.log(`  > Total compilation: ${Math.round((t2-t1) / 1000)} seconds`);
+        const seconds = Math.round((t2-t1) / 1000);
+        const elapsedTime = seconds > 90 ? `${Math.trunc(seconds / 60)} minutes ${seconds % 60} seconds` : `${seconds} seconds`;
+        console.log(`  > Total compilation: ${elapsedTime}`);
     }
     generateProtoOut()
     {        
@@ -253,49 +262,53 @@ module.exports = class Processor {
     }
     executeStatement(st) {
         const __executeStatementCounter = this.executeStatementCounter++;
-        let activeTranspile = this.nextStatementTranspile;
+
+        let ignoreStatement = this.pragmas.nextStatement.ignore ?? false;
+        let activeTranspile = this.pragmas.nextStatement.transpile ?? false;
         if (activeTranspile) {
             this.transpile = true;
-            this.nextStatementTranspile = false;
         }
-        this.traceLog(`[TRACE] #${__executeStatementCounter} ${st.debug ?? ''} (DEEP:${this.scope.deep})`, '38;5;75');
+        this.pragmas.nextStatement = {};
+        let res = new ExpressionItems.IntValue(0); // default value if ignore
+        if (!ignoreStatement) {
+            this.traceLog(`[TRACE] #${__executeStatementCounter} ${st.debug ?? ''} (DEEP:${this.scope.deep})`, '38;5;75');
 
-        this.sourceRef = st.debug ? (st.debug.split(':').slice(0,2).join(':') ?? ''):'';
-        // if (st instanceof ExpressionItem) {
-        //     const res = st.instance();
-        //     return res;
-        // }
-        if (typeof st.type === 'undefined') {
-            console.log(st);
-            this.error(st, `Invalid statement (without type)`);
-        }
-        const method = ('exec_'+st.type).replace(/[-_][a-z]/g, (group) => group.slice(-1).toUpperCase());
-        if (Debug.active) console.log(`## DEBUG ## ${this.executeCounter}.${this.executeStatementCounter} ${method} ${st.debug}` );
-        if (!(method in this)) {
-            console.log('==== ERROR ====');
-            this.error(st, `Invalid statement type: ${st.type}`);
-        }
-        let res;
-        try {
-            if (this.breakpoints.includes(st.debug)) {
-                debugger;
+            this.sourceRef = st.debug ? (st.debug.split(':').slice(0,2).join(':') ?? ''):'';
+            // if (st instanceof ExpressionItem) {
+            //     const res = st.instance();
+            //     return res;
+            // }
+            if (typeof st.type === 'undefined') {
+                console.log(st);
+                this.error(st, `Invalid statement (without type)`);
             }
-            if (this.transpile) {
-                this.transpile = false;
-                const transpiler = new Transpiler({processor: this});
-                const res = transpiler.transpile(st, this.transpileOptions);
-                this.transpileOptions = {};
-                return res;
-            } else {
-                res = this[method](st);
+            const method = ('exec_'+st.type).replace(/[-_][a-z]/g, (group) => group.slice(-1).toUpperCase());
+            if (Debug.active) console.log(`## DEBUG ## ${this.executeCounter}.${this.executeStatementCounter} ${method} ${st.debug}` );
+            if (!(method in this)) {
+                console.log('==== ERROR ====');
+                this.error(st, `Invalid statement type: ${st.type}`);
             }
-        } catch (e) {
-            // console.log([Expression.constructor.name]);
-            console.log("EXCEPTION ON "+st.debug+" ("+this.callstack.join(' > ')+")");
-            if (activeTranspile) {
-                this.transpile = false;
+            try {
+                if (this.breakpoints.includes(st.debug)) {
+                    debugger;
+                }
+                if (this.transpile) {
+                    this.transpile = false;
+                    const transpiler = new Transpiler({processor: this});
+                    const res = transpiler.transpile(st, this.transpileOptions);
+                    this.transpileOptions = {};
+                    return res;
+                } else {
+                    res = this[method](st);
+                }
+            } catch (e) {
+                // console.log([Expression.constructor.name]);
+                console.log("EXCEPTION ON "+st.debug+" ("+this.callstack.join(' > ')+")");
+                if (activeTranspile) {
+                    this.transpile = false;
+                }
+                throw e;
             }
-            throw e;
         }
         if (activeTranspile) {
             this.transpile = false;
@@ -379,19 +392,23 @@ module.exports = class Processor {
                 if (bytes === false) {
                     throw new Error(`Invalid bytes ${params[1]} on pragma fixed_size (valid values: bytes, word, dword, lword) at ${Context.sourceRef}`);
                 }
-                this.nextFixedBytes = bytes;
+                this.pragmas.nextFixed.bytes = bytes;
                 break;
             }
             case 'fixed_tmp':{
-                this.nextTemporalFixed = true;
+                this.pragmas.nextFixed.temporal = true;
                 break;
             }
             case 'debugger':
                 debugger;
                 break;  
+            case 'feature': {
+                this.pragmas.nextStatement.ignore = !(Context.config.features[params[1]] ?? false);
+                break;
+            }
             case 'transpile':
                 this.transpileOptions = {};
-                this.nextStatementTranspile = true;
+                this.pragmas.nextStatement.transpile = true;
                 for (let i = 1; i < params.length; ++i) {
                     const pos = params[i].indexOf(':');
                     if (pos < 0) {
@@ -402,9 +419,6 @@ module.exports = class Processor {
                         this.transpileOptions[key] = value;
                     }
                 }
-                break;
-            case 'fixed':
-                this.nextStatementFixed = true;
                 break;
             case 'dump': {                
                 const value = this.references.get(params[1]).value;
@@ -519,7 +533,9 @@ module.exports = class Processor {
             this.globalHints.define(name, res);
         }
         else {
-            if (Context.config.logHints) console.log(`  > define hint \x1B[38;5;208m${name}\x1B[0m`)            
+            if (Context.config.logHints || Context.config.logGlobalHints) {                
+                console.log(`  > define hint \x1B[38;5;208m${name}\x1B[0m`)
+            }            
             this.hints.define(name, res);
         }
     }
@@ -1295,13 +1311,13 @@ module.exports = class Processor {
                 else console.log(seq);
             }
             let data = {global};
-            if (this.nextFixedBytes !== false) {
-                data.bytes = this.nextFixedBytes;
-                this.nextFixedBytes = false;
+            if (this.pragmas.nextFixed.bytes !== false) {
+                data.bytes = this.pragmas.nextFixed.bytes;
+                this.pragmas.nextFixed.bytes = false;
             }
-            if (this.nextTemporalFixed !== false) {
+            if (this.pragmas.nextFixed.temporal !== false) {
                 data.temporal = true;
-                this.nextFixedBytes = false;
+                this.pragmas.nextFixed.temporal = false;
             }
 
             this.declareFullReference(colname, 'fixed', lengths, data, seq);
@@ -1463,6 +1479,8 @@ module.exports = class Processor {
         }
         if (Context.config.outputConstraints) {
             console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] > ${expr.toString({hideClass:true, hideLabel:false})} === 0 (${this.sourceRef})\x1B[0m`);
+        }
+        if (Context.config.outputConstraints || Context.config.outputGlobalConstraints ) {
             console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] (RAW) > ${expr.toString({hideClass:true, hideLabel:true})} === 0 (${this.sourceRef})\x1B[0m`);
         }
     }

@@ -127,7 +127,7 @@ module.exports = class Sequence {
     }
     extend() {        
         if (Debug.active) console.log(this.size);
-        if (Context.config.debugCompress) {
+        if (Context.config.logCompress) {
             console.log(this.engines.compression.execute(this.expression)[0]);
         }
         this.extendPos = 0;

@@ -110,8 +110,9 @@ module.exports = class ProtoOut {
         this.HintFieldArray = this.root.lookupType('HintFieldArray');
         this.Hint = this.root.lookupType('Hint');
     }
-    setupPilOut(name) {
-        console.log('Prime Field \x1B[38;5;208m0x' + this.Fr.p.toString(16)+'\x1B[0m');
+    setupPilOut(name) {        
+        console.log('> set pilout name \x1B[38;5;208m0x' + name + '\x1B[0m');
+        console.log('> set prime field \x1B[38;5;208m' + this.Fr.p.toString(16) + '\x1B[0m');
         this.pilOut = {
             name,
             baseField: this.toBaseField(this.Fr.p, 0, false),

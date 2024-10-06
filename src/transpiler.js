@@ -27,7 +27,7 @@ module.exports = class Transpiler {
         const lines = code.split('\n');
         const nlines = lines.map((line, index) => `\x1B[35m${(index + 1).toString(10).padStart(4,'0')}:\x1B[0m ${line}`);
         console.log(`  > Transpiled code ${Context.sourceTag}`);
-        if (Context.config.debugTraspile) {
+        if (Context.config.logTraspile) {
             console.log('\n'+ nlines.join('\n'));
         }
     }

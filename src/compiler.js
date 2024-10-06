@@ -53,11 +53,6 @@ class Compiler {
                 this.namespaces[name] = 0;
             }
         }
-        if (this.config.defines && typeof this.config.defines === 'object') {
-            for (const name in this.config.defines) {
-                this.constants.define(name, this.Fr.e(this.config.defines[name]));
-            }
-        }
         let sts = this.parseSource(fileName, true);
         this.processor.startExecution(sts);
         if (config.processorTest) {

@@ -9,23 +9,63 @@ const tty = require('tty');
 const assert = require('./assert.js');
 const debugConsole = require('./debug_console.js');
 
-const argv = require("yargs")
-    .version(version)
-    .usage("pil <source.pil> -o <output.json> [-P <pilconfig.json>]")
-    .alias("e", "exec")
-    .alias("o", "output")
-    .alias("n", "name")
-    .alias("P", "config")
-    .alias("v", "verbose")
-    .alias("I", "include")
-    .option("nofixed")
-    .alias("l", "lib")
-    .alias("f", "includePathFirst")
-    .alias("a", "asserts")
-    .alias("O", "option")
-    .argv;
+const OPTIONS = {
+    'chrono-proto': { describe: 'activate time measuraments of protobuf generation steps'},
+    'debug': { describe: 'enable a verbose debug mode' },
+    'log-compress': { describe: 'log extra information of compress mode' },
+    'log-traspile': { describe: 'log transpilation code and other debug information about transpiling' },
+    'log-lines': { describe: 'output the source reference that produce console.log' },
+    'println-lines': { describe: 'output the source (pi) that a println/error message' },
+    'log-file': { describe: 'enable log files generation' },
+    'log-hint-expressions': { describe: 'log all hints expressions' },
+    // TODO: log-hint (names), full log only of specified hints
+    'log-hints': { describe: 'log all hints' },
+    'no-proto-fixed-data': { describe: 'no store data of fixed inside pilout' },
+    'output-constraints': { describe: 'output all air and global constraints generated' },
+    'output-global-constraints': { describe: 'output all global constraints generated' },
+    'ignore-unknown-pragmas': { describe: 'ignore unknown pragmas' }
+    // TODO: option to force witness name as snake_case and air, airtemplate, airgroup in CamelCase
+}
+
+const yargs = require("yargs").version(version)
+    .usage("$0 <source.pil> <options>")
+    .wrap(160)
+    .option('e', { alias: 'exec', describe: 'Only execute the pil file' })
+    .option('o', { alias: 'output', describe: 'output pilout file. if filename is none, no pilout will be generated'})
+    .option('n', { alias: 'name', describe: 'name of pilout (protobuf)'})
+    .option('P', { alias: 'config', describe: 'pil configuration file (json format)'})
+    .option('v', { alias: 'verbose', describe: 'verbose output'})
+    .option('I', { alias: 'include', describe: 'include a pil (as adding a include on main pil)'})
+    .option('l', { alias: 'lib', describe: 'include paths separated by ,'})
+    .option('F', { alias: 'feature', describe: 'enable a pil feature (#pragma feature <name>)'})
+    .option('D', { alias: 'define', describe: 'define a global int value with value if it specified, if no was declared as 1'})
+    .option('asserts', { describe: 'enable asserts (more slow)'})
+    .alias("h", "help")
+    .option('O', { alias: 'option', describe: 'set a option options available:\n' + Object.entries(OPTIONS).map(([k,v]) => k.padEnd(30)+ ' '+v.describe).join('\n')});
+
+const argv = yargs.argv;
 
 Error.stackTraceLimit = Infinity;
+
+
+function getMultiOptions(options, fcall) {
+    if (typeof options === 'undefined') return;
+
+    const _options = Array.isArray(options) ? options : [options];
+    let res = {};
+    for (const option of _options) {
+        const posEqual = option.indexOf('=');
+        const key = (posEqual > 0) ? option.substr(0, posEqual) : option;
+        const value = (posEqual > 0) ? option.substr(posEqual + 1) : true;
+        if (typeof fcall === 'function') {
+            const [_key,_value] = fcall(key, value);
+            res[_key] = _value;
+        }
+        else res[key] = value;
+    }
+    return res;
+}
+
 
 async function run() {
     let inputFile;
@@ -35,7 +75,7 @@ async function run() {
     } else if (argv._.length == 1) {
         inputFile = argv._[0];
     } else  {
-        console.log("Only one circuit at a time is permited");
+        console.log("Only one pil at a time is permited");
         process.exit(1);
     }
 
@@ -84,16 +124,35 @@ async function run() {
     if (argv.includePathFirst) {
         config.includePathFirst = true;
     }
-    if (argv.option) {
-        const options = Array.isArray(argv.option) ? argv.option : [argv.option];
-        for (const option of options) {
-            const posEqual = option.indexOf('=');
-            const key = (posEqual > 0) ? option.substr(0, posEqual) : option;
-            const value = (posEqual > 0) ? option.substr(posEqual + 1) : true;
+
+    Object.assign(config, getMultiOptions(argv.option, (key, value) => {
             const camelCaseKey = key.replace(/-([a-z])/g, (m, chr) => chr.toUpperCase());
-            config[camelCaseKey] = value;
-        }
-    }
+            if (typeof OPTIONS[key] === 'undefined') {
+                console.log(`\x1B[1;31mERROR:\x1B[0;31m Unknown option \x1B[1m${key}\x1B[0;31m (config.${camelCaseKey})\n       try use -h or --help to see all options\x1B[0m`);    
+                process.exit(1);
+            }
+            return [camelCaseKey, value];
+        }));
+
+    config.defines = config.defines || {};
+    Object.assign(config.defines, getMultiOptions(argv.define, (key, value) => {
+            try {
+                return [key, BigInt(value)];
+            } catch (e) {
+                console.log(`\x1B[1;31mERROR:\x1B[0;31m On define \x1B[1m${key}\x1B[0;31m with value \x1B[1m${value}\x1B[0;31m (only numbers are supported in defines)\x1B[0m`);
+                process.exit(1);
+            }
+        }));
+
+    config.features = config.features || {};
+    Object.assign(config.features, getMultiOptions(argv.feature, (key, value) => {
+            if (value !== true) {
+                console.log(`\x1B[1;31mERROR:\x1B[0;31m Pragma feature \x1B[1m${key}\x1B[0;31m has value \x1B[1m${value}\x1B[0;31m, but pragma features can only enable.\x1B[0m`);
+                process.exit(1);
+            }
+            return [key, value];
+        }));
+
     if (config.logLines) {
         debugConsole.init();
     }   

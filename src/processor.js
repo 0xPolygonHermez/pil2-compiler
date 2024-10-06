@@ -202,7 +202,7 @@ module.exports = class Processor {
                 if (stats.size < 10240*1024) {
                     console.log(`  > Proto size: ${Math.round(stats.size / 1024)} KB`);
                 } else {
-                    console.log(`  > Proto size: ${Math.round(stats.size / 1024*1024)} MB`);
+                    console.log(`  > Proto size: ${Math.round(stats.size / (1024*1024))} MB`);
                 }                
             }
             console.log(`  > Proto time: ${Math.round((t2-t1) * 100)/100.0} ms`);

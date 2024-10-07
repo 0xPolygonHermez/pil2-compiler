@@ -66,9 +66,12 @@ module.exports = class SequenceSizeOf extends SequenceBase {
         return 1;
     }
     updateMaxValue(value) {
+        if (value < 0n) {
+            value = Context.Fr.e(value);
+        }
         if (this.maxValue < value) {
             this.maxValue = value;
-        }   
+        }
     }
     getMaxValue() {
         return this.maxValue;
@@ -77,7 +80,8 @@ module.exports = class SequenceSizeOf extends SequenceBase {
         if (this.maxValue < 256n) return 1;
         if (this.maxValue < 65536n) return 2;
         if (this.maxValue < 4294967296n) return 4;
-        return 8;
+        if (this.maxValue < 0x10000000000000000n) return 8;
+        throw new Error(`too big number ${this.maxValue}`);
     }
     updateMaxSizeWithPadingSize(paddingSize) {
         if (this._paddingDelta) {

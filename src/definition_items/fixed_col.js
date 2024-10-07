@@ -14,7 +14,7 @@ module.exports = class FixedCol extends ProofItem {
         this.sequence = null;
         this.values = false;
         this.maxValue = 0;
-        this.bytes = data.bytes ?? false;        
+        this.bytes = data.bytes ?? false;
         this.temporal = data.temporal ?? false;
         this.size = 0;
         this.maxRow = 0;
@@ -43,7 +43,7 @@ module.exports = class FixedCol extends ProofItem {
         if (value < 65536n) return 2;
         if (value < 4294967296n) return 4;
         if (value <= U64_MAX) return 8;
-        return BIG_INT; // big int 
+        return BIG_INT; // big int
     }
     createBuffer(rows, bytes) {
         const buffer = new Buffer.alloc(rows * bytes);
@@ -56,7 +56,7 @@ module.exports = class FixedCol extends ProofItem {
         }
         throw new Error(`invalid number of bytes ${bytes}`);
     }
-    checkIfResize(row, value) {        
+    checkIfResize(row, value) {
         switch (this.bytes) {
             case 1: if (value >= 256n) this.resizeValues(row, value); break;
             case 2: if (value >= 65536n) this.resizeValues(row, value); break;
@@ -88,25 +88,25 @@ module.exports = class FixedCol extends ProofItem {
             this.checkIfResize(row, value);
         }
         if (row >= this.maxRow) this.maxRow = row;
-        this.values[row] = this.converter(value);        
+        this.values[row] = this.converter(value);
     }
     #fastSetRowValue(row, value) {
         value = Context.Fr.e(value);
-        this.values[row] = this.converter(value);        
+        this.values[row] = this.converter(value);
     }
     #ultraFastSetRowValue(row, value) {
         value = Context.Fr.e(value);
-        this.values[row] = value;        
+        this.values[row] = value;
     }
     resizeValues(row, value) {
         let _bytes = this.valueToBytes(value);
         let [_buffer, _values, _converter] = this.createBuffer(this.rows, _bytes);
         const _resizeConvert = this.bytes !== BIG_INT ? x => BigInt(x) : x => x;
-        for (let i = 0; i < this.maxRow; ++i) { 
+        for (let i = 0; i < this.maxRow; ++i) {
             _values[i] = _resizeConvert(this.values[i]);
         }
-        console.log(`\x1B[1;31mWARNING: fixed RESIZE from ${this.bytes} bytes to ${_bytes} on row ${row}/${this.maxRow} at ${Context.sourceRef}\x1B[0m`);    
-        console.log(`\x1B[1;31muse #pragma fixed_bytes ${_bytes} to force initial size\x1B[0m`);    
+        console.log(`\x1B[1;31mWARNING: fixed RESIZE from ${this.bytes} bytes to ${_bytes} on row ${row}/${this.maxRow} at ${Context.sourceRef}\x1B[0m`);
+        console.log(`\x1B[1;31muse #pragma fixed_bytes ${_bytes} to force initial size\x1B[0m`);
         this.values = _values;
         this.bytes = _bytes;
         this.buffer = _buffer;

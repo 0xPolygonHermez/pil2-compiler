@@ -48,6 +48,7 @@ const units = require('./units.js');
 const MAX_SWITCH_CASE_RANGE = 512;
 module.exports = class Processor {
     constructor (Fr, parent, config = {}) {
+        this.totalProtoTime = 0;
         this.memoryInfo = {maxMemory: 0};
         this.lastMs = Math.floor(performance.now());
         this.sourceRef = '(processor constructor)';
@@ -220,12 +221,15 @@ module.exports = class Processor {
                 const stats = fs.statSync(Context.config.outputFile);
                 console.log('  > Proto size: ' + units.getHumanSize(stats.size));
             }
+            this.totalProtoTime += (t2-t1);
             console.log('  > Proto time: ' + units.getHumanTime(t2-t1));
         }
         const t2 = performance.now();
         this.memoryUpdate();
+        const compilationTime = t2 - t1;
+        console.log('  > Total proto time ('+(Math.round((this.totalProtoTime * 10000)/compilationTime)/100)+'%): ' + units.getHumanTime(this.totalProtoTime));
         console.log('  > Memory: ' + units.getHumanSize(this.memoryInfo.maxMemory));
-        console.log('  > Total compilation: ' + units.getHumanTime(t2-t1));
+        console.log('  > Total compilation: ' + units.getHumanTime(compilationTime));
     }
     generateProtoOut()
     {
@@ -1193,6 +1197,7 @@ module.exports = class Processor {
             this.airGroupProtoOut(this.currentAirGroup.id, air.id);
             this.memoryUpdate();
             const t2 = performance.now();
+            this.totalProtoTime += (t2-t1);
             console.log('  > Proto time: ' + units.getHumanTime(t2-t1));
         }
 

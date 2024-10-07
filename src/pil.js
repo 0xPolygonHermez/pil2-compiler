@@ -13,6 +13,7 @@ const OPTIONS = {
     'chrono-proto': { describe: 'activate time measuraments of protobuf generation steps'},
     'debug': { describe: 'enable a verbose debug mode' },
     'log-compress': { describe: 'log extra information of compress mode' },
+    'log-bin-compress': { describe: 'log extra information of bin compress mode' },
     'log-traspile': { describe: 'log transpilation code and other debug information about transpiling' },
     'log-lines': { describe: 'output the source reference that produce console.log' },
     'println-lines': { describe: 'output the source (pi) that a println/error message' },
@@ -128,7 +129,7 @@ async function run() {
     Object.assign(config, getMultiOptions(argv.option, (key, value) => {
             const camelCaseKey = key.replace(/-([a-z])/g, (m, chr) => chr.toUpperCase());
             if (typeof OPTIONS[key] === 'undefined') {
-                console.log(`\x1B[1;31mERROR:\x1B[0;31m Unknown option \x1B[1m${key}\x1B[0;31m (config.${camelCaseKey})\n       try use -h or --help to see all options\x1B[0m`);    
+                console.log(`\x1B[1;31mERROR:\x1B[0;31m Unknown option \x1B[1m${key}\x1B[0;31m (config.${camelCaseKey})\n       try use -h or --help to see all options\x1B[0m`);
                 process.exit(1);
             }
             return [camelCaseKey, value];
@@ -155,9 +156,9 @@ async function run() {
 
     if (config.logLines) {
         debugConsole.init();
-    }   
+    }
     const out = compile(F, fullFileName, null, config);
-}    
+}
 
 run().then(()=> {
     process.exitCode = 0;

@@ -1,0 +1,13 @@
+airtemplate FixedCompress(int N = 2**13) {
+    col fixed ONE = [1:5,2:5,3:5,4:5]...;
+    col fixed TWO = [5:10]:20...;
+    col fixed BIN = [0:50,1:30,0:15,1:10]...;
+    col fixed FTO = [[1..20]:5,[0:16..18:16]:7,[20..1]]...;
+
+    col witness binary;
+    binary * (1 - binary) === 0;
+}
+
+airgroup FixedCompress {
+    FixedCompress();
+}

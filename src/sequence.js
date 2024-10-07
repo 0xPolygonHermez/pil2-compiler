@@ -11,6 +11,7 @@ const SequenceExtend = require('./sequence/extend.js');
 const SequenceToList = require('./sequence/to_list.js');
 const SequenceTypeOf = require('./sequence/type_of.js');
 const SequenceCompression = require('./sequence/compression.js');
+const SequenceBinCompression = require('./sequence/bin_compression.js');
 const IntValue = require('./expression_items/int_value.js');
 const ExpressionList = require('./expression_items/expression_list.js');
 
@@ -51,7 +52,8 @@ module.exports = class Sequence {
             extend: new SequenceExtend(this, 'extend', options),
             toList: new SequenceToList(this, 'toList', options),
             typeOf: new SequenceTypeOf(this, 'typeOf'),
-            compression: new SequenceCompression(this, 'compression')
+            compression: new SequenceCompression(this, 'compression'),
+            binCompression: new SequenceBinCompression(this, 'binCompression')
         };
         this.engines.typeOf.execute(this.expression);
         this.sizeOf(this.expression);
@@ -109,7 +111,7 @@ module.exports = class Sequence {
         this.engines.sizeOf.updateMaxSizeWithPadingSize(this.paddingSize);
         this.bytes = this.engines.sizeOf.getMaxBytes();
         if (Debug.active) console.log(['SIZE', this.size]);
-        return this.size; 
+        return this.size;
     }
     toList() {
         this.engines.toList.execute(this.expression);
@@ -125,10 +127,16 @@ module.exports = class Sequence {
         this.paddingCycleSize = size;
         return this.paddingCycleSize;
     }
-    extend() {        
+    extend() {
         if (Debug.active) console.log(this.size);
+        console.log(Context.config);
         if (Context.config.logCompress) {
             console.log(this.engines.compression.execute(this.expression)[0]);
+        }
+        if (Context.config.logBinCompress) {
+            const [data, len] = this.engines.binCompression.execute(this.expression);
+            console.log(len, data);
+            console.log(data.map(x => x < 128 ? `0x${x.toString(16).padStart(2,'0').toUpperCase()}(${x})`:x));
         }
         this.extendPos = 0;
         const [code, count] = this.engines.codeGen.execute(this.expression);

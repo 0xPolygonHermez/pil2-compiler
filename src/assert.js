@@ -23,7 +23,7 @@ function returnInstanceOf(actual, cls, message) {
     if (actual && actual.constructor) {
         return _message(`value(${actual.constructor.name}) isn't an instance of ${cls.name}`, actual);
     }
-    _message(message, `value isn't an instance of ${cls}`, actual);
+    _message(message, `value (${typeof actual}) isn't an instance of ${cls.name ?? cls}`, actual);
 }
 
 function returnNotInstanceOf(actual, cls, message) {
@@ -55,10 +55,10 @@ function notTypeOf(actual, typename, message) {
 }
 
 function _message(message, defaultmsg = false, value = false) {
-    if (typeof value === 'object' && (!value || typeof value.toString !== 'function')) { 
+    if (typeof value === 'object' && (!value || typeof value.toString !== 'function')) {
         console.log(value);
     }
-    if (typeof message === 'object') { 
+    if (typeof message === 'object') {
         console.log(message);
         debugger;
         throw new Error('ASSERT:' + defaultmsg);
@@ -70,17 +70,17 @@ function _message(message, defaultmsg = false, value = false) {
 function defined(value, message) {
     if (typeof value !== 'undefined') return true;
     _message(message, 'not defined value', value);
-}   
+}
 
 function _undefined(value, message) {
     if (typeof value === 'undefined') return true;
     _message(message, `defined value ${value}`, value);
-}   
+}
 
 function ok(value, message) {
     if (value) return true;
     _message(message, `defined value ${value}`);
-}   
+}
 
 const _exports = {
     enable,
@@ -104,7 +104,7 @@ const _exports = {
 }
 
 function enable(value = true) {
-    if (!value) return disable();        
+    if (!value) return disable();
 
     _exports.isEnabled = true;
     _exports.equal = equal;
@@ -113,15 +113,15 @@ function enable(value = true) {
     _exports.notStrictEqual = notStrictEqual;
     _exports.defined = defined;
     _exports.undefined = _undefined;
-    _exports.returnInstanceOf = returnInstanceOf;    
-    _exports.instanceOf = returnInstanceOf;    
-    _exports.returnNotInstanceOf = returnNotInstanceOf;    
-    _exports.notInstanceOf = returnNotInstanceOf;    
-    _exports.typeOf = typeOf;    
-    _exports.notTypeOf = notTypeOf;    
+    _exports.returnInstanceOf = returnInstanceOf;
+    _exports.instanceOf = returnInstanceOf;
+    _exports.returnNotInstanceOf = returnNotInstanceOf;
+    _exports.notInstanceOf = returnNotInstanceOf;
+    _exports.typeOf = typeOf;
+    _exports.notTypeOf = notTypeOf;
     _exports.ok = ok;
-    _exports.returnTypeOf = returnTypeOf;    
-    _exports.returnNotTypeOf = returnNotTypeOf;    
+    _exports.returnTypeOf = returnTypeOf;
+    _exports.returnNotTypeOf = returnNotTypeOf;
     _showState();
 }
 

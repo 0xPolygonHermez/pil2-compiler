@@ -17,6 +17,7 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
         const v = this.createCodeVariable('_v');
         const comparator = ((operation === '+' || operation === '*') && delta > 0n) ? '<=':'>=';
         let code = `for(let ${v}=${fromValue}n;${v}${comparator}${toValue}n;${v}=${v}${delta > 0n? operation+delta:delta}n){`;
+        // code += '__log("XXX"); __log(`__data[${__dindex}] = `,'+`${v}, Fr.e(${v}).toString(16));`;
         code += '__data[__dindex++] = ' + (this.bytes === 8 ? `Fr.e(${v})` : `Number(${v})`) + ';';
         if (times > 1) {
             const _code = this.#getCodeRepeatLastElements(1, times - 1);
@@ -138,7 +139,7 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
             case 1: context.__data = new Uint8Array(__dbuf.buffer, 0, this.size); break;
             case 2: context.__data = new Uint16Array(__dbuf.buffer, 0, this.size); break;
             case 4: context.__data = new Uint32Array(__dbuf.buffer, 0, this.size); break;
-            case 8: context.__data = new BigInt64Array(__dbuf.buffer, 0, this.size); break;
+            case 8: context.__data = new BigUint64Array(__dbuf.buffer, 0, this.size); break;
         }
         return context;
     }

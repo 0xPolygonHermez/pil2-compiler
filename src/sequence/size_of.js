@@ -62,7 +62,7 @@ module.exports = class SequenceSizeOf extends SequenceBase {
         return tn === false ? count : count * times;
     }
     expr(e) {
-        this.updateMaxValue(e.asInt());
+        this.updateMaxValue(e.asIntDefault(0n));
         return 1;
     }
     updateMaxValue(value) {

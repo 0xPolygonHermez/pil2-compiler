@@ -55,9 +55,9 @@ module.exports = class Values {
             case 1: this.#values = new Uint8Array(this.#buffer.buffer, 0, this.#rows); break;
             case 2: this.#values = new Uint16Array(this.#buffer.buffer, 0, this.#rows); break;
             case 4: this.#values = new Uint32Array(this.#buffer.buffer, 0, this.#rows); break;
-            case 8: this.#values = new BigInt64Array(this.#buffer.buffer, 0, this.#rows); break;
+            case 8: this.#values = new BigUint64Array(this.#buffer.buffer, 0, this.#rows); break;
         }
-    }   
+    }
     setValue(irow, value) {
         if (!this.#mutable) {
             throw new Error(`modifying an inmutable values irow = ${irow} and value = ${value}`);
@@ -66,11 +66,12 @@ module.exports = class Values {
     }
     __setValue(irow, value) {
         this.initValues();
-        if (this.#bytes === 8) this.#values[irow] = value;
+        if (this.#bytes === 8) this.#values[irow] = Context.Fr.e(value);
         else this.#values[irow] = Number(value);
     }
     getValue(irow) {
-        return this.#values === false ? 0n : BigInt(this.#values[irow]);
+        const res = this.#values === false ? 0n : BigInt(this.#values[irow]);
+        return res;
     }
     getValues() {
         return this.#values;

@@ -34,6 +34,9 @@ module.exports = class FixedCol extends ProofItem {
     getValue(row) {
         return this.getRowValue(row);
     }
+    getValueItem(row) {
+        return this.getRowItem(row);
+    }
     setValue(value) {
         // TODO: review
         this.set(value);

@@ -9,6 +9,9 @@ module.exports = class FixedRow extends ExpressionItem {
     getValue() {
         return this.col.getValue(this.row);
     }
+    getValueItem() {
+        return this.col.getValueItem(this.row);
+    }
     setValue(value) {
         return this.col.setValue(this.row, value);
     }
@@ -16,6 +19,6 @@ module.exports = class FixedRow extends ExpressionItem {
         return new FixedRow(this.col, this.row, this.options);
     }
     evalInside(options = {}) {
-        return this.getValue();
+        return options.asItem ? this.getValueItem() : this.getValue();
     }
 }

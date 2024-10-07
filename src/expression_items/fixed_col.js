@@ -17,6 +17,9 @@ module.exports = class FixedCol extends ProofItem {
     getValue(row) {
         return this.definition.getValue(row);
     }
+    getValueItem(row) {
+        return this.definition.getValueItem(row);
+    }
     getRowItem(row) {
         return new FixedRow(this,row);
     }

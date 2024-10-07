@@ -54,8 +54,8 @@ module.exports = class Sequence {
             compression: new SequenceCompression(this, 'compression')
         };
         this.engines.typeOf.execute(this.expression);
-        this.sizeOf(this.expression);
-        this.#values = new Values(this.bytes, this.maxSize);
+        this.size = this.sizeOf(this.expression);
+        this.#values = new Values(this.bytes, this.size);
     }
     get isSequence () {
         return this.engines.typeOf.isSequence;
@@ -109,7 +109,7 @@ module.exports = class Sequence {
         this.engines.sizeOf.updateMaxSizeWithPadingSize(this.paddingSize);
         this.bytes = this.engines.sizeOf.getMaxBytes();
         if (Debug.active) console.log(['SIZE', this.size]);
-        return this.size; 
+        return this.size;
     }
     toList() {
         this.engines.toList.execute(this.expression);
@@ -125,14 +125,14 @@ module.exports = class Sequence {
         this.paddingCycleSize = size;
         return this.paddingCycleSize;
     }
-    extend() {        
+    extend() {
         if (Debug.active) console.log(this.size);
         if (Context.config.logCompress) {
             console.log(this.engines.compression.execute(this.expression)[0]);
         }
         this.extendPos = 0;
         const [code, count] = this.engines.codeGen.execute(this.expression);
-        const context = this.engines.codeGen.genContext();
+        const context = {...this.engines.codeGen.genContext(), __log: function () { console.log.apply(null, arguments)}};
         vm.createContext(context);
         vm.runInContext(code, context);
         this.#values.__setValues(context.__dbuf, context.__data);

@@ -535,6 +535,7 @@ module.exports = class Processor {
         const names = this.context.getNames(st.name.name);
         let assignedValue = false;
         if (st.value instanceof ExpressionItems.ExpressionList) {
+            console.log('EXPRESSION LIST ASSIGNMENT');
             const sequence = new Sequence(st.value, ExpressionItems.IntValue.castTo(this.references.get('N')));
             sequence.extend();
             if (Debug.active) console.log(sequence.size);

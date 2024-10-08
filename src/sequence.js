@@ -113,7 +113,7 @@ module.exports = class Sequence {
     }
     toList() {
         this.engines.toList.execute(this.expression);
-        return new ExpressionList(this.#values.getValues());
+        return new ExpressionList(this.engines.toList.getValues());
     }
     setPaddingSize(size) {
         if (this.maxSize === false) {

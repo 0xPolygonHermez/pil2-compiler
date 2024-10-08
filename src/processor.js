@@ -153,11 +153,11 @@ module.exports = class Processor {
 
         if (typeof Context.config.test.onProcessorInit === 'function') {
             Context.config.test.onProcessorInit(this);
-        }        
+        }
         this.memoryUpdate();
     }
     memoryUpdate() {
-        const mem = process.memoryUsage().rss; 
+        const mem = process.memoryUsage().rss;
         if (mem > this.memoryInfo.maxMemory) {
             this.memoryInfo.maxMemory = mem;
         }
@@ -198,7 +198,7 @@ module.exports = class Processor {
     }
     startExecution(statements) {
         const t1 = performance.now();
-                
+
         this.sourceRef = '(start-execution)';
 
         this.declareBuiltInConstants();
@@ -228,7 +228,7 @@ module.exports = class Processor {
         console.log('  > Total compilation: ' + units.getHumanTime(t2-t1));
     }
     generateProtoOut()
-    {        
+    {
         if (Context.config.protoOut === false) return;
         this.memoryUpdate();
         this.proto.setPublics(this.publics);
@@ -237,7 +237,7 @@ module.exports = class Processor {
         let packed = new PackedExpressions();
         this.globalExpressions.pack(packed);
         this.proto.setGlobalConstraints(this.globalConstraints, packed);
-        this.proto.addHints(this.globalHints, packed, {airGroupId: false });        
+        this.proto.addHints(this.globalHints, packed, {airGroupId: false });
         this.proto.setGlobalExpressions(packed);
         this.proto.setGlobalSymbols(this.references);
         this.proto.encode();
@@ -271,7 +271,7 @@ module.exports = class Processor {
         }
         return false;
     }
-    getDirectStatement(st) {        
+    getDirectStatement(st) {
         if (st.type === 'code') {
             return this.getDirectStatement(st.statements);
         }
@@ -357,7 +357,7 @@ module.exports = class Processor {
                     console.log('## DEBUG ON ##');
                     console.log('##############');
                 }
-                else if (params[1] === 'off') Debug.active = false;        
+                else if (params[1] === 'off') Debug.active = false;
                 break;
             case 'profile':
                 if (params[1] === 'on') {
@@ -365,13 +365,13 @@ module.exports = class Processor {
                 }
                 else if (params[1] === 'off') {
                     console.profileEnd();
-                }        
+                }
                 break;
             case 'exit':
                 EXIT_HERE;
                 break;
             case 'timer': {
-                const name = params[1] ?? false; 
+                const name = params[1] ?? false;
                 const action = params[2] ?? 'start';
                 if (action === 'start')  {
                     this.timers[name] = Performance.now();
@@ -426,7 +426,7 @@ module.exports = class Processor {
             }
             case 'debugger':
                 debugger;
-                break;  
+                break;
             case 'feature': {
                 this.pragmas.nextStatement.ignore = !(Context.config.features[params[1]] ?? false);
                 break;
@@ -440,12 +440,12 @@ module.exports = class Processor {
                         this.transpileOptions[params[i]] = true;
                     } else {
                         const key = params[i].substr(0, pos);
-                        const value = params[i].substr(pos+1);                        
+                        const value = params[i].substr(pos+1);
                         this.transpileOptions[key] = value;
                     }
                 }
                 break;
-            case 'dump': {                
+            case 'dump': {
                 const value = this.references.get(params[1]).value;
                 value.dump('*************** PRAGMA '+Context.sourceRef+' ***************');
                 break;
@@ -453,7 +453,7 @@ module.exports = class Processor {
             default:
                 throw new Error(`Prama ${instr} not implemented`);
         }
-        
+
     }
     showMemory(m1, m2 = false) {
         const concept = m2 === false ? 'use' : 'increment';
@@ -491,7 +491,7 @@ module.exports = class Processor {
         if (!func) {
             this.error({}, `Undefined function ${name}`);
         }
-        if (func.isBridge) {   
+        if (func.isBridge) {
             return func.exec(callinfo, {}, options);
         } else if (options.alias) {
             throw new Error(`Alias can not be used on function calls at ${Context.sourceRef}`);
@@ -547,9 +547,9 @@ module.exports = class Processor {
             this.globalHints.define(name, res);
         }
         else {
-            if (Context.config.logHints || Context.config.logGlobalHints) {                
+            if (Context.config.logHints || Context.config.logGlobalHints) {
                 console.log(`  > define hint \x1B[38;5;208m${name}\x1B[0m`)
-            }            
+            }
             this.hints.define(name, res);
         }
     }
@@ -608,7 +608,7 @@ module.exports = class Processor {
             const _case = s.cases[index];
             if (_case.condition && _case.condition.values) {
                 for (const value of _case.condition.values) {
-                    if (value instanceof Expression) {  
+                    if (value instanceof Expression) {
                         const _key = value.asInt();
                         if (typeof values[_key] !== 'undefined') {
                             throw new Error(`Switch-case value ${_key} duplicated`);
@@ -617,7 +617,7 @@ module.exports = class Processor {
                     } else if (value.from && value.to && value.from instanceof Expression && value.to instanceof Expression) {
                         const _from = value.from.asInt();
                         const _to = value.to.asInt();
-                        if ((_to - _from) < MAX_SWITCH_CASE_RANGE) { 
+                        if ((_to - _from) < MAX_SWITCH_CASE_RANGE) {
                             while (_from <= _to) {
                                 if (typeof values[_from] !== 'undefined') {
                                     throw new Error(`Switch-case value ${_from} duplicated`);
@@ -627,7 +627,7 @@ module.exports = class Processor {
                             }
                         } else {
                             throw new Error(`Switch-case range too big ${from}..${to} (${_to-_from}) max: ${MAX_SWITCH_CASE_RANGE}`);
-                        }        
+                        }
                     } else {
                         console.log(value);
                         EXIT_HERE;
@@ -751,9 +751,9 @@ module.exports = class Processor {
             }
             if (Debug.active) console.log('INCREMENT', s.increment);
             this.execute(s.increment);
-            //if (mesure) { 
-            //    t[4] = performance.now(); 
-            //    console.log(`PARTIAL TIMES T0:${t[1]-t[0]}ms T1:${t[2]-t[1]}ms T2:${t[3]-t[2]}ms T3:${t[4]-t[3]}ms`);   
+            //if (mesure) {
+            //    t[4] = performance.now();
+            //    console.log(`PARTIAL TIMES T0:${t[1]-t[0]}ms T1:${t[2]-t[1]}ms T2:${t[3]-t[2]}ms T3:${t[4]-t[3]}ms`);
             //    mesure = false;
             //}
         }
@@ -781,7 +781,7 @@ module.exports = class Processor {
         }
         if (result instanceof ReturnCmd) {
             return true;
-        }   
+        }
         return false;
     }
     execForIn(s) {
@@ -936,7 +936,7 @@ module.exports = class Processor {
         if (!this.loadedRequire[requireId]) {
             this.loadedRequire[requireId] = true;
             return this.execute(s.contents);
-        }    
+        }
     }
     execFunctionDefinition(s) {
         if (Debug.active) console.log('FUNCTION '+s.name);
@@ -1040,22 +1040,22 @@ module.exports = class Processor {
         let airGroup = this.airGroups.get(name);
         if (!airGroup) {
             airGroup = new AirGroup(name, [], true);
-            this.airGroups.define(name, airGroup);            
+            this.airGroups.define(name, airGroup);
         }
         this.openAirGroup(airGroup);
-        this.execute(s.statements); 
+        this.execute(s.statements);
         this.suspendCurrentAirGroup();
     }
     setAirGroupBuiltIntConstants(airGroup) {
-        this.references.set('AIRGROUP', [], airGroup ? airGroup.name : '');  
-        this.references.set('AIRGROUP_ID', [], new ExpressionItems.IntValue(airGroup ? airGroup.id : 0));  
+        this.references.set('AIRGROUP', [], airGroup ? airGroup.name : '');
+        this.references.set('AIRGROUP_ID', [], new ExpressionItems.IntValue(airGroup ? airGroup.id : 0));
     }
     /**
      * method to return id of airgroup, if this id not defined yet, use lastAirGroupId to set it
-     * @param {AirGroup} airGroup 
+     * @param {AirGroup} airGroup
      * @returns {number}
      */
-    getAirGroupId(airGroup) {    
+    getAirGroupId(airGroup) {
         const id = airGroup.getId();
         if (id !== false) {
             if (this.proto) {
@@ -1071,20 +1071,20 @@ module.exports = class Processor {
         return this.lastAirGroupId;
     }
     /**
-     * Open or reopen a airgroup with name airGroupName, this means that 
+     * Open or reopen a airgroup with name airGroupName, this means that
      * start to executing inside airgroup scope
-     * @param {string} airGroupName 
-     * @param {AirGroup} airGroup 
+     * @param {string} airGroupName
+     * @param {AirGroup} airGroup
      */
     openAirGroup(airGroup) {
         this.airGroupStack.push(this.currentAirGroup);
         this.currentAirGroup = airGroup;
         this.scope.pushInstanceType('airgroup');
         this.context._airGroupName = airGroup.name;
-        this.airGroupId = this.getAirGroupId(airGroup);        
+        this.airGroupId = this.getAirGroupId(airGroup);
         Context.airGroupId = this.airGroupId;
         this.setAirGroupBuiltIntConstants(airGroup);
-    }    
+    }
     /**
     * close current airgroup and call defered funcions, clear scope of airgroup
     */
@@ -1140,7 +1140,7 @@ module.exports = class Processor {
     setAirBuiltInConstants(air) {
         this.references.set('BITS', [], air.bits ?? 0);
         // TODO: alert to AIR_ID because really was undefined
-        this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? 0));          
+        this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? 0));
     }
     executeAirTemplate(airTemplate, airTemplateFunc, callinfo, options = {}) {
         const name = options.alias ? options.alias : airTemplate.name;
@@ -1174,7 +1174,7 @@ module.exports = class Processor {
         console.log('  > Constraints: ' + constraints);
         console.log('  > Execution time: ' + units.getHumanTime(ti2-ti1));
 
-    
+
         if (this.proto) {
             const t1 = performance.now();
             this.memoryUpdate();
@@ -1193,7 +1193,7 @@ module.exports = class Processor {
         this.context.pop();
         this.closeAir(air);
 
-        // closing airgroup but no closing final        
+        // closing airgroup but no closing final
         // this.suspendCurrentAirGroup(false);
 
         this.finishFunctionCall(airTemplate);
@@ -1227,7 +1227,7 @@ module.exports = class Processor {
     }
     airGroupProtoOut(airGroupId, airId) {
         if (Context.config.protoOut === false) return;
-        
+
         let packed = new PackedExpressions();
         let chrono = new Chrono(Context.config.chronoProto ?? false);
 
@@ -1236,9 +1236,9 @@ module.exports = class Processor {
         this.proto.setFixedCols(this.fixeds);
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
 
-        this.proto.setPeriodicCols(this.fixeds);        
+        this.proto.setPeriodicCols(this.fixeds);
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-PERIODIC-COLS');
-        
+
         this.proto.setWitnessCols(this.witness);
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-WITNESS-COLS');
 
@@ -1264,7 +1264,7 @@ module.exports = class Processor {
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
         if (airId == 0) {
-            
+
             this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId), 'airgroupvalue', {airGroupId});
         }
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS');
@@ -1274,7 +1274,7 @@ module.exports = class Processor {
                 airId
             });
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-HINTS');
-        this.proto.setExpressions(packed);        
+        this.proto.setExpressions(packed);
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-EXPRESSIONS');
         chrono.end('PROTO-AIRGROUP-OUT-END');
     }
@@ -1563,7 +1563,7 @@ module.exports = class Processor {
         return this.evaluateTemplate(text);
     }
 
-    evaluateTemplate(template, options = {}) {  
+    evaluateTemplate(template, options = {}) {
         const regex = /\${[^}]*}/gm;
         let m;
         let tags = [];
@@ -1592,11 +1592,6 @@ module.exports = class Processor {
         if (Debug.active) console.log(`TEMPLATE "${template}" ==> "${evaluatedTemplate}"`);
         return evaluatedTemplate;
     }
-    evaluateExpression(e){
-        // TODO
-        TODO_STOP
-        return 0n;
-    }
     execReturn(s) {
         const sourceRef = this.sourceRef;
         this.traceLog(`[RETURN.BEGIN ${sourceRef}] ${this.scope.deep}`);
@@ -1610,8 +1605,5 @@ module.exports = class Processor {
         }
         this.traceLog(`[RETURN.END  ${sourceRef}] ${this.scope.deep}`);
         return new ReturnCmd(res);
-    }
-    e2value(e, s, title) {
-        return e.evalAsValue();
     }
 }

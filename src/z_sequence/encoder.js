@@ -1,10 +1,4 @@
-const Expression = require("../expression.js");
-const Debug = require('../debug.js');
-const assert = require('../assert.js');
-const Context = require('../context.js');
-const SequenceBase = require('./base.js');
-const ZSequence = require("../z_sequence.js");
-const ZSequenceEncoder = require("../z_sequence/encoder.js");
+
 
 const MAGIC_TAG = 0x3CA81A73;
 
@@ -75,13 +69,117 @@ const TAG_FROM_TO_DELTA_SBIT = 1;
     +---+---+-------+---------------+
 */
 
-module.exports = class SequenceBinCompression extends SequenceBase {
+module.exports = class ZSequenceEncoder {
     #stack;
     constructor (parent, label, options = {}) {
         super(parent, label, options);
+        this.debug = false;
         this.#stack = [];
         this.short = options.short ?? false;
-        this.encoder = new ZSequenceEncoder();
+    }
+    encodeTagFromToGeom(from, to, ratio, times) {
+        return this.flushStack([TAG_FROM_TO_GEOM, from, to, ratio, times], '#tagFromToGeom');
+    }
+    encodeTagRepeat(last, elements) {
+        if (last === 1) {
+            return this.flushStack([TAG_REPEAT_LAST, elements], '#tagRepeat(last)');
+        }
+        return this.flushStack([TAG_REPEAT, last, elements], '#tagRepeat');
+    }
+    encodeTagPut(values, times = 1) {
+    }
+    encodeTagPut(values, times = 1) {
+        let code = [TAG_PUT];
+
+        // check if value 0,1
+        const first = values[0];
+        let _debug = this.debug ? '#tagPut([' + values.join(',') +'],' + times + ')':'';
+        if (values.length == 1 && (first == 0n || first == 1n)) {
+            code[0] = first ? TAG_PUT_1 : TAG_PUT_0;
+            let count = 1;
+            // count how many consecutive ones or zeros there are
+            while (count < values.length && values[count] == first) ++count;
+            // compress count
+            const total = count * times;
+            if (total > 0n && total < 16n ) {
+                code[0] += total;
+            } else {
+                code.push(total);
+            }
+            if (this.debug) {
+                _debug += '=>@compress01('+first.toString()+','+total+')=0x'+code[0].toString(16)+'+...';
+                code.unshift(debug);
+            }
+
+            // check if remaing values
+            if (count == values.length) {
+                return code;
+            }
+            // if remaining values, concat
+            return code.concat(this.tagPut(values.slice(count), times));
+        }
+
+        // could not compress 0/1, check if compress count
+        const count = values.length;
+        if (count > 0n || count < 16n ) {
+            code[0] += count * 2;
+        } else {
+            code.push(count);
+        }
+        // compress times
+        if (times == 1n) {
+            code[0] |= TAG_TIMES_ONE;
+        } else {
+            code.push(times);
+        }
+        if (this.debug) {
+            code.unshift(_debug);
+        }
+        // concat values
+        return code.concat(values);
+    }
+    encodeTagFromTo(from, to, delta, times) {
+        let code = this.flushStack([TAG_FROM_TO, from, to]);
+        if (delta > 0n || delta < 8n ) {
+            code[0] += Number(delta) * 2;
+        } else {
+            code.push(delta);
+        }
+        if (times == 1n) {
+            code[0] |= TAG_TIMES_ONE;
+        } else {
+            code.push(times);
+        }
+        if (this.debug) {
+            code.unshift(`#tagFromTo(${from},${to},${delta},${times})`);
+        }
+        return code;
+    }
+
+    beginExecution() {
+        this.pos = 0;
+    }
+    endExecution(res) {
+        if (this.#stack.length === 0) {
+            return res;
+        }
+        return [res[0].concat(this.flushStack()), res[1]];
+    }
+    flushStack(code = [], _debug = false) {
+        let _code = [];
+        if (this.debug && _debug !== false) {
+            _code.push(_debug + '(' + code.slice(1).concat(',') +')');
+        }
+        while (this.#stack.length > 0) {
+            const times = this.#stack[0][1];
+            let count = 1;
+            let plen = this.#stack.length - 1;
+            // group all stack values with same times
+            while (count < this.#stack.length && this.#stack[count][1] == times) ++count;
+            _code = _code.concat(this.tagPut(this.#stack.slice(0, count).map(x => x[0]), times));
+            this.#stack.splice(0, count);
+        }
+        return _code.concat(code);
     }
     fromTo(fromValue, toValue, delta, times, operation = '+') {
         let count = 0;
@@ -94,11 +192,9 @@ module.exports = class SequenceBinCompression extends SequenceBase {
         const isGeometric = operation === '*' || operation === '/';
         count = times * count;
         if (isGeometric) {
-            this.encoder.encodeTagFromToGeom(fromValue, toValue, delta, times);
-            return count;
+            return [this.tagFromToGeom(fromValue, toValue, delta, times), count];
         }
-        this.encoder.encodeTagFromTo(fromValue, toValue, delta, times);
-        return count;
+        return [this.tagFromTo(fromValue, toValue, delta, times), count];
     }
 
     rangeSeq(e) {
@@ -130,42 +226,15 @@ module.exports = class SequenceBinCompression extends SequenceBase {
     }
     seqList(e) {
         let count = 0;
+        let code = [];
         for(const value of e.values) {
-            count += this.insideExecute(value);
+            const [_code, _count] = this.insideExecute(value);
+            count += _count;
+            code = code.concat(_code);
         }
-        return count;
+        return [code, count];
     }
-    sequence(e) {
-        return this.seqList(e);
-    }
-    paddingSeq(e) {
-        // TODO: if last element it's a padding, not need to fill and after when access to
-        // a position applies an module over index.
-        const seqSize = this.insideExecute(e.value);
-        let remaingValues = this.paddingSize - seqSize;
-        if (remaingValues < 0) {
-            throw new Error(`In padding range must be space at least for one time sequence [paddingSize(${this.paddingSize}) - seqSize(${seqSize}) = ${remaingValues}] at ${this.debug}`);
-        }
-        if (seqSize < 1) {
-            throw new Error(`Sequence must be at least one element at ${this.debug}`);
-        }
-        if (remaingValues != 0) {
-            this.encoder.encodeTagRepeat(seqSize, remaingValues);
-        }
-        return seqSize + remaingValues;
-    }
-    expr(e) {
-        this.encoder.encodeTagPut(this.e2num(e));
-        return 1;
-    }
-    repeatSeq(e) {
-        const times = Number(this.e2num(e.times));
-        let count = this.insideExecute(e.value);
-        if (times === 1) {
-            return count;
-        }
-        // repeat times - 1, to do n, put once and repeat n - 1
-        this.encoder.encodeTagRepeat(count, (times - 1)* count);
-        return count;
+    #pushElement(value, times = 1) {
+        this.#stack.push([value, times]);
     }
 }

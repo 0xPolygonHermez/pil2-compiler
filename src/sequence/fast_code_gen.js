@@ -7,24 +7,109 @@ const SequenceBase = require('./base.js');
 module.exports = class SequenceFastCodeGen extends SequenceBase {
     fromTo(fromValue, toValue, delta, times, operation = '+') {
         let count = 0;
+        let forceBigInt = false;
         if (toValue === false) {
-            toValue = this.calculateToValue(fromValue, delta, times, operation);
             count = this.paddingSize;
         } else {
-            count = this.calculateSingleCount(fromValue, toValue, delta, operation);
+            if (operation === '+' || operation === '-') {
+                count = this.calculateSingleCount(fromValue, toValue, delta, operation) * times;
+            } else {
+                // ratio = delta;
+                count = operation === '/' ? this.geomCount(toValue, fromValue, delta):
+                                            this.geomCount(fromValue, toValue, delta);
+                if (this.useFieldElement() && operation === '/') {
+                    operation = '*';
+                    forceBigInt = true;
+                    console.log(delta);
+                    delta = Context.Fr.inv(delta);
+                    console.log(delta, fromValue, Context.Fr.e(fromValue * delta));
+                }
+                count = count * times;
+            }
         }
-        count = times * count;
+
+        // count % times !== 0
+        // this implies no complete loop, loop has two parts if times > 1, part to set value
+        // and part to repeat this value. To solve this problematic, most performance solution
+        // was make all "complete loops" and after make partial parts of loop, but out of loop
+        //
+        // partialLoop: this is partial loops, means at least at end need to store value
+        // partialRepeat: if times == 1 or remain == 1 no repeats, only sets.
+
+        //                if remain > 1 means that repeat remain times.
+
+        const partialLoop = (times > 1 && count % times) ? true:false;
+        const partialRepeat = (times > 1 && (count % times) > 1) ? (count % times) - 1:0;
+        const v = this.createCodeVariable('_vkp');
+
+        // if partialSet only complete loops, need to remove the last loop of times elements.
+        const loopCount = partialLoop ? count - times : count;
+
+        let code = `// bytes: ${this.bytes} count:${count}\nlet ${v}=` + this.codeValue(fromValue, forceBigInt) + ';\n';
+        if (loopCount > 0) {
+            const it = this.createCodeVariable('_it');
+            const tmp = this.createCodeVariable('_tmp');
+            code += `for(let ${it}=0;${it} < ${loopCount};${it}=${it} + ${times}){`;
+            // in this case codeConvert without forceBigInt to avoid number conversion
+            code += `  ${tmp} = ` + ((forceBigInt && !this.useBigInt()) ? `Number(${v})`:v) + ';';
+            code += `  __data[__dindex] = ${tmp};`
+            code += `  if (__data[__dindex++] !== ${tmp}) throw new Error(`+'`conversion problem __data[${__dindex-1}](${__data[__dindex-1]}) !== ${'+tmp+'})`);\n';
+            if (times > 1) {
+                const _code = this.#getCodeRepeatLastElements(1, (times - 1));
+                code += _code;
+            }
+            code += `  ${v} = ` + this.codeConvert(`${v} ${operation} ` + this.codeValue(delta, forceBigInt), forceBigInt) + ';';
+            code += '}\n';
+        }
+        if (partialLoop) {
+            code += `  __data[__dindex++] = ${v};`
+        }
+        if (partialRepeat) {
+            code += this.#getCodeRepeatLastElements(1, partialRepeat);
+        }
+        return [code, count];
+    }
+
+    // TODO: integrate this version with change order to do divisions in the other function used, be carrefull
+    // with ranges witho
+    fromToGeom(fromValue, toValue, ratio, times, reverse = false) {
+        // TODO: times = 0 check
+        let count;
+        if (toValue === false) {
+            if (times !== 1 && this.paddingSize % times) {
+                throw new Error(`Invalid parameters to geometric serie (from:${fromValue} paddingSize:${this.paddingSize} ratio:${ratio} times:${times}) at ${Context.sourceTag}`)
+            }
+            count = this.paddingSize / times;
+        } else {
+            count = reverse ? this.geomCount(toValue, fromValue, ratio):
+                              this.geomCount(fromValue, toValue, ratio);
+        }
         const v = this.createCodeVariable('_v');
-        const comparator = ((operation === '+' || operation === '*') && delta > 0n) ? '<=':'>=';
-        let code = `for(let ${v}=${fromValue}n;${v}${comparator}${toValue}n;${v}=${v}${delta > 0n? operation+delta:delta}n){`;
-        // code += '__log("XXX"); __log(`__data[${__dindex}] = `,'+`${v}, Fr.e(${v}).toString(16));`;
-        code += '__data[__dindex++] = ' + (this.bytes === 8 ? `Fr.e(${v})` : `Number(${v})`) + ';';
+        const it = this.createCodeVariable('_it');
+        let code = `let ${v} = ${this.codeValue(reverse?toValue:fromValue)};`;
+        const _reverse = reverse && count > 1;
+        if (_reverse) {
+            // put in last position, ready to write last position and repetitons
+            code += `__dindex += ${(count-1) * times};`
+        }
+        code += `for(let ${it}=0;${it}<${count};++${it}){`;
+        code += `  __data[__dindex++] = ${v}; ${v} = ` + this.codeConvert(`${v} * ${this.codeValue(ratio)}`) +';'
         if (times > 1) {
             const _code = this.#getCodeRepeatLastElements(1, times - 1);
             code += _code;
         }
+        if (_reverse) {
+            // go back, last block of values wrotten, and one more block of values
+            // to be write in next loop.
+            code += `__dindex -= ${2 * times};`
+        }
         code += '}\n';
-        return [code, count];
+        if (_reverse) {
+            // when exit of the loop are in position "-1", because write position 0 and
+            // go back one position
+            code += `__dindex += ${(count + 1) * times};`
+        }
+        return [code, count * times];
     }
 
     rangeSeq(e) {
@@ -34,6 +119,7 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
     }
     arithSeq(e) {
         const [t1, t2, tn, times] = this.getTermSeqInfo(e);
+        this.checkTimes(times);
         if (t1 === t2) {
             throw new Error(`Invalid arithmetic parameters t1:${t1} t2:${t2} tn:${tn} times:${times}`);
         }
@@ -44,16 +130,19 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
     }
     geomSeq(e) {
         const [t1, t2, tn, times] = this.getTermSeqInfo(e);
+        this.checkTimes(times);
         if (t1 > t2) {
             if (t1 % t2) {
                 throw new Error(`Invalid geometric parameters t1:${t1} t2:${t2} tn:${tn} times:${times}`);
             }
-            return this.fromTo(t1, tn, t1/t2, times, '/');
+            console.log({t1,tn,t2,ratio: t1/t2, times});
+            if (this.useFieldElement()) return this.fromTo(t1, tn, t1/t2, times, '/');
+            else return this.fromToGeom(t1, tn, t1/t2, times, true);
         }
         if (t2 % t1) {
             throw new Error(`Invalid geometric parameters t1:${t1} t2:${t2} tn:${tn} times:${times}`);
         }
-        return this.fromTo(t1, tn, t2/t1, times, '*');
+        return this.fromTo(t1, tn, Context.Fr.e(t2/t1), times, '*');
     }
     seqList(e) {
         let count = 0;
@@ -110,11 +199,16 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
         // count is the number of elements sequence to repeat
         // rlen is the number of elements to repeteat (ex: rlen = count * times)
         // data.fill(data.slice(3, 9), 9, 9 + 50000 * 6);
+        if (this.bytes === true) {
+            let rep = this.createCodeVariable('__rep');
+            return `{ for(let ${rep}=0;${rep}<${rlen};++${rep}){__data[__dindex] = __data[__dindex - ${count}]; ++__dindex;}}`;
+            // return `__data.splice(__dindex, ${rlen},...__data.slice(__dindex - ${count}, __dindex)); __dindex += ${rlen};`;
+        }
         if (this.bytes === 1) {
             return `__dbuf.fill(__dbuf.slice(__dindex - ${count}, __dindex), __dindex, __dindex + ${rlen}); __dindex += ${rlen};`;
         }
         return `__dbuf.fill(__dbuf.slice((__dindex - ${count})*${this.bytes}, __dindex*${this.bytes}),`+
-               ` __dindex*${this.bytes}, (__dindex + ${rlen})*${this.bytes}); __dindex += ${rlen}*${this.bytes};`;
+               ` __dindex*${this.bytes}, (__dindex + ${rlen})*${this.bytes}); __dindex += ${rlen};`;
     }
     repeatSeq(e) {
         // TODO, review cache problems.
@@ -140,6 +234,7 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
             case 2: context.__data = new Uint16Array(__dbuf.buffer, 0, this.size); break;
             case 4: context.__data = new Uint32Array(__dbuf.buffer, 0, this.size); break;
             case 8: context.__data = new BigUint64Array(__dbuf.buffer, 0, this.size); break;
+            default: context.__data = []; break;
         }
         return context;
     }

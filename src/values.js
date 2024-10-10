@@ -50,6 +50,9 @@ module.exports = class Values {
         this.createBuffer();
     }
     createBuffer() {
+        if (this.#bytes === true) {
+            this.#values = new Array(this.#rows);
+        }
         this.#buffer = Buffer.alloc(this.#rows * this.#bytes);
         switch (this.#bytes) {
             case 1: this.#values = new Uint8Array(this.#buffer.buffer, 0, this.#rows); break;

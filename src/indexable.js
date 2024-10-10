@@ -77,7 +77,8 @@ module.exports = class Indexable {
     get(id) {
         let res = this.values[id];
         if (res === null) {
-            return this.getEmptyValue(id);
+            res = this.getEmptyValue(id);
+            this.values[id] = res;
         }
         return res;
     }

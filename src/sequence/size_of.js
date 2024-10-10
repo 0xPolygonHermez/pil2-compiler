@@ -4,6 +4,7 @@ const assert = require('../assert.js');
 const Context = require('../context.js');
 const SequenceBase = require('./base.js');
 
+const MAX_VALUE_FORCED = 2n ** 64n;
 module.exports = class SequenceSizeOf extends SequenceBase {
     seqList(e) {
         let size = 0;
@@ -28,49 +29,71 @@ module.exports = class SequenceSizeOf extends SequenceBase {
     rangeSeq(e) {
         // TODO review if negative, fe?
         const [fromValue, toValue, times] = this.getRangeSeqInfo(e);
-        this.updateMaxValue(fromValue);
-        this.updateMaxValue(toValue);
+        this.updateLimitsValue(fromValue);
+        this.updateLimitsValue(toValue);
         return this.toNumber(toValue > fromValue ? toValue - fromValue + 1n : toValue - fromValue + 1n) *  times;
     }
     arithSeq(e) {
         const [t1, t2, tn, times] = this.getTermSeqInfo(e);
         const delta = t2 - t1;
-        const distance = tn - t2;
-        this.updateMaxValue(t1);
+        this.updateLimitsValue(t1);
+        this.updateLimitsValue(t2);
         if (tn !== false) {
+            const distance = tn - t2;
             if ((delta > 0 && tn < t2) || (delta < 0 && tn > t2) || (distance % delta !== 0n)) {
                 throw new Error(`Invalid terms of arithmetic sequence ${t1},${t2}...${tn} at ${this.debug}`);
             }
-            this.updateMaxValue(tn);
+            this.updateLimitsValue(tn);
             return this.toNumber(distance/delta + 2n) * times;
         }
         else {
-            this._paddingFrom = t2;
-            this._paddingDelta = delta;
-            return this.paddingSize = 2;
+            this.paddingSequenceInfo = {from: t1, delta, times};
+            return this.paddingSize = (2 * times);
         }
         // TODO review if negative, fe?
     }
     geomSeq(e) {
         const [t1, t2, tn, times] = this.getTermSeqInfo(e);
-        this.updateMaxValue(t1);
+        this.updateLimitsValue(t1);
         if (t1 === 0n) {
             throw new Error(`Invalid terms of geometric sequence ${t1},${t2}...${tn} at ${this.debug}`);
         }
         const [count, reverse, ti, tf, ratio] = this.getGeomInfo(t1, t2, tn, times, true);
-        if (tf !== false) this.updateMaxValue(t1);
-        return tn === false ? count : count * times;
+
+        if (tf !== false) {
+            this.updateLimitsValue(tf);
+        }
+        if (tn !== false) {
+            return count * times;
+        } else {
+            this.paddingSequenceInfo = {from: t1, ratio, times};
+            return this.paddingSize = (2 * times);
+        }
     }
     expr(e) {
-        this.updateMaxValue(e.asIntDefault(0n));
+        this.updateLimitsValue(e.asIntDefault(0n));
         return 1;
     }
-    updateMaxValue(value) {
-        if (value < 0n) {
+    forceMaxValue() {
+        if (this.useFieldElement()) {
+            this.maxValue = Context.Fr.e(-1);
+        } else {
+            this.maxValue = MAX_VALUE_FORCED;
+        }
+    }
+    updateLimitsValue(value) {
+        if (this.useFieldElement()) {
             value = Context.Fr.e(value);
+            if (value > this.maxValue) {
+                this.maxValue = value;
+            }
+            return;
         }
         if (this.maxValue < value) {
             this.maxValue = value;
+        }
+        if (this.minValue > value) {
+            this.minValue = value;
         }
     }
     getMaxValue() {
@@ -81,11 +104,21 @@ module.exports = class SequenceSizeOf extends SequenceBase {
         if (this.maxValue < 65536n) return 2;
         if (this.maxValue < 4294967296n) return 4;
         if (this.maxValue < 0x10000000000000000n) return 8;
-        throw new Error(`too big number ${this.maxValue}`);
+        return true;  // means bigdata
     }
     updateMaxSizeWithPadingSize(paddingSize) {
-        if (this._paddingDelta) {
-            this.updateMaxValue(this._paddingFrom + this._paddingDelta * (paddingSize - 1n));
+        const info = this.paddingSequenceInfo;
+        if (!info) return;
+
+        const count = BigInt(Math.ceil(paddingSize / info.times));
+
+        if (info.delta) {   // arithmetic serie
+            this.updateLimitsValue(info.from + info.delta * (count - 1n));
+        }
+        if (info.ratio) {
+            // BE CAREFULL: could be a field element with a big number, but only need it to decide if
+            // we need to increase, for these reason use force to use MaxValue
+            this.forceMaxValue();
         }
     }
 }

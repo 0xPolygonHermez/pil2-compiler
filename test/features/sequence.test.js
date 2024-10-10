@@ -3,10 +3,9 @@ const { F1Field } = require("ffjavascript");
 const assert = chai.assert;
 const compile = require("../../src/compiler.js");
 const CompilerTest = require('../compiler_test.js');
-const debugConsole = require('../../src/debug_console.js').init();
 
 class SequencesCompilerTest extends CompilerTest {
-    onSubproofEnd() {
+    onAirEnd(processor) {
         const N = 2 ** 7;
         const empty = new Array(N).fill(0);
 
@@ -61,7 +60,7 @@ class SequencesCompilerTest extends CompilerTest {
         this.verifyFixedCycle('R_FACTOR_R2', [16,8,4,2,1], 2);
 
         // col fixed R_FACTOR_RF = [8192:10,4096:10..*..];
-        this.verifyFixedCycle('R_FACTOR_RF', [8192,4096,2048,1024,512,256,128,64,32,16,8,4,2,1], 10);        
+        this.verifyFixedCycle('R_FACTOR_RF', [8192,4096,2048,1024,512,256,128,64,32,16,8,4,2,1], 10);
     }
 }
 

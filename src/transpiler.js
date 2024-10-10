@@ -24,11 +24,11 @@ module.exports = class Transpiler {
                         println: function () { console.log(...Object.values(arguments));}
                     };
     }
-    dumpCode(code) {
+    static dumpCode(code, cond = true) {
         const lines = code.split('\n');
         const nlines = lines.map((line, index) => `\x1B[35m${(index + 1).toString(10).padStart(4,'0')}:\x1B[0m ${line}`);
         console.log(`  > Transpiled code ${Context.sourceTag}`);
-        if (Context.config.logTraspile) {
+        if (cond) {
             console.log('\n'+ nlines.join('\n'));
         }
     }
@@ -58,15 +58,16 @@ module.exports = class Transpiler {
         this.declared = {};
         const code = this.#transpile(st);
         const _format_code = beautify(code, {wrap_line_length: 160});
-        if (true || options.debug) this.dumpCode(_format_code);
-        
+
+        this.constructor.dumpCode(_format_code, Context.config.logTranspile ?? false);
+
         const t1 = Performance.now();
         vm.createContext(this.context);
         vm.runInContext(options.debug ? _format_code : code, this.context);
         const t2 = Performance.now();
         console.log('  > Traspilation execution time: ' + units.getHumanTime(t2-t1));
 
-        if (_log !== false) {    
+        if (_log !== false) {
             if (_log.bufpos > 0) {
                 const bytes = fs.writeSync(_log.fd, _log.buffer, 0, _log.bufpos);
                 _log.size += bytes;
@@ -94,7 +95,7 @@ module.exports = class Transpiler {
         return 'break;'
     }
     #transpileIf(st) {
-        let code = '';        
+        let code = '';
         let first = true;
         // debugger;
         // console.log(util.inspect(st.conditions, { maxArrayLength: null }));
@@ -105,15 +106,15 @@ module.exports = class Transpiler {
             if (cond.type === 'if') {
                 if (first) code += 'if (';
                 else code += ' else if (';
-                code += this.#toString(cond.expression) + ')';            
+                code += this.#toString(cond.expression) + ')';
             } else if (cond.type === 'else') {
                 code += ' else ';
             } else {
                 EXIT_HERE;
             }
-            code += this.#braces(this.#transpile(cond.statements));            
+            code += this.#braces(this.#transpile(cond.statements));
             first = false;
-        }   
+        }
         return code;
     }
     #braces(code) {
@@ -131,7 +132,7 @@ module.exports = class Transpiler {
         for (const _case of st.cases) {
             // console.log(_case);
             if (_case.condition) {
-                let cvalues = [];            
+                let cvalues = [];
                 for (const cvalue of _case.condition.values) {
                     cvalues.push(this.#toString(cvalue));
                 }
@@ -143,7 +144,7 @@ module.exports = class Transpiler {
                 EXIT_HERE;
             }
             code += this.#transpile(_case.statements)+';break;';
-        }   
+        }
         code += '}';
         return code;
     }
@@ -179,10 +180,10 @@ module.exports = class Transpiler {
             if (st.items.length !== initlen) {
                 console.log(st.items);
                 console.log(st.init.stack);
-                throw new Error(`mistmatch lengths ${st.items.length} vs ${initlen}`);            
+                throw new Error(`mistmatch lengths ${st.items.length} vs ${initlen}`);
             }
         }
-        
+
         this.declareInsideTranspilation(st.items.map(x => x.name));
         if (st.items.length === 1) {
             code += st.items[0].name;
@@ -230,10 +231,10 @@ module.exports = class Transpiler {
     }
     #transpileVariableIncrement(st) {
         if (!st.dim) {
-            if (st.pre === 1n) {   
+            if (st.pre === 1n) {
                 return '++'+st.name;
             }
-            if (st.post === 1n) {   
+            if (st.post === 1n) {
                 return st.name+'++';
             }
         }
@@ -246,7 +247,7 @@ module.exports = class Transpiler {
         }
         return '{'+codes.join(';\n')+'}';
     }
-    declareInsideTranspilation(names) {        
+    declareInsideTranspilation(names) {
         for (const name of names) {
             this.currentScope[name] = true;
         }
@@ -260,7 +261,7 @@ module.exports = class Transpiler {
         this.scopes.pop();
     }
     isDeclaredInsideTranspilation(name) {
-        // console.log(`\x1B[42m ${name} \x1B[0m`);   
+        // console.log(`\x1B[42m ${name} \x1B[0m`);
         if (typeof this.currentScope[name] !== 'undefined') {
             return true;
         }
@@ -268,7 +269,7 @@ module.exports = class Transpiler {
             if (typeof scope[name] !== 'undefined') {
                 return true;
             }
-        }   
+        }
         return false;
     }
     #mapping(operand, options) {
@@ -318,7 +319,7 @@ module.exports = class Transpiler {
         if (isFixed) {
             const indexes = this.#extractIndexes(result);
             if (dim == 1) {
-                let tref = this.createTranspiledObjectReference('fixed', name, reference.instance.getItem(reference.locator).definition);    
+                let tref = this.createTranspiledObjectReference('fixed', name, reference.instance.getItem(reference.locator).definition);
                 return tref+`.${action}RowValue(Number(${indexes[0]})${extraArgValue})`;
                 // return `getFixed('${name}'`+ (indexes === false ? ')':`,${indexes})`);
             } if (dim == 2) {
@@ -331,12 +332,12 @@ module.exports = class Transpiler {
                         let references = [];
                         for (let index = 0; index < lindex; ++index) {
                             references.push(reference.getItem([index]).definition);
-                        }      
+                        }
                         let tref = this.createTranspiledObjectReference('fixed', name, references);
                         return tref+`[${indexes[0]}].${action}RowValue(Number(${indexes[1]})${extraArgValue})`;
-                    }                    
+                    }
                 }
-                
+
                 return `${action}FixedRow('${name}',${indexes[1]})[${indexes[2]}]`;
             }
         } else {
@@ -366,10 +367,10 @@ module.exports = class Transpiler {
                         let references = [];
                         for (let index = 0; index < lindex; ++index) {
                             references.push(reference.getItem([index]).definition);
-                        }      
+                        }
                         let tref = this.createTranspiledObjectReference(type, name, references);
                         return tref+`[${indexes[0]}].${action}Value(${optionalValue})`;
-                    }                    
+                    }
                 }
             }
         }

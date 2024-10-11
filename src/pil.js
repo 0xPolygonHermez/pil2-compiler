@@ -7,19 +7,20 @@ const compile = require("./compiler.js");
 const ffjavascript = require("ffjavascript");
 const tty = require('tty');
 const assert = require('./assert.js');
-const debugConsole = require('./debug_console.js');
 
 const OPTIONS = {
     'chrono-proto': { describe: 'activate time measuraments of protobuf generation steps'},
     'debug': { describe: 'enable a verbose debug mode' },
     'log-compress': { describe: 'log extra information of compress mode' },
-    'log-traspile': { describe: 'log transpilation code and other debug information about transpiling' },
+    'log-transpile': { describe: 'log transpilation code and other debug information about transpiling' },
+    'log-transpiled-sequences' : { describe: 'log transpilation of sequences' },
     'log-lines': { describe: 'output the source reference that produce console.log' },
     'println-lines': { describe: 'output the source (pi) that a println/error message' },
     'log-file': { describe: 'enable log files generation' },
     'log-hint-expressions': { describe: 'log all hints expressions' },
     // TODO: log-hint (names), full log only of specified hints
     'log-hints': { describe: 'log all hints' },
+    'log-fixed-resize': { describe: 'log all resizing of fixed' },
     'no-proto-fixed-data': { describe: 'no store data of fixed inside pilout' },
     'output-constraints': { describe: 'output all air and global constraints generated' },
     'output-global-constraints': { describe: 'output all global constraints generated' },
@@ -128,7 +129,7 @@ async function run() {
     Object.assign(config, getMultiOptions(argv.option, (key, value) => {
             const camelCaseKey = key.replace(/-([a-z])/g, (m, chr) => chr.toUpperCase());
             if (typeof OPTIONS[key] === 'undefined') {
-                console.log(`\x1B[1;31mERROR:\x1B[0;31m Unknown option \x1B[1m${key}\x1B[0;31m (config.${camelCaseKey})\n       try use -h or --help to see all options\x1B[0m`);    
+                console.log(`\x1B[1;31mERROR:\x1B[0;31m Unknown option \x1B[1m${key}\x1B[0;31m (config.${camelCaseKey})\n       try use -h or --help to see all options\x1B[0m`);
                 process.exit(1);
             }
             return [camelCaseKey, value];
@@ -153,11 +154,8 @@ async function run() {
             return [key, value];
         }));
 
-    if (config.logLines) {
-        debugConsole.init();
-    }   
     const out = compile(F, fullFileName, null, config);
-}    
+}
 
 run().then(()=> {
     process.exitCode = 0;

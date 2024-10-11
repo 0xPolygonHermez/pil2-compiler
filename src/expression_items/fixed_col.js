@@ -1,5 +1,6 @@
 const ProofItem = require("./proof_item.js");
 const FixedRow = require('./fixed_row.js');
+const Context = require('../context.js');
 // const Sequence = require("../sequence.js");
 module.exports = class FixedCol extends ProofItem {
     constructor (id) {

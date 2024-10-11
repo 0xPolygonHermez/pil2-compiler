@@ -41,8 +41,11 @@ class ExpressionList extends ExpressionItem {
         console.log(indexes, this.items, this.items[indexes[0]]);
         return this.items[indexes[0]].getLevelLength(indexes.slice(1));
     }
-    dump() {
-        return '[' + this.items.map(x => x.toString()).join(',')+']';
+    dump(options = {}) {
+        return '[' + this.items.map(x => x.toString(options)).join(',')+']';
+    }
+    toString(options = {}) {
+        return this.dump(options);
     }
     cloneInstance() {
         let instance = new ExpressionList(this.items, this.debug);

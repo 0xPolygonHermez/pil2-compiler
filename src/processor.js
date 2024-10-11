@@ -152,7 +152,7 @@ module.exports = class Processor {
             this.proto.setupPilOut(Context.config.name ?? 'noname');
         }
 
-        if (typeof Context.config.test.onProcessorInit === 'function') {
+        if (typeof Context.config.test === 'object' && typeof Context.config.test.onProcessorInit === 'function') {
             Context.config.test.onProcessorInit(this);
         }
         this.memoryUpdate();
@@ -331,7 +331,6 @@ module.exports = class Processor {
                     res = this[method](st);
                 }
             } catch (e) {
-                // console.log([Expression.constructor.name]);
                 this.dumpExceptionInfo({method, st, msg: e.message});
                 if (activeTranspile) {
                     this.transpile = false;
@@ -347,7 +346,7 @@ module.exports = class Processor {
     dumpExceptionInfo(info) {
         let deep = this.callstack.length;
         let index = deep - 1;
-        let lines = ['   0 '+info.msg];
+        let lines = ['   0 '+info.msg+` at ${Context.sourceTag}`];
         while (index >= 0) {
             const cinfo = this.callstack[index];
             lines.push(`  ${String(deep-index).padStart(2)} ${cinfo.call.padEnd(80)} [${cinfo.source}]` );
@@ -428,12 +427,13 @@ module.exports = class Processor {
                 Context.references.getItem(name, indexes).definition.dumpToFile(filename, bytes);
                 break;
             }
+            case 'fixed_bytes':
             case 'fixed_size':{
-                const bytes = {byte: 1, word: 2, dword: 4, lword: 4}[params[1]] ?? false;
-                if (bytes === false) {
+                const bytes = {byte: 1, word: 2, dword: 4, lword: 4}[params[1]] ?? params[1];
+                if (bytes != 1 && bytes != 2 && bytes != 4 && bytes != 8) {
                     throw new Error(`Invalid bytes ${params[1]} on pragma fixed_size (valid values: bytes, word, dword, lword) at ${Context.sourceRef}`);
                 }
-                this.pragmas.nextFixed.bytes = bytes;
+                this.pragmas.nextFixed.bytes = Number(bytes);
                 break;
             }
             case 'fixed_tmp':{
@@ -1179,6 +1179,9 @@ module.exports = class Processor {
         let res = airTemplate.exec(air.name ,callinfo);
         this.memoryUpdate();
         this.finalAirScope();
+        if (typeof Context.config.test === 'object' && typeof Context.config.test.onAirEnd === 'function') {
+            Context.config.test.onAirEnd(this);
+        }
         const witnessCols = this.witness.length;
         const fixedCols = this.witness.length;
         const constraints = this.constraints.length;
@@ -1340,7 +1343,7 @@ module.exports = class Processor {
             let init = s.sequence ?? null;
             let seq = null;
             if (init) {
-                seq = new Sequence(init, ExpressionItems.IntValue.castTo(this.references.get('N')));
+                seq = new Sequence(init, {maxSize: ExpressionItems.IntValue.castTo(this.references.get('N'))});
                 if (Context.config.fixed !== false) seq.extend();
             } else if (s.init) {
                 seq = s.init.instance();
@@ -1538,6 +1541,7 @@ module.exports = class Processor {
             if (initialization) {
                 const init = s.multiple ? s.init.getItem([index]) : s.init;
                 if (init instanceof ExpressionItems.ExpressionList) {
+                    if (Context.sourceTag === 'gl_groups_small.pil:9') debugger;
                     initValue = init.eval();
                 } else {
                     if (Debug.active) console.log(name, s.vtype, Context.sourceRef);
@@ -1550,7 +1554,7 @@ module.exports = class Processor {
                             // if (initValue.dump) initValue.dump(); else console.log(initValue);
                             break;
                         case 'string':
-                            initValue = init.eval().asStringItem();;
+                            initValue = init.eval().asStringItem();
                             break;
                     }
                     if (Debug.active) console.log(name, s.vtype, initValue.toString ? initValue.toString() : initValue);

@@ -29,8 +29,6 @@ module.exports = class Assign {
         return value;
     }
     #assign (name, indexes, value) {
-        // console.log(`ASSIGN(${name})[#${indexes.length ?? 0}] = ${value.constructor ? (value.constructor.name ?? typeof value):typeof value}`);
-        // const array = Context.references.getArray(name, indexes);
         const reference = Context.references.getReference(name);
         return reference.set(value, indexes);
     }

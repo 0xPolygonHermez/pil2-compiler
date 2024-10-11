@@ -67,8 +67,8 @@ return                                      { return 'RETURN' }
 
 (0x[0-9A-Fa-f][0-9A-Fa-f_]*)|([0-9][0-9_]*) { yytext = yytext.replace(/\_/g, ""); return 'NUMBER'; }
 
-\"[^"]+\"                                   { yytext = yytext.slice(1,-1); return 'STRING'; }
-\`[^`]+\`                                   { yytext = yytext.slice(1,-1); return 'TEMPLATE_STRING'; }
+\"[^"]*\"                                   { yytext = yytext.slice(1,-1); return 'STRING'; }
+\`[^`]*\`                                   { yytext = yytext.slice(1,-1); return 'TEMPLATE_STRING'; }
 [a-zA-Z_][a-zA-Z$_0-9]*                     { return 'IDENTIFIER'; }
 \&[a-zA-Z_][a-zA-Z$_0-9]*                   { yytext = yytext.slice(1); return 'REFERENCE'; }
 \@[a-zA-Z_][a-zA-Z$_0-9]*                   { yytext = yytext.slice(1); return 'HINT'; }
@@ -521,12 +521,26 @@ return_type
         { $$ = { type: $1.type, dim: $2.dim } }
     ;
 
+pragma_list
+    : pragma_list PRAGMA
+        { $$ = $1; $$.statements.push({type: 'pragma', value: $2 }) }
+
+    | PRAGMA
+        { $$ = { statements: [{type: 'pragma', value: $1 }]} }
+    ;
+
 declare_list
     : declare_list lcs declare_item
         { $$ = $1; $$.statements.push($3); }
 
+    | declare_list lcs pragma_list declare_item
+        { $$ = $1; $$.statements = [...$$.statements, ...$3.statements, $4]; }
+
     | declare_item
         { $$ = { statements: [$1] } }
+
+    | pragma_list declare_item
+        { $$ = { statements: [{type: 'pragma', value: $1 }, $1]} }
     ;
 
 declare_item
@@ -1217,7 +1231,7 @@ air_template_definition
         { $$ = { type: 'air_template_block', name: $2, statements: $4.statements } }
     ;
 
-air_group_definition     
+air_group_definition
     : AIR_GROUP IDENTIFIER '{' statement_block '}'
         { $$ = { type: 'air_group', aggregate: false, name: $2, statements: $4.statements } }
     ;

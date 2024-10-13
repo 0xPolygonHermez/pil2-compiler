@@ -26,51 +26,11 @@ const TAG_PUT_0 = 0x40;
 const TAG_PUT_1 = 0x50;
 const TAG_FROM_TO_DELTA_MASK = 0x0E;
 const TAG_FROM_TO_DELTA_SBIT = 1;
-/*
-    magic 4 bytes: 0x3CA81A73
-    uncompressed len (bytes)
-    max element size (bytes)
-    type compression: 0x00 - no compression
-                      0x5A - Zequence
-                      0x4Z - Lzma
 
-    code tag in 127 bits to avoid use more than one byte with varlen codification.
 
-    +---+---+---+---+---+---+---+---+
-    | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 | BIT
-    +---+---+---+---+---+---+---+---+
-    | 1 |           x               | FORBIDDEN - NO VALID
-    +---+---+---+---+-----------+---+
-    |   |   |   |               |   | PUT|[count]|[times]|value_1|...|value_count
-    | 0 | 1 | 1 |   [0-15]      | t | n != 0, number of elements (no count argument), n = 0 number of elements on optional argument count
-    |   |   |   |               |   | t = 1, without repetitions, only once. t = 0, number of times each element on optional argument times
-    +---+---+---+---+-----------+---+
-    |   |   |   |   |               | PUT_0|[times]
-    | 0 | 1 | 0 | 0 |     [0-15]    | t != 0, t number of "0", t = 0 => number of times of "0"
-    +---+---+---+---+---------------+
-    |   |   |   |   |               | PUT_1|[times]
-    | 0 | 1 | 0 | 1 |     [0-15]    | t != 0, t number of "1", t = 0 => number of times of "1"
-    +---+---+-------+-----------+---+
-    | 0 | 0 |   0   |       0       | FORBIDDEN - NO VALID
-    +---+---+-------+---------------+
-    |   |   |       |       1       | 1: REPEAT_LAST|elements_repeated (last=1)
-    |   |   |       |       2       | 2: REPEAT_ALL|elements_repeated  (last=current_length)
-    | 0 | 0 |   0   |       3       | 3: REPEAT|last|elements_repeated
-    |   |   |       |       4       | 4: FROM_TO_GEOM|from|to|ratio|times
-    |   |   |       |     [5-15]    | RESERVED
-    +---+---+-------+---------------+
-    |   |   |       |           |   | FROM_TO|from|to|[delta]|[times]
-    | 0 | 0 |   1   |   delta   | t | delta (from < to: delta, from > to: -delta, delta = 0 variable delta)
-    |   |   |       |           |   | t = times (0: variable times, 1: times = 1)
-    +---+---+-------+-----------+---+
-    |   |   |       |               |
-    | 0 | 0 | [2-3] |               | RESERVED
-    |   |   |       |               |
-    +---+---+-------+---------------+
-*/
-
-module.exports = class ZSequenceDecoder {
-    constructor (config = {}) {
+module.exports = class ZFieldSequenceDecoder {
+    constructor (Fr, config = {}) {
+        this.Fr = Fr;
         this.lastRead = false;
         this.lastWrite = false;
         this.writeCount = 0;
@@ -132,14 +92,17 @@ module.exports = class ZSequenceDecoder {
                     case 0x03:  // REPEAT
                         return this.decodeTagRepeat();
 
-                    case 0x04:  // FROM_TO_GEOM
-                        return this.decodeTagFromToGeom();
+                    case 0x04:  // GEOMETRIC_SEQUENCE
+                        return this.decodeTagGeometricSequence();
 
                     default:    // RESERVED
                 }
                 break;
-            case 0x01:  // FROM_TO
-                return this.decodeTagFromTo();
+            case 0x01:  // ARITHMETIC_INC_SEQUENCE
+                return this.decodeTagArithmeticSequence(false);
+
+            case 0x02:  // ARITHMETIC_DEC_SEQUENCE
+                return this.decodeTagArithmeticSequence(true);
 
             case 0x04:  // PUT_0
                 return this.decodeTagPut01(0);
@@ -165,46 +128,28 @@ module.exports = class ZSequenceDecoder {
         const count = this.read();
         this.copy(last, count);
     }
-    decodeTagFromToGeom() {
-        const from = this.read();
-        const to = this.read();
-        const ratio = this.read();
+    decodeTagGeometricSequence() {
+        const from = this.Fr.e(this.read());
+        const count = this.read();
+        const ratio = this.Fr.e(this.read());
         const times = this.read();
 
-        if (from < to) {
-            while (from <= to) {
-                this.write(from, times);
-                from *= ratio;
-            }
-        } else {
-            let values = [];
-            while (to <= from) {
-                values.push(from);
-                to *= ratio;
-            }
-            values.reverse;
-            for (const value of values) {
-                this.write(value, times);
-            }
+        for (let index = 0; index < count; ++index) {
+            this.write(from, times);
+            from = this.Fr.mul(from, ratio);
         }
     }
-    decodeTagFromTo() {
+    decodeTagArithmeticSequence(negateDelta = false) {
         const tag = this.getLastRead();
-        const from = this.read();
-        const to = this.read();
-        const delta = this.readIfZero(tag & TAG_FROM_TO_DELTA_MASK) >> TAG_FROM_TO_DELTA_SBIT;
+        const from = this.Fr.e(this.read());
+        const count = this.read();
+        const _delta = this.readIfZero(tag & TAG_FROM_TO_DELTA_MASK) >> TAG_FROM_TO_DELTA_SBIT;
+        const delta = negateDelta ? this.Fr.neg(_delta) : this.Fr.e(_delta);
         const times = this.readIfZero(tag & TAG_TIMES_MASK);
 
-        if (from < to) {
-            while (from <= to) {
-                this.write(from, times);
-                from += delta;
-            }
-            return;
-        }
-        while (from >= to) {
+        for (let index = 0; index < count; ++index) {
             this.write(from, times);
-            from -= delta;
+            from = this.Fr.add(from, delta);
         }
     }
     decodeTagPut() {

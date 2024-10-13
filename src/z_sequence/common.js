@@ -26,6 +26,7 @@ const TAG_PUT_0 = 0x40;
 const TAG_PUT_1 = 0x50;
 const TAG_FROM_TO_DELTA_MASK = 0x0E;
 const TAG_FROM_TO_DELTA_SBIT = 1;
+
 /*
     magic 4 bytes: 0x3CA81A73
     uncompressed len (bytes)
@@ -56,15 +57,19 @@ const TAG_FROM_TO_DELTA_SBIT = 1;
     |   |   |       |       1       | 1: REPEAT_LAST|elements_repeated (last=1)
     |   |   |       |       2       | 2: REPEAT_ALL|elements_repeated  (last=current_length)
     | 0 | 0 |   0   |       3       | 3: REPEAT|last|elements_repeated
-    |   |   |       |       4       | 4: FROM_TO_GEOM|from|to|ratio|times
+    |   |   |       |       4       | 4: GEOMETRIC_SEQUENCE|from|count|ratio|times
     |   |   |       |     [5-15]    | RESERVED
     +---+---+-------+---------------+
-    |   |   |       |           |   | FROM_TO|from|to|[delta]|[times]
-    | 0 | 0 |   1   |   delta   | t | delta (from < to: delta, from > to: -delta, delta = 0 variable delta)
+    |   |   |       |           |   | ARITHMETIC_INC_SEQUENCE|from|count|[delta]|[times]
+    | 0 | 0 |   1   |   delta   | t | delta (delta = 0 variable delta)
+    |   |   |       |           |   | t = times (0: variable times, 1: times = 1)
+    +---+---+-------+-----------+---+
+    |   |   |       |           |   | ARITHMETIC_DEC_SEQUENCE|from|count|[delta]|[times]
+    | 0 | 0 |   2   |   delta   | t | delta (delta = 0 variable delta)
     |   |   |       |           |   | t = times (0: variable times, 1: times = 1)
     +---+---+-------+-----------+---+
     |   |   |       |               |
-    | 0 | 0 | [2-3] |               | RESERVED
+    | 0 | 0 |   3   |               | RESERVED
     |   |   |       |               |
     +---+---+-------+---------------+
 */

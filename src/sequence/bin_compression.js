@@ -94,10 +94,10 @@ module.exports = class SequenceBinCompression extends SequenceBase {
         const isGeometric = operation === '*' || operation === '/';
         count = times * count;
         if (isGeometric) {
-            this.encoder.encodeTagFromToGeom(fromValue, toValue, delta, times);
+            this.encoder.encodeTagGeometricSequence(fromValue, toValue, delta, times);
             return count;
         }
-        this.encoder.encodeTagFromTo(fromValue, toValue, delta, times);
+        this.encoder.encodeTagArithmeticSequence(fromValue, toValue, delta, times);
         return count;
     }
 

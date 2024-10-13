@@ -14,79 +14,36 @@ const TAG_LZMA   =  0x4C;
 
 const TAG_TIMES_MASK = 0x01;
 const TAG_TIMES_ONE = 0x01;
-const TAG_FROM_TO = 0x10;
+const TAG_ARITHMETIC_INC_SEQUENCE = 0x10;
+const TAG_ARITHMETIC_DEC_SEQUENCE = 0x20;
 const TAG_PUT = 0x60;
 const TAG_PUT_COUNT_MASK = 0x1E;
 const TAG_PUT_COUNT_SBIT = 1;
 const TAG_REPEAT_LAST = 0x01;
 const TAG_REPEAT_ALL = 0x02;
 const TAG_REPEAT = 0x02;
-const TAG_FROM_TO_GEOM = 0x03;
+const TAG_GEOMETRIC_SEQUENCE = 0x03;
 const TAG_PUT_0 = 0x40;
 const TAG_PUT_1 = 0x50;
 const TAG_FROM_TO_DELTA_MASK = 0x0E;
 const TAG_FROM_TO_DELTA_SBIT = 1;
-/*
-    magic 4 bytes: 0x3CA81A73
-    uncompressed len (bytes)
-    max element size (bytes)
-    type compression: 0x00 - no compression
-                      0x5A - Zequence
-                      0x4Z - Lzma
-
-    code tag in 127 bits to avoid use more than one byte with varlen codification.
-
-    +---+---+---+---+---+---+---+---+
-    | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 | BIT
-    +---+---+---+---+---+---+---+---+
-    | 1 |           x               | FORBIDDEN - NO VALID
-    +---+---+---+---+-----------+---+
-    |   |   |   |               |   | PUT|[count]|[times]|value_1|...|value_count
-    | 0 | 1 | 1 |   [0-15]      | t | n != 0, number of elements (no count argument), n = 0 number of elements on optional argument count
-    |   |   |   |               |   | t = 1, without repetitions, only once. t = 0, number of times each element on optional argument times
-    +---+---+---+---+-----------+---+
-    |   |   |   |   |               | PUT_0|[times]
-    | 0 | 1 | 0 | 0 |     [0-15]    | t != 0, t number of "0", t = 0 => number of times of "0"
-    +---+---+---+---+---------------+
-    |   |   |   |   |               | PUT_1|[times]
-    | 0 | 1 | 0 | 1 |     [0-15]    | t != 0, t number of "1", t = 0 => number of times of "1"
-    +---+---+-------+-----------+---+
-    | 0 | 0 |   0   |       0       | FORBIDDEN - NO VALID
-    +---+---+-------+---------------+
-    |   |   |       |       1       | 1: REPEAT_LAST|elements_repeated (last=1)
-    |   |   |       |       2       | 2: REPEAT_ALL|elements_repeated  (last=current_length)
-    | 0 | 0 |   0   |       3       | 3: REPEAT|last|elements_repeated
-    |   |   |       |       4       | 4: FROM_TO_GEOM|from|to|ratio|times
-    |   |   |       |     [5-15]    | RESERVED
-    +---+---+-------+---------------+
-    |   |   |       |           |   | FROM_TO|from|to|[delta]|[times]
-    | 0 | 0 |   1   |   delta   | t | delta (from < to: delta, from > to: -delta, delta = 0 variable delta)
-    |   |   |       |           |   | t = times (0: variable times, 1: times = 1)
-    +---+---+-------+-----------+---+
-    |   |   |       |               |
-    | 0 | 0 | [2-3] |               | RESERVED
-    |   |   |       |               |
-    +---+---+-------+---------------+
-*/
-
-module.exports = class ZSequenceEncoder {
+module.exports = class ZFieldSequenceEncoder {
     #stack;
-    constructor (parent, label, options = {}) {
-        super(parent, label, options);
+    constructor (Fr, options = {}) {
+        this.Fr = Fr;
+        this.options = options;
         this.debug = false;
         this.#stack = [];
         this.short = options.short ?? false;
     }
-    encodeTagFromToGeom(from, to, ratio, times) {
-        return this.flushStack([TAG_FROM_TO_GEOM, from, to, ratio, times], '#tagFromToGeom');
+    encodeTagGeometricSequence(from, count, ratio, times) {
+        return this.flushStack([TAG_GEOMETRIC_SEQUENCE, from, count, ratio, times], '#tagGeometricSequence');
     }
     encodeTagRepeat(last, elements) {
         if (last === 1) {
             return this.flushStack([TAG_REPEAT_LAST, elements], '#tagRepeat(last)');
         }
         return this.flushStack([TAG_REPEAT, last, elements], '#tagRepeat');
-    }
-    encodeTagPut(values, times = 1) {
     }
     encodeTagPut(values, times = 1) {
         let code = [TAG_PUT];
@@ -138,8 +95,11 @@ module.exports = class ZSequenceEncoder {
         // concat values
         return code.concat(values);
     }
-    encodeTagFromTo(from, to, delta, times) {
-        let code = this.flushStack([TAG_FROM_TO, from, to]);
+    encodeTagArithmeticSequence(from, count, delta, times) {
+        const _from = this.Fr.e(from);
+        const decSequence = (delta < 0);
+        const _delta = this.Fr.e(decSequence ? -delta:delta);
+        let code = this.flushStack([decSequence ? TAG_ARITHMETIC_INC_SEQUENCE : TAG_ARITHMETIC_DEC_SEQUENCE, from, count]);
         if (delta > 0n || delta < 8n ) {
             code[0] += Number(delta) * 2;
         } else {
@@ -151,7 +111,7 @@ module.exports = class ZSequenceEncoder {
             code.push(times);
         }
         if (this.debug) {
-            code.unshift(`#tagFromTo(${from},${to},${delta},${times})`);
+            code.unshift(`#tagArith${decSequence?'Dec':'Inc'}Sequence(${from},${count},${delta},${times})`);
         }
         return code;
     }

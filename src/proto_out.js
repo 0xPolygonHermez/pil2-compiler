@@ -44,7 +44,7 @@ module.exports = class ProtoOut {
         this.currentAirGroup = null;
         this.witnessId2ProtoId = [];
         this.fixedId2ProtoId = [];
-        this.airGroupValueId2ProtoId = []; 
+        this.airGroupValueId2ProtoId = [];
         this.options = options;
         this.bigIntType = options.bigIntType ?? 'Buffer';
         this.toBaseField = this.mapBigIntType();
@@ -110,9 +110,9 @@ module.exports = class ProtoOut {
         this.HintFieldArray = this.root.lookupType('HintFieldArray');
         this.Hint = this.root.lookupType('Hint');
     }
-    setupPilOut(name) {        
-        console.log('> set pilout name \x1B[38;5;208m0x' + name + '\x1B[0m');
-        console.log('> set prime field \x1B[38;5;208m' + this.Fr.p.toString(16) + '\x1B[0m');
+    setupPilOut(name) {
+        console.log('> set pilout name \x1B[38;5;208m' + name + '\x1B[0m');
+        console.log('> set prime field \x1B[38;5;208m0x' + this.Fr.p.toString(16) + '\x1B[0m');
         this.pilOut = {
             name,
             baseField: this.toBaseField(this.Fr.p, 0, false),
@@ -198,7 +198,7 @@ module.exports = class ProtoOut {
         let symbols = [];
         for (const label of labels) {
             symbols.push([label.label, {type, locator: label.from, array: label.multiarray, data: {}}]);
-        }   
+        }
         this._setSymbols(symbols, data);
     }
     _setSymbols(symbols, data = {}) {
@@ -277,7 +277,7 @@ module.exports = class ProtoOut {
     setProofValues(proofvalues) {
         this.pilOut.numProofValues = proofvalues.length;
     }
-    setFixedCols(fixedCols) {  
+    setFixedCols(fixedCols) {
         this.setConstantCols(fixedCols, this.currentAir.numRows, false);
     }
     setPeriodicCols(periodicCols) {
@@ -431,7 +431,7 @@ module.exports = class ProtoOut {
                     if (protoId === false) {
                         throw new Error(`Translate: Found invalid subproofValue idx ${ope.subproofValue.idx}`);
                     }
-                    ope.subproofValue.idx = protoId;        
+                    ope.subproofValue.idx = protoId;
                 }
                 break;
             case 'challenge': {
@@ -599,7 +599,7 @@ module.exports = class ProtoOut {
             value = Context.Fr.e(value);
         }
 
-        // first divide in chunks to calculate how many chunks in 
+        // first divide in chunks to calculate how many chunks in
         // big endian are used.
         let chunks = [];
         while (value > 0n) {

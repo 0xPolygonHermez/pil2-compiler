@@ -9,9 +9,16 @@ module.exports = class Cast extends Function {
     }
     exec(s, mapInfo) {
         const cast = typeof mapInfo.eargs[0].asString === 'function' ? mapInfo.eargs[0].asString() : mapInfo.eargs[0];
-        if (cast !== 'string') {
-            throw new Error('Invalid type of cast');
+        const value = mapInfo.eargs[1];
+        if (cast === 'string') {
+            if (Array.isArray(value)) {
+                return new ExpressionItems.StringValue(value.map(x => x.toString({hideClass:true, hideLabel:false})).join(','));
+            }
+            return new ExpressionItems.StringValue(value.toString({hideClass:true, hideLabel:false}));
         }
-        return new ExpressionItems.StringValue(mapInfo.eargs[1].toString({hideClass:true, hideLabel:false}));
+        if (cast === 'fe') {
+            return new ExpressionItems.IntValue(Context.Fr.e(value))
+        }
+        throw new Error(`Invalid type of cast ${cast}`);
     }
 }

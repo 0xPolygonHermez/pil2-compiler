@@ -4,6 +4,7 @@ const MultiArray = require('../multi_array.js');
 const util = require('util');
 const Context = require('../context.js');
 const assert = require('../assert.js');
+const IntValue = require('./int_value.js');
 class ExpressionList extends ExpressionItem {
 
     constructor(items, options = {}) {
@@ -18,7 +19,11 @@ class ExpressionList extends ExpressionItem {
             this.items = [];
             this.names = options.names ? [] : false;
             for (let index = 0; index < items.length; ++index) {
-                this.items.push(items[index].clone());
+                // if (typeof items[index].clone !== 'function') {
+                //     console.log(typeof items[index], items[index], options.names);
+                // }
+                this.items.push(typeof items[index].clone !== 'function' ? new IntValue(items[index]) : items[index].clone());
+                // this.items.push(items[index].clone());
                 if (!options.names) continue;
                 this.names.push(options.names[index]);
             }
@@ -34,10 +39,13 @@ class ExpressionList extends ExpressionItem {
             return this.items.length;
         }
         console.log(indexes, this.items, this.items[indexes[0]]);
-        return this.items[indexes[0]].getLevelLength(indexes.slice(1));       
+        return this.items[indexes[0]].getLevelLength(indexes.slice(1));
     }
-    dump() {
-        return '[' + this.items.map(x => x.toString()).join(',')+']';
+    dump(options = {}) {
+        return '[' + this.items.map(x => x.toString(options)).join(',')+']';
+    }
+    toString(options = {}) {
+        return this.dump(options);
     }
     cloneInstance() {
         let instance = new ExpressionList(this.items, this.debug);
@@ -57,7 +65,7 @@ class ExpressionList extends ExpressionItem {
         const index = indexes[0];
         if (index < 0 && index >= this.items.length) {
             throw new Error(`Out of bounds, try to access index ${index} but list only has ${this.items.length} elements`);
-        }        
+        }
         const item = this.items[index];
         if (indexes.length === 1) {
             return item;

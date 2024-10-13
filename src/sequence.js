@@ -14,6 +14,8 @@ const SequenceCompression = require('./sequence/compression.js');
 const SequenceBinCompression = require('./sequence/bin_compression.js');
 const IntValue = require('./expression_items/int_value.js');
 const ExpressionList = require('./expression_items/expression_list.js');
+const beautify = require('js-beautify').js;
+const Transpiler = require('./transpiler.js');
 
 const MAX_ELEMS_GEOMETRIC_SEQUENCE = 300;
 class SequencePadding {
@@ -31,11 +33,13 @@ module.exports = class Sequence {
     // TODO: check repetitive sequences (times must be same)
     // TODO: check arith_seq/geom_seq with repetitive
 
-    constructor (expression, maxSize) {
+    constructor (expression, options = {}) {
+        this.options = options;
         this.padding = false;
+        this.fieldElement = options.fieldElement ?? true;
         this.expression = expression;
 
-        this.maxSize = typeof maxSize === 'undefined' ? false : Number(maxSize);
+        this.maxSize = Number(options.maxSize ?? Context.rows);
         this.paddingCycleSize = false;
         this.paddingSize = 0;
         this.extendPos = 0;
@@ -43,21 +47,21 @@ module.exports = class Sequence {
         this.valueCounter = 0;
         this.varIndex = 0;
         this.bytes = 8;         // by default
-        const options = {set: (index, value) => this.#setValue(index, value),
-                         get: (index) => this.#values[index]};
+        const defaultEngineOptions = {set: (index, value) => this.#setValue(index, value),
+                                      get: (index) => this.#values[index]};
         this.engines = {
             sizeOf: new SequenceSizeOf(this, 'sizeOf'),
             codeGen: new SequenceFastCodeGen(this, 'codeGen'),
                                                     // : new SequenceCodeGen(this, 'codeGen'),
-            extend: new SequenceExtend(this, 'extend', options),
-            toList: new SequenceToList(this, 'toList', options),
+            extend: new SequenceExtend(this, 'extend', defaultEngineOptions),
+            toList: new SequenceToList(this, 'toList', defaultEngineOptions),
             typeOf: new SequenceTypeOf(this, 'typeOf'),
             compression: new SequenceCompression(this, 'compression'),
             binCompression: new SequenceBinCompression(this, 'binCompression')
         };
         this.engines.typeOf.execute(this.expression);
         this.sizeOf(this.expression);
-        this.#values = new Values(this.bytes, this.maxSize);
+        this.#values = new Values(this.bytes, this.size);
     }
     get isSequence () {
         return this.engines.typeOf.isSequence;
@@ -66,8 +70,8 @@ module.exports = class Sequence {
         return this.engines.typeOf.isList;
     }
     clone() {
-        let cloned = new Sequence(this.expression, this.maxSize);
-        if (Debug.active) console.log(['CLONED', this.maxSize, cloned.maxSize]);
+        let cloned = new Sequence(this.expression, this.options);
+        if (Debug.active) console.log(['CLONED', this.options]);
         this.#values.mutable = false;
         cloned.#values = this.#values.clone();
         return cloned;
@@ -98,9 +102,7 @@ module.exports = class Sequence {
         const size = this.engines.sizeOf.execute(e);
         assert.ok(size >= this.paddingCycleSize, `size(${size}) < paddingCycleSize(${this.paddingCycleSize})`);
         if (Debug.active) {
-            console.log(['SIZE(MAXSIZE)', this.maxSize]);
-            console.log(['SIZE(paddingCycleSize)', this.paddingCycleSize]);
-            console.log(['SIZE(paddingSize)', this.paddingSize]);
+            console.log(`Sequence(sizeOf) size:${size} maxSize:${this.maxSize} paddingCycleSize:${this.paddingCycleSize} paddingSize:${this.paddingSize}`);
         }
         if (this.paddingCycleSize) {
             this.paddingSize = this.maxSize - (size - this.paddingCycleSize);
@@ -110,19 +112,18 @@ module.exports = class Sequence {
         }
         this.engines.sizeOf.updateMaxSizeWithPadingSize(this.paddingSize);
         this.bytes = this.engines.sizeOf.getMaxBytes();
-        if (Debug.active) console.log(['SIZE', this.size]);
         return this.size;
     }
     toList() {
         this.engines.toList.execute(this.expression);
-        return new ExpressionList(this.#values.getValues());
+        return new ExpressionList(this.engines.toList.getValues());
     }
     setPaddingSize(size) {
         if (this.maxSize === false) {
-            throw new Error(`Invalid padding sequence without maxSize at ${this.debug}`);
+            throw new Error(`Invalid padding sequence without maxSize at ${Context.sourceTag}`);
         }
         if (this.paddingCycleSize !== false) {
-            throw new Error(`Invalid padding sequence, previous padding sequence already has been specified at ${this.debug}`);
+            throw new Error(`Invalid padding sequence, previous padding sequence already has been specified at ${Context.sourceTag}`);
         }
         this.paddingCycleSize = size;
         return this.paddingCycleSize;
@@ -139,8 +140,13 @@ module.exports = class Sequence {
             console.log(data.map(x => x < 128 ? `0x${x.toString(16).padStart(2,'0').toUpperCase()}(${x})`:x));
         }
         this.extendPos = 0;
-        const [code, count] = this.engines.codeGen.execute(this.expression);
-        const context = this.engines.codeGen.genContext();
+        let [code, count] = this.engines.codeGen.execute(this.expression);
+        if (Context.config.logTranspiledSequences) {
+            code = beautify(code, {wrap_line_length: 160});
+            code = `// bytes:${this.bytes === true ? 'bigint':this.bytes} at ${Context.sourceTag}\n` + code;
+            Transpiler.dumpCode(code);
+        }
+        const context = {...this.engines.codeGen.genContext(), __log: function () { console.log.apply(null, arguments)}};
         vm.createContext(context);
         vm.runInContext(code, context);
         this.#values.__setValues(context.__dbuf, context.__data);

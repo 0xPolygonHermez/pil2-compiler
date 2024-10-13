@@ -310,7 +310,7 @@ class Expression extends ExpressionItem {
             elem = {op, operands: [new ExpressionItems.StackItem(baseStackOffset+1)]};
         }
 
-        // calculate relative offsets using baseStackOffset and elements added for 
+        // calculate relative offsets using baseStackOffset and elements added for
         // each operator, added 1 because first offset is 1 (position -1)
         let stackOffsets = [];
         for (let index = 0; index < stackRows.length; ++index) {
@@ -405,7 +405,7 @@ class Expression extends ExpressionItem {
 
         const operand = this.getAloneOperand();
         if (operand instanceof ExpressionItems.ArrayOf === false) return this;
-        
+
         return operand.toArrays();
     }
     evalAsValue(options) {
@@ -434,7 +434,7 @@ class Expression extends ExpressionItem {
     evaluateFullStack(stackResults, options) {
         assert.ok(this.stack.length > 0);
         const evaluateId = Expression.evaluatedGlobalId++; // Date.now();
-        if (Debug.active) { 
+        if (Debug.active) {
             this.dump(`evaluateFullStack #${evaluateId} BEGIN`);
             console.log("\n", this.stackResultsToString(stackResults));
         }
@@ -442,7 +442,7 @@ class Expression extends ExpressionItem {
         if (Debug.active) this.dump(`evaluateFullStack #${evaluateId} MIDDLE`);
         this.evaluateStackPos(stackResults, this.stack.length - 1, {...options, evaluateId});
         if (Debug.active) this.dump(`evaluateFullStack #${evaluateId} END`);
-    }    
+    }
     evaluateStackPos(stackResults, stackIndex, options = {}) {
         assert.ok(stackIndex < this.stack.length);
         const st = this.stack[stackIndex];
@@ -505,10 +505,13 @@ class Expression extends ExpressionItem {
             if (value instanceof Expression && !value.isAlone()) {
                 value = ExpressionItems.NonRuntimeEvaluableItem.get();
             } else {
+                if (typeof value.getAloneOperand !== 'function') {
+                    console.log(value.getAloneOperand);
+                }
                 value = this.assertExpressionItem(value.getAloneOperand());
                 if (options.instance) {
                     st.op = false;
-                    st.operands = [value];            
+                    st.operands = [value];
                 }
             }
         }
@@ -516,7 +519,7 @@ class Expression extends ExpressionItem {
     }
     evalNonRuntimeOperands(operation, values) {
         // a runtime-evaluable item was always different of non-runtime-evaluable on compilation-time
-        // check if at least one value is runtime-evaluable. 
+        // check if at least one value is runtime-evaluable.
         if (operation === 'eq' || operation === 'ne') {
             if (values.some(value => value.isRuntimeEvaluable())) {
                 return new ExpressionItems.IntValue(operation === 'ne' ? 1n:0n);
@@ -551,7 +554,7 @@ class Expression extends ExpressionItem {
         if (operation === 'if') {
             return this.applyOperationIf(_values);
         }
-    
+
         const operationInfo = ExpressionOperationsInfo.get(operation);
 
         if (operationInfo === false) {
@@ -581,7 +584,7 @@ class Expression extends ExpressionItem {
             if (assert.isEnabled) {
                 _values.forEach(value => assert.instanceOf(value, ExpressionItem));
             }
-    
+
             types = _values.map(x => x.constructor.name);
 
             // if number of values was less than 2 (means 1, always was equals)
@@ -638,7 +641,7 @@ class Expression extends ExpressionItem {
                     }
                 }
                 ++iarg;
-            }            
+            }
         }
         throw new Error(`Operation ${operation} not was defined by types ${types.join(',')} [${methods.join(', ')}] at ${Context.sourceRef}`);
     }
@@ -661,8 +664,8 @@ class Expression extends ExpressionItem {
         if (typeof values[0][method] === 'function') {
             // instance call, first value (operand) is "this", arguments rest of values (operands)
             res = values[0][method](...values.slice(1));
-            if (res !== null) return [true, res];        
-        } 
+            if (res !== null) return [true, res];
+        }
         if (values[0].constructor.operators && typeof values[0].constructor.operators[method] === 'function') {
             // static call with all values (operands)
             res = values[0][method](...values.slice(1));
@@ -861,7 +864,7 @@ class Expression extends ExpressionItem {
         const secondValue = (st.operands.length > 1 && st.operands[1] instanceof ExpressionItems.ValueItem) ? st.operands[1].getValue() : false;
 
         // [op,v1,v2] ==> [v1 op v2]
-        if (firstValue !== false && secondValue !== false) {            
+        if (firstValue !== false && secondValue !== false) {
             assert.ok(!firstValue || !firstValue.rowOffset);
             assert.ok(!secondValue || !secondValue.rowOffset);
             const res = this.applyOperation(st.op, st.operands);
@@ -921,12 +924,12 @@ class Expression extends ExpressionItem {
             st.operands[1] = new ExpressionItems.IntValue(-secondValue);
             return true;
         }
-        
+
         if (st.op === 'if' && firstValue !== false) {
             st.op = false;
             st.operands = [st.operands[firstValue ? 1:2]];
             return true;
-        } 
+        }
 
         // TODO: be carrefull with next, prior, inc, dec
         // x - x = 0 ???
@@ -948,7 +951,7 @@ class Expression extends ExpressionItem {
     }
     cleanOrphanFromStack() {
         const stackLen = this.stack.length;
-        if (stackLen === 0) return; 
+        if (stackLen === 0) return;
 
         // array with index the stack position and value to purge or not;
         let purge = new Array(stackLen).fill(true);
@@ -967,19 +970,19 @@ class Expression extends ExpressionItem {
                 pending.push(absPos);
             });
         }
-        
+
         let translate = [];
         let freeStackPos = 0;
 
         for (let istack = 0; istack < stackLen; ++istack) {
-            if (purge[istack]) { 
+            if (purge[istack]) {
                 translate[istack] = false;
                 continue;
             }
             const newPos = freeStackPos++;
             translate[istack] = newPos
             this.stack[newPos] = this.stack[istack];
-            this.stack[newPos].operands.filter(x => x instanceof ExpressionItems.StackItem).forEach(operand => {      
+            this.stack[newPos].operands.filter(x => x instanceof ExpressionItems.StackItem).forEach(operand => {
                 const newAbsolutePos = translate[operand.getAbsolutePos(istack)];
                 // assert newAbsolutePos(>0)
                 operand.setOffset(newPos - newAbsolutePos);
@@ -1010,7 +1013,7 @@ class Expression extends ExpressionItem {
                 // two situations for alone:
                 //    1 - stack reference, use its reference and purge
                 //    2 - single operand, use index and purge
-                //        TODO: if this single operand exists (duplicated), reference it.  
+                //        TODO: if this single operand exists (duplicated), reference it.
                 if (ope instanceof ExpressionItems.StackItem) {
                     tt.copyPurge(istack, ope.getAbsolutePos(istack));
                 } else {
@@ -1037,7 +1040,7 @@ class Expression extends ExpressionItem {
                     if (Debug.active) this.dump(`XXXX #${istack}/${iope} ${absolutePos} ${savedOperand.toString()}`);
                     this.stack[istack].operands[iope] = this.assertExpressionItem(savedOperand.clone());
                     if (Debug.active) this.dump('YYYY');
-                } else {            
+                } else {
                     // CASE: new absolute pos exists and will not be purged
                     // newStackIndex - 1 is new really istack after clear simplified stack positions
                     // calculate relative position (offset)
@@ -1066,7 +1069,7 @@ class Expression extends ExpressionItem {
         let _nextPosition = 0;
         for (let istack = 0; istack < stackLen; ++istack) {
             if (tt.getPurge(istack)) continue;
-            
+
             const newAbsPos = tt.getTranslation(istack);
             assert.strictEqual(newAbsPos, _nextPosition);
             this.stack[newAbsPos] = this.stack[istack];

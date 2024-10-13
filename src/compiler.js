@@ -15,6 +15,7 @@ const Processor = require("./processor.js");
 const Context = require("./context.js");
 const { mainModule } = require("process");
 const assert = require('./assert.js');
+const debugConsole = require('./debug_console.js');
 
 const oldParseError = pil_parser.Parser.prototype.parseError;
 
@@ -98,7 +99,7 @@ class Compiler {
             this.$.debug = `${compiler.relativeFileName}:${last.last_line}`; // ${first.first_column}:${last.last_line}:${last.last_column}`;
             // this.$.__debug = `${compiler.relativeFileName} (${first.first_line}, ${first.first_column}) (${last.last_line}, ${last.last_column})`;
             // this.$.__contents = compiler.srcLines[first.first_line - 1].substring(first.first_column + 1, last.last_column);
-            this.$.__yystate = `${yystate} ${yylineno}`        
+            this.$.__yystate = `${yystate} ${yylineno}`
             return result;
         }
         return parser;
@@ -110,7 +111,7 @@ class Compiler {
             this.fileDir = process.cwd();
             for (const include of this.config.includes) {
                 libraries.push({type: 'include', file: include, debug:'', contents: this.loadInclude({file: include})});
-            }   
+            }
         }
         const [_src, fileDir, fullFileName, relativeFileName] = this.loadSource(fileName, isMain);
 
@@ -120,7 +121,7 @@ class Compiler {
         this.relativeFileName = relativeFileName;
         this.fileDir = fileDir;
 
-    
+
         const parser = this.instanceParser(src, fullFileName);
         let sts;
         try {
@@ -131,7 +132,7 @@ class Compiler {
             }
             for (const library of libraries.slice().reverse()) {
                 sts.unshift(library);
-            }   
+            }
         } catch (e) {
             console.log('ERROR ON '+Context.processor.sourceRef);
             throw e;
@@ -228,6 +229,10 @@ class Compiler {
 }
 
 module.exports = function compile(Fr, fileName, ctx, config = {}) {
+
+    if (config.logLines) {
+        debugConsole.init();
+    }
 
     let compiler = new Compiler(Fr);
     return compiler.compile(fileName, config);

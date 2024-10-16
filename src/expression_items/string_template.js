@@ -8,7 +8,7 @@ class StringTemplate extends StringValue {
         super(value);
     }
     evalTemplate(options) {
-        return new StringValue(Context.processor.evaluateTemplate(this.value));
+        return new StringValue(Context.processor.evaluateTemplate(this.value, options));
     }
     cloneInstance() {
         return new StringTemplate(this.value);

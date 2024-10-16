@@ -2,6 +2,7 @@ const Air = require("./air.js")
 const Context = require('./context.js');
 const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js");
 const ExpressionItems = require('./expression_items.js');
+const assert = require('./assert.js');
 module.exports = class AirTemplate {
     constructor (name, statements) {
         this.name = name;
@@ -19,7 +20,6 @@ module.exports = class AirTemplate {
     exec(callInfo, mapInfo, options = {}) {
         let res = false;
         for (const statements of this.blocks) {
-            console.log(`AIR ${Context.airName} #${Context.airId} TEMPLATE ${this.name}`);
             res = Context.processor.execute(statements, `AIR ${Context.airName} #${Context.airId} TEMPLATE ${this.name}`);
             if (res instanceof FlowAbortCmd) {
                 assert.instanceOf(res, ReturnCmd);

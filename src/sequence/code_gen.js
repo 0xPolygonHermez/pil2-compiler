@@ -7,7 +7,7 @@ const SequenceBase = require('./base.js');
 module.exports = class SequenceCodeGen extends SequenceBase {
     fromTo(fromValue, toValue, delta, times, operation = '+') {
         let count = 0;
-        if (toValue === false) {            
+        if (toValue === false) {
             toValue = this.calculateToValue(fromValue, delta, times, operation);
             count = this.paddingSize;
         } else {
@@ -67,10 +67,10 @@ module.exports = class SequenceCodeGen extends SequenceBase {
     sequence(e) {
         return this.seqList(e);
     }
-    paddingSeq(e) {        
+    paddingSeq(e) {
         // TODO: if last element it's a padding, not need to fill and after when access to
         // a position applies an module over index.
-        const [_code, seqSize] = this.execute(e.value);        
+        const [_code, seqSize] = this.execute(e.value);
         let remaingValues = this.paddingSize - seqSize;
         if (remaingValues < 0) {
             throw new Error(`In padding range must be space at least for one time sequence [paddingSize(${this.paddingSize}) - seqSize(${seqSize}) = ${remaingValues}] at ${this.debug}`);
@@ -90,7 +90,7 @@ module.exports = class SequenceCodeGen extends SequenceBase {
         code += '}\n';
         return [code, seqSize + remaingValues];
     }
-    expr(e) {        
+    expr(e) {
         // no cache
         const num = this.e2num(e);
         return [`__values.push(${num}n);\n`, 1];

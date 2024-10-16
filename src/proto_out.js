@@ -5,6 +5,7 @@ const fs = require('fs');
 const util = require('util');
 const assert = require('./assert.js');
 const Context = require('./context.js');
+const StringValue = require('./expression_items/string_value.js');
 
 const MAX_CHALLENGE = 200;
 const MAX_STAGE = 20;
@@ -44,7 +45,7 @@ module.exports = class ProtoOut {
         this.currentAirGroup = null;
         this.witnessId2ProtoId = [];
         this.fixedId2ProtoId = [];
-        this.airGroupValueId2ProtoId = []; 
+        this.airGroupValueId2ProtoId = [];
         this.airValueId2ProtoId = [];
         this.options = options;
         this.bigIntType = options.bigIntType ?? 'Buffer';
@@ -113,7 +114,8 @@ module.exports = class ProtoOut {
         this.Hint = this.root.lookupType('Hint');
     }
     setupPilOut(name) {
-        console.log('FR', this.Fr.p, this.toBaseField(this.Fr.p));
+        console.log('> set pilout name \x1B[38;5;208m' + name + '\x1B[0m');
+        console.log('> set prime field \x1B[38;5;208m0x' + this.Fr.p.toString(16) + '\x1B[0m');
         this.pilOut = {
             name,
             baseField: this.toBaseField(this.Fr.p, 0, false),
@@ -130,12 +132,13 @@ module.exports = class ProtoOut {
         }
     }
     encode() {
-        this.updateSymbolsWithSameName();
-
+        Context.memoryUpdate();
         // fs.writeFileSync('tmp/pilout.pre.log', util.inspect(this.pilOut, false, null, false));
         let message = this.PilOut.fromObject(this.pilOut);
         // fs.writeFileSync('tmp/pilout.log', util.inspect(this.pilOut, false, null, false));
+        Context.memoryUpdate();
         this.data = this.PilOut.encode(message).finish();
+        Context.memoryUpdate();
         return this.data;
     }
     saveToFile(filename) {
@@ -197,7 +200,7 @@ module.exports = class ProtoOut {
         let symbols = [];
         for (const label of labels) {
             symbols.push([label.label, {type, locator: label.from, array: label.multiarray, data: {}}]);
-        }   
+        }
         this._setSymbols(symbols, data);
     }
     _setSymbols(symbols, data = {}) {
@@ -239,10 +242,14 @@ module.exports = class ProtoOut {
             }
             case 'airgroupvalue': {
                 const [stage, protoId] = this.airGroupValueId2ProtoId[id];
+                assert.typeOf(protoId, 'number');
+                assert.typeOf(stage, 'number');
                 return {type: REF_TYPE_AIR_GROUP_VALUE, id: protoId, airGroupId: ref.data.airGroupId, stage};
             }
             case 'airvalue': {
                 const [stage, protoId] = this.airValueId2ProtoId[id];
+                assert.typeOf(protoId, 'number');
+                assert.typeOf(stage, 'number');
                 return {type: REF_TYPE_AIR_GROUP_VALUE, id: protoId, airGroupId: ref.data.airGroupId, stage};
             }
             case 'proofvalue':
@@ -267,7 +274,7 @@ module.exports = class ProtoOut {
     setProofValues(proofvalues) {
         this.pilOut.numProofValues = proofvalues.length;
     }
-    setFixedCols(fixedCols) {    
+    setFixedCols(fixedCols) {
         this.setConstantCols(fixedCols, this.currentAir.numRows, false);
     }
     setPeriodicCols(periodicCols) {
@@ -300,19 +307,34 @@ module.exports = class ProtoOut {
         for (const col of cols) {
             const colIsPeriodic = col.isPeriodic() && col.rows < rows;
             if (colIsPeriodic !== periodic) continue;
-            const _rows = periodic ? col.rows : rows;
+            if (col.temporal) continue; // ignore temporal columns, only use to help to create other fixed columns
             this.fixedId2ProtoId[col.id] = [colType, airCols.length];
             let values = [];
-            for (let irow = 0; irow < _rows; ++irow) {
-                const _value = col.getValue(irow);
-                if (typeof _value === 'undefined') {
-                    console.log(irow, col);
-                    throw new Error(`Error ${col.constructor.name} on row ${irow}`);
+            if (!Context.config.noProtoFixedData) {
+                if (Context.config.compressFixedCols && col.isCompressed) {
+                    values = this.setCompressedConstantsCols(col);
+                } else {
+                    const _rows = periodic ? col.rows : rows;
+                    console.log(`  > Proto setting ${periodic?'periodic':'fixed'} col ${col.id} ${_rows} ....`);
+                    values = this.setRegularConstantsCols(col, _rows);
                 }
-                values.push(this.toBaseField(_value));
             }
             airCols.push({values});
         }
+    }
+    setRegularConstantsCols(col, rows) {
+        let values = [];
+        for (let irow = 0; irow < rows; ++irow) {
+            const _value = col.getValue(irow);
+            if (typeof _value === 'undefined') {
+                console.log(irow, col);
+                throw new Error(`Error ${col.constructor.name} on row ${irow}`);
+            }
+            values.push(this.toBaseField(_value));
+        }
+        return values;
+    }
+    setCompressedConstantsCols(col) {
     }
     setWitnessCols(cols) {
         const stageWidths = this.setupAirProperty('stageWidths');
@@ -406,7 +428,7 @@ module.exports = class ProtoOut {
                     if (protoId === false) {
                         throw new Error(`Translate: Found invalid airGroupValue idx ${ope.airGroupValue.idx}`);
                     }
-                    ope.airGroupValue.idx = protoId;        
+                    ope.airGroupValue.idx = protoId;
                     ope.airGroupValue.stage = stage;
                 }
                 break;
@@ -415,7 +437,7 @@ module.exports = class ProtoOut {
                     if (protoId === false) {
                         throw new Error(`Translate: Found invalid airValue idx ${ope.airValue.idx}`);
                     }
-                    ope.airValue.idx = protoId;        
+                    ope.airValue.idx = protoId;
                     ope.airValue.stage = stage;
                 }
                 break;
@@ -504,8 +526,24 @@ module.exports = class ProtoOut {
     toHintField(hdata, options = {}) {
         const path = options.path ?? '';
         // check if an alone expression to use and translate its single operand
+        if (hdata && hdata.isArray) {
+            hdata = hdata.getAloneOperand().toArrays();
+        }
+        if (Array.isArray(hdata)) {
+            let result = [];
+            for (let index = 0; index < hdata.length; ++index) {
+                result.push(this.toHintField(hdata[index], {...options, path: path + '[' + index + ']'}));
+            }
+            return { hintFieldArray: { hintFields: Array.isArray(result) ? result : [result] }};
+        }
         if (hdata && typeof hdata.pack === 'function') {
             // console.log('HINT', typeof hdata.toString == 'function' ? hdata.constructor.name + ' ==> ' + hdata.toString() : hdata);
+            if (typeof hdata.evalAsValue === 'function') {
+                const value = hdata.evalAsValue();
+                if (value.isString) {
+                    return { stringValue: value.asString() };
+                }
+            }
             const expressionId = hdata.pack(options.packed, options);
             return { operand: { expression: { idx: expressionId } }};
         }
@@ -517,18 +555,14 @@ module.exports = class ProtoOut {
             }
             return { operand: { expression: { idx: expressionId } }};
         }
-        if (Array.isArray(hdata)) {
-            let result = [];
-            for (let index = 0; index < hdata.length; ++index) {
-                result.push(this.toHintField(hdata[index], {...options, path: path + '[' + index + ']'}));
-            }
-            return { hintFieldArray: { hintFields: Array.isArray(result) ? result : [result] }};
-        }
         if (typeof hdata === 'bigint' || typeof hdata === 'number') {
             return { operand: {constant: { value: this.bint2buf(BigInt(hdata))}} }
         }
         if (typeof hdata === 'string') {
             return { stringValue: hdata };
+        }
+        if (hdata instanceof StringValue) {
+            return { stringValue: hdata.asString() };
         }
         if (typeof hdata === 'object' && hdata.constructor.name === 'Object') {
             let result = [];
@@ -572,7 +606,7 @@ module.exports = class ProtoOut {
             value = Context.Fr.e(value);
         }
 
-        // first divide in chunks to calculate how many chunks in 
+        // first divide in chunks to calculate how many chunks in
         // big endian are used.
         let chunks = [];
         while (value > 0n) {
@@ -633,9 +667,6 @@ module.exports = class ProtoOut {
         const PilOut = root.lookupType('pilout.PilOut');
         console.log(PilOut);
         */
-    }
-    updateSymbolsWithSameName() {
-        console.log(this.pilOut.symbols.map(x => `${x.name}__${x.airGroupId}${typeof x.airId === 'undefined' ? '':('__'+x.airId)}`));
     }
 }
 

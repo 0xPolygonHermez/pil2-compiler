@@ -33,3 +33,19 @@ println(a);
 
 a = -(2)**8;
 println(a);
+
+
+function f(int c, expr sel) {
+    expr _a0 = sel;
+    expr _a1 = 0 - sel;
+    expr _a = c ? sel : 0 - sel;
+    println("=====> ", c);
+    println(_a0);
+    println(_a1);
+    println(_a);
+}
+
+col witness w;
+f(0, w * w);
+f(1, w * w);
+

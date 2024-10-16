@@ -83,7 +83,7 @@ class Reference {
         // indexes is base, over it we fill all value levels.
         const isArray = Array.isArray(value);
         const valueLen = isArray ? value.length : value.getLevelLength(vindexes);
-        
+
         if (len !== valueLen) {
             throw new Error(`Mismatch con array length (${len} vs ${valueLen}) on ${this.name}[${indexes.join('],[')}] level:${level} at ${Context.sourceRef}`);
         }
@@ -91,12 +91,12 @@ class Reference {
         for (let index = 0; index < len; ++index) {
             const _indexes = [...indexes, index];
             const _vindexes = [...vindexes, index];
-    
+
             // we are on final now we could set values
             if (level + 1 === this.array.dim) {
                 if (isArray) {
                     this.setOneItem(value[index], _indexes, options);
-                } else {    
+                } else {
                     if (value.dump) value.dump();
                     const _item = value.getItem(_vindexes);
                     this.setOneItem(_item, _indexes, options);
@@ -131,7 +131,7 @@ class Reference {
         } else {
             this.instance.set(id, value);
         }
-        this.markAsInitialized(indexes);
+        // this.markAsInitialized(indexes);
     }
     init (value, indexes = [], options = {}) {
         assert.notStrictEqual(value, null); // to detect obsolete legacy uses
@@ -162,7 +162,7 @@ class Reference {
             }
             throw new Error(`Accessing to index, but not an array ${this.name} ${Context.sourceTag}`);
         }
-        if ((this.array.dim + 1) === indexes.length) {            
+        if ((this.array.dim + 1) === indexes.length) {
             // return row and the id of indexes without row
             return [indexes[indexes.length - 1], this.getId(indexes.slice(0,-1))];
         }
@@ -267,7 +267,7 @@ class Reference {
         if (res === false) {
             res = this.const ? this.instance.getConstItem(locator, options) : this.instance.getItem(locator, options);
         }
-    
+
         if (label) {
             res.setLabel(label);
         } else res.setLabel('___');

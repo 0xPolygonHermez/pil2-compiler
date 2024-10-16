@@ -15,6 +15,9 @@ module.exports = class ArrayOf extends RuntimeItem {
 
         this.instanceType = instanceType;
     }
+    get isArray() {
+        return true;
+    }
     toString(options) {
         return super.toString(options)+'['+this._array.lengths.join('],[')+`] D${this.dim}`;
     }

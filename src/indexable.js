@@ -77,7 +77,8 @@ module.exports = class Indexable {
     get(id) {
         let res = this.values[id];
         if (res === null) {
-            return this.getEmptyValue(id);
+            res = this.getEmptyValue(id);
+            this.values[id] = res;
         }
         return res;
     }
@@ -117,6 +118,10 @@ module.exports = class Indexable {
         }
         if (assert.isEnabled) assert.typeOf(itemClass.createFrom, 'function', [this.type, this.constructor.name, itemClass, res, res.value]);
         return itemClass.createFrom(res.value, {id, instance: this});
+    }
+    // get expression item to add in a expression
+    getDefinition(id, options = {}) {
+        return this.values[id];
     }
 
     getLabel(id, options) {

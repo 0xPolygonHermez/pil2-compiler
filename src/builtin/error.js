@@ -2,7 +2,7 @@ const Function = require("../function.js");
 const IntValue = require('../expression_items/int_value.js');
 const Context = require('../context.js');
 
-module.exports = class Error extends Function {
+module.exports = class _Error extends Function {
     constructor (parent) {
         super(parent, {name: 'error', args: [], returns: [] });
     }

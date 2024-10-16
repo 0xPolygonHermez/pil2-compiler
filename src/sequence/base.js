@@ -1,6 +1,7 @@
 const Expression = require("../expression.js");
 const Context = require('../context.js');
 const assert = require('../assert.js');
+const { FeValue } = require("../expression_items.js");
 
 module.exports = class SequenceBase {
     constructor (parent, label, options = {}) {
@@ -9,17 +10,62 @@ module.exports = class SequenceBase {
         this.set = options.set;
         this.label = label;
     }
+    checkTimes(times) {
+        if (times < 1) throw new Error(`Invalid times ${times} in sequence at ${Context.sourceTag}`);
+    }
+    useFieldElement() {
+        return this.parent.fieldElement;
+    }
+    useBigInt() {
+        return this.bytes === 8 || this.bytes === true;
+    }
+    codeConvert(something, forceBigInt = false) {
+        if (this.useFieldElement()) {
+            something = `Fr.e(${something})`;
+        }
+        if (this.useBigInt() || forceBigInt) {
+            return something;
+        }
+        return `Number(${something})`;
+    }
+    codeFieldElement(value) {
+        return value + 'n';
+    }
+    codeValue(value, forceBigInt = false) {
+        if (this.useFieldElement()) {
+            value = Context.Fr.e(value);
+        }
+        if (this.useBigInt() || forceBigInt) {
+            return value.toString() + 'n';
+        }
+        return value.toString();
+    }
     get paddingSize() {
         return this.parent.paddingSize;
     }
     set paddingSize(value) {
         this.parent.setPaddingSize(value);
     }
+    get bytes() {
+        return this.parent.bytes;
+    }
+    get size() {
+        return this.parent.size;
+    }
     execute(e) {
-        if (e instanceof Expression) {
-            return this.expr(e);
-        }
-        switch (e.type) {
+        this.beginExecution();
+        const res = this.insideExecute(e);
+        return this.endExecution(res);
+    }
+    beginExecution(e) {
+    }
+    endExecution(res) {
+        return res;
+    }
+    insideExecute(e) {
+        const type = e instanceof Expression ? 'expr': e.type;
+        switch (type) {
+            case 'expr': return this.expr(e);
             case 'sequence': return this.sequence(e);
             case 'padding_seq': return this.paddingSeq(e);
             case 'seq_list': return this.seqList(e);
@@ -30,10 +76,10 @@ module.exports = class SequenceBase {
         }
         throw new Error(`Invalid sequence type ${e.type} ${this.label}`);
     }
-    expr(e){        
+    expr(e){
         throw new Error(`Sequence type:expr not implemented for ${this.label}`);
     }
-    sequence(e){        
+    sequence(e){
         throw new Error(`Sequence type:sequence not implemented for ${this.label}`);
     }
     paddingSeq(e){
@@ -128,33 +174,27 @@ module.exports = class SequenceBase {
         SequenceBase.cacheGeomN[key] = n;
         return n;
     }
-    geomCount(fromValue, toValue, delta) {
-        if (delta < Number.MIN_SAFE_INTEGER || delta > Number.MAX_SAFE_INTEGER) {
-            throw new Error(`Geometric coeficient to big ${delta}`);
+    geomCount(fromValue, toValue, ratio) {
+        let count = 1;
+        let value = fromValue;
+        console.log({fromValue, toValue, ratio, count, value});
+        if (this.useFieldElement()) {
+            console.log({value, toValue});
+            while (value < toValue) {
+                value = Context.Fr.e(value * ratio);
+                console.log({value, toValue, count});
+                ++count;
+            }
+        } else {
+            while (value < toValue) {
+                value *= ratio;
+                ++count;
+            }
         }
-        if (!fromValue || !toValue || !delta) {
-            throw new Error(`Invalid geometric parameters from:${fromValue} to:${toValue} delta:${delta}`);
+        if (value !== toValue) {
+            throw new Error(`Invalid geometric parameters (from: ${fromValue}, to: ${toValue}, ratio: ${ratio} finalValue: ${value}) at ${Context.sourceTag}`);
         }
-
-        const _delta = Number(delta);
-        if (fromValue >= Number.MIN_SAFE_INTEGER && fromValue <= Number.MAX_SAFE_INTEGER && 
-            toValue >= Number.MIN_SAFE_INTEGER && toValue <= Number.MAX_SAFE_INTEGER) {
-            if (toValue > fromValue) {
-                assert.ok(Number(toValue/fromValue) > 0);
-                return Math.floor(Math.log(Number(toValue/fromValue))/Math.log(_delta)) + 1;
-            } 
-            assert.ok(Number(fromValue/toValue) > 0);
-            return Math.floor(Math.log(Number(fromValue/toValue))/Math.log(_delta)) + 1;
-        }                
-        const _maxToValue = delta ** BigInt(Math.floor(Math.log(Number.MAX_SAFE_INTEGER)/Math.log(_delta)));
-        const _times = fromValue / BigInt(_maxToValue);
-        assert.ok((_times * 54n) <= Number.MAX_SAFE_INTEGER);
-        let count = Number(fromValue / BigInt(_maxToValue)) * this.geomCount(1, _maxToValue, _delta);
-        const _remainToValue = Number(fromValue % BigInt(_maxToValue));
-        if (_remainToValue) {
-            count += this.geomCount(1, _remainToValue, _delta);
-        }
-        return count;       
+        return count;
     }
     calculateToValue(fromValue, delta, times, operation) {
         const size = Math.ceil(this.parent.paddingSize / times);
@@ -164,12 +204,12 @@ module.exports = class SequenceBase {
             case '*': return fromValue * (delta ** BigInt(size - 1));
             case '/': return fromValue / (delta ** BigInt(size - 1));
         }
-        throw new Error(`Invalid sequence operation ${operation}`);            
+        throw new Error(`Invalid sequence operation ${operation}`);
     }
     calculateSingleCount(fromValue, toValue, delta, operation) {
         switch (operation) {
-            case '+': return Number((toValue - fromValue) / delta) + 1; 
-            case '-': return Number((fromValue - toValue) / delta) + 1; 
+            case '+': return Number((toValue - fromValue) / delta) + 1;
+            case '-': return Number((fromValue - toValue) / delta) + 1;
             case '*': return this.geomCount(fromValue, toValue, delta);
             case '/': return this.geomCount(fromValue, toValue, delta);
         }
@@ -189,7 +229,7 @@ module.exports = class SequenceBase {
         let padding = tn === false;
         if (padding) {
             if (calculateSize) {
-                return [this.paddingSize = 2, reverse, 0n, 0n, ratio];
+                return [this.paddingSize, reverse, 0n, 0n, ratio];
             }
             n = BigInt(Math.floor(this.paddingSize / times));
             if (!reverse) {
@@ -217,5 +257,7 @@ module.exports = class SequenceBase {
             throw new Error(`ERROR geometric seq calculation ${tf} !== ${ti} * (${ratio} ** ${BigInt(n)})`);
         }
         return [this.toNumber(n) + 1, reverse, ti, tf, ratio];
+    }
+    flush() {
     }
 }

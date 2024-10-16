@@ -6,11 +6,15 @@ const assert = require('./assert.js');
 const Context = require('./context.js');
 const SequenceSizeOf = require('./sequence/size_of.js');
 const SequenceCodeGen = require('./sequence/code_gen.js');
+const SequenceFastCodeGen = require('./sequence/fast_code_gen.js');
 const SequenceExtend = require('./sequence/extend.js');
 const SequenceToList = require('./sequence/to_list.js');
 const SequenceTypeOf = require('./sequence/type_of.js');
+const SequenceCompression = require('./sequence/compression.js');
 const IntValue = require('./expression_items/int_value.js');
 const ExpressionList = require('./expression_items/expression_list.js');
+const beautify = require('js-beautify').js;
+const Transpiler = require('./transpiler.js');
 
 const MAX_ELEMS_GEOMETRIC_SEQUENCE = 300;
 class SequencePadding {
@@ -28,29 +32,34 @@ module.exports = class Sequence {
     // TODO: check repetitive sequences (times must be same)
     // TODO: check arith_seq/geom_seq with repetitive
 
-    constructor (expression, maxSize) {
-        this.#values = new Values();
+    constructor (expression, options = {}) {
+        this.options = options;
         this.padding = false;
+        this.fieldElement = options.fieldElement ?? true;
         this.expression = expression;
 
-        this.maxSize = typeof maxSize === 'undefined' ? false : Number(maxSize);
+        this.maxSize = Number(options.maxSize ?? Context.rows);
         this.paddingCycleSize = false;
         this.paddingSize = 0;
         this.extendPos = 0;
         this.debug = '';
         this.valueCounter = 0;
         this.varIndex = 0;
-        const options = {set: (index, value) => this.#setValue(index, value),
-                         get: (index) => this.#values[index]};
+        this.bytes = 8;         // by default
+        const defaultEngineOptions = {set: (index, value) => this.#setValue(index, value),
+                                      get: (index) => this.#values[index]};
         this.engines = {
             sizeOf: new SequenceSizeOf(this, 'sizeOf'),
-            codeGen: new SequenceCodeGen(this, 'codeGen'),
-            extend: new SequenceExtend(this, 'extend', options),
-            toList: new SequenceToList(this, 'toList', options),
-            typeOf: new SequenceTypeOf(this, 'typeOf')
+            codeGen: new SequenceFastCodeGen(this, 'codeGen'),
+                                                    // : new SequenceCodeGen(this, 'codeGen'),
+            extend: new SequenceExtend(this, 'extend', defaultEngineOptions),
+            toList: new SequenceToList(this, 'toList', defaultEngineOptions),
+            typeOf: new SequenceTypeOf(this, 'typeOf'),
+            compression: new SequenceCompression(this, 'compression')
         };
         this.engines.typeOf.execute(this.expression);
         this.sizeOf(this.expression);
+        this.#values = new Values(this.bytes, this.size);
     }
     get isSequence () {
         return this.engines.typeOf.isSequence;
@@ -59,11 +68,14 @@ module.exports = class Sequence {
         return this.engines.typeOf.isList;
     }
     clone() {
-        let cloned = new Sequence(this.expression, this.maxSize);
-        if (Debug.active) console.log(['CLONED', this.maxSize, cloned.maxSize]);
+        let cloned = new Sequence(this.expression, this.options);
+        if (Debug.active) console.log(['CLONED', this.options]);
         this.#values.mutable = false;
         cloned.#values = this.#values.clone();
         return cloned;
+    }
+    getIntValue(index) {
+        return this.#values.getValue(index);
     }
     getValue(index) {
         return new IntValue(this.#values.getValue(index));
@@ -74,10 +86,10 @@ module.exports = class Sequence {
     }
     setValue(index, value) {
         if ((index >= 0 && (this.maxSize === false || index < this.maxSize) === false)) {
-            console.log(`\x1B[33mERROR Invalid value of extendPos:${index} maxSize:${this.maxSize}  ${this.debug}\x1B[0m`);
+            console.log(`\x1B[31m  > ERROR Invalid value of extendPos:${index} maxSize:${this.maxSize}  ${this.debug}\x1B[0m`);
         }
         if (typeof this.#values.getValue(index) !== 'undefined') {
-            console.log(`\x1B[33mERROR Rewrite index position:${index} ${this.debug}\x1B[0m`);
+            console.log(`\x1B[31m  > ERROR Rewrite index position:${index} ${this.debug}\x1B[0m`);
         }
         ++this.valueCounter;
         return this.#values.setValue(index, value);
@@ -88,9 +100,7 @@ module.exports = class Sequence {
         const size = this.engines.sizeOf.execute(e);
         assert.ok(size >= this.paddingCycleSize, `size(${size}) < paddingCycleSize(${this.paddingCycleSize})`);
         if (Debug.active) {
-            console.log(['SIZE(MAXSIZE)', this.maxSize]);
-            console.log(['SIZE(paddingCycleSize)', this.paddingCycleSize]);
-            console.log(['SIZE(paddingSize)', this.paddingSize]);
+            console.log(`Sequence(sizeOf) size:${size} maxSize:${this.maxSize} paddingCycleSize:${this.paddingCycleSize} paddingSize:${this.paddingSize}`);
         }
         if (this.paddingCycleSize) {
             this.paddingSize = this.maxSize - (size - this.paddingCycleSize);
@@ -98,32 +108,40 @@ module.exports = class Sequence {
         } else {
             this.size = size;
         }
-        if (Debug.active) console.log(['SIZE', this.size]);
+        this.engines.sizeOf.updateMaxSizeWithPadingSize(this.paddingSize);
+        this.bytes = this.engines.sizeOf.getMaxBytes();
         return this.size;
     }
     toList() {
         this.engines.toList.execute(this.expression);
-        return new ExpressionList(this.#values.getValues());
+        return new ExpressionList(this.engines.toList.getValues());
     }
     setPaddingSize(size) {
         if (this.maxSize === false) {
-            throw new Error(`Invalid padding sequence without maxSize at ${this.debug}`);
+            throw new Error(`Invalid padding sequence without maxSize at ${Context.sourceTag}`);
         }
         if (this.paddingCycleSize !== false) {
-            throw new Error(`Invalid padding sequence, previous padding sequence already has been specified at ${this.debug}`);
+            throw new Error(`Invalid padding sequence, previous padding sequence already has been specified at ${Context.sourceTag}`);
         }
         this.paddingCycleSize = size;
         return this.paddingCycleSize;
     }
     extend() {
         if (Debug.active) console.log(this.size);
+        if (Context.config.logCompress) {
+            console.log(this.engines.compression.execute(this.expression)[0]);
+        }
         this.extendPos = 0;
-        const [code, count] = this.engines.codeGen.execute(this.expression);
-        let __values = [];
-        const context = {__values}
+        let [code, count] = this.engines.codeGen.execute(this.expression);
+        if (Context.config.logTranspiledSequences) {
+            code = beautify(code, {wrap_line_length: 160});
+            code = `// bytes:${this.bytes === true ? 'bigint':this.bytes} at ${Context.sourceTag}\n` + code;
+            Transpiler.dumpCode(code);
+        }
+        const context = {...this.engines.codeGen.genContext(), __log: function () { console.log.apply(null, arguments)}};
         vm.createContext(context);
         vm.runInContext(code, context);
-        this.#values.__setValues(__values);
+        this.#values.__setValues(context.__dbuf, context.__data);
         this.#values.mutable = false;
     }
     verify() {
@@ -141,5 +159,11 @@ module.exports = class Sequence {
     }
     toString() {
         return this.#values.toString();
+    }
+    getValues() {
+        return this.#values.getValues();
+    }
+    getBuffer() {
+        return this.#values.getBuffer();
     }
 }

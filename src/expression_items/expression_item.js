@@ -176,7 +176,7 @@ class ExpressionItem {
         let results = {};
         const _options = options ? {...options, results} : {results};
         results.prior = this.evalPrior(options);
-        results.inside = this.evalInside(options);
+        results.inside = this.evalInside({...options, asItem: true});
         results.next = this.evalNext(options);
         return results.final ? results.final : results.inside;
     }
@@ -189,11 +189,11 @@ class ExpressionItem {
     isEmpty() {
         // default implementation
         return false;
-    }    
+    }
     isUnrolled() {
         // default implementation
         return false;
-    }    
+    }
     isRuntimeEvaluable() {
         // default implementation
         return true;

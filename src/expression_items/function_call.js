@@ -31,9 +31,12 @@ module.exports = class FunctionCall extends RuntimeItem {
     toString(options) {
         return this.dump(options);
     }
+    dumpArgument(argument, options = {}) {
+        return options.map ? options.map(argument, options) : argument.toString(options);
+    }
     dump(options) {
         const indexes = this.indexes.length > 0 ? '['+this.indexes.join(',')+']':'';
-        const args = '(' + this.args.map(x => x.toString()).join(',') +')';
+        const args = '(' + this.args.map(x => this.dumpArgument(x, options)).join(',') +')';
         return this.name + args + indexes;
     }
     cloneInstance() {

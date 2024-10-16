@@ -6,6 +6,9 @@ class StringValue extends RuntimeItem {
         assert.typeOf(value, 'string');
         this.value = value;
     }
+    get isString() {
+        return true;
+    }
     get isBaseType () {
         return true;
     }
@@ -22,7 +25,7 @@ class StringValue extends RuntimeItem {
         assert.typeOf(value, 'string');
         this.value = value;
         return this.value;
-    }
+    }    
     asString() {
         return this.value;
     }

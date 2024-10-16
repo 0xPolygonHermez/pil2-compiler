@@ -8,7 +8,7 @@ module.exports = class AssertEq extends Function {
         super(999999, {name: 'assert_eq'});
     }
     mapArguments(s) {
-        if (s.args.length !== 2) {
+        if (s.args.length < 2 || s.args.length > 3) {
             throw new Error('Invalid number of parameters');
         }
         assert.instanceOf(s.args[0], Expression);
@@ -16,9 +16,8 @@ module.exports = class AssertEq extends Function {
         const arg0 = s.args[0].eval();
         const arg1 = s.args[1].eval();
         if (!arg0.equals(arg1)) {
-            console.log(arg0);
-            console.log(arg1);
-            throw new Error(`Assert fails (${arg0} === ${arg1}) on ${Context.sourceRef}`);
+            const msg = s.args[2] ? s.args[2].toString() + '\n' : '';
+            throw new Error(msg + `Assert fails (${arg0} === ${arg1}) on ${Context.sourceRef}`);
         }
         return 0n;
     }

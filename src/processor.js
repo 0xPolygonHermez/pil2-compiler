@@ -1,4 +1,4 @@
-const { performance } = require('perf_hooks');
+const Performance = require('perf_hooks').performance;
 const Scope = require("./scope.js");
 const Expressions = require("./expressions.js");
 const Expression = require("./expression.js");
@@ -41,10 +41,16 @@ const util = require('util');
 const Debug = require('./debug.js');
 const Transpiler = require('./transpiler.js');
 const assert = require('./assert.js');
+const { performance } = require('perf_hooks');
+const utils = require('./utils.js')
+const Chrono = require('./chrono.js');
+const units = require('./units.js');
 
 const MAX_SWITCH_CASE_RANGE = 512;
 module.exports = class Processor {
     constructor (Fr, parent, config = {}) {
+        this.totalProtoTime = 0;
+        this.memoryInfo = {maxMemory: 0};
         this.lastMs = Math.floor(performance.now());
         this.sourceRef = '(processor constructor)';
         this.compiler = parent;
@@ -55,14 +61,15 @@ module.exports = class Processor {
         this.scope = new Scope();
         this.runtime = new Runtime();
         this.context = new Context(this.Fr, this, config);
-        this.nextStatementTranspile = false;
-        this.nextStatementFixed = false;
+        this.pragmas = { nextStatement: {},
+                         nextFixed: {}};
         this.loadedRequire = {};
         this.globalScopeTypes = []; // 'witness', 'fixed', 'airgroupvalue', 'challenge', 'proofvalue', 'public'];
 
         this.scope.mark('proof');
         this.delayedCalls = {};
         this.timers = {};
+        this.memory = {};
 
         this.lastAirGroupId = -1;
         this.lastAirId = -1;
@@ -116,14 +123,15 @@ module.exports = class Processor {
         this.airGroups = new AirGroups();
         this.airTemplates = new AirTemplates();
 
-        this.expressions = new Expressions();
-        this.globalExpressions = new Expressions();
+        this.expressions = new Expressions('air');
+        this.globalExpressions = new Expressions('proof');
 
         this.constraints = new Constraints();
         this.globalConstraints = new Constraints(this.globalExpressions);
 
         this.assign = new Assign(Fr, this, this.context, this.references, this.expressions);
-        this.hints = new Hints(Fr, this.expressions);
+        this.hints = new Hints(this.expressions);
+        this.globalHints = new Hints(this.globalExpressions);
 
         this.executeCounter = 0;
         this.executeStatementCounter = 0;
@@ -131,6 +139,7 @@ module.exports = class Processor {
         this.callstack = []; // TODO
         this.breakpoints = ['expr.pil:26'];
         this.sourceRef = '(built-in-class)';
+        this.loadConfigDefines();
         this.loadBuiltInClass();
         this.scopeType = 'proof';
 
@@ -141,16 +150,30 @@ module.exports = class Processor {
 
         this.sourceRef = '(init)';
 
-        if (config.proto === false) {
+        if (config.protoOut === false) {
             this.proto = false;
         } else {
             this.proto = new ProtoOut(this.Fr);
             this.proto.setupPilOut(Context.config.name ?? 'noname');
         }
 
-        this.transpiler = new Transpiler({processor: this});
-        if (typeof Context.config.test.onProcessorInit === 'function') {
+        if (typeof Context.config.test === 'object' && typeof Context.config.test.onProcessorInit === 'function') {
             Context.config.test.onProcessorInit(this);
+        }
+        this.memoryUpdate();
+    }
+    memoryUpdate() {
+        const mem = process.memoryUsage().rss;
+        if (mem > this.memoryInfo.maxMemory) {
+            this.memoryInfo.maxMemory = mem;
+        }
+    }
+    loadConfigDefines() {
+        const defines = Context.config.defines ?? {};
+        for (const name in defines) {
+            console.log(`> define const int \x1B[38;5;208m${name}\x1B[0m = ${defines[name]}`)
+            const initValue = new ExpressionItems.IntValue(Context.config.defines === true ? 1n : BigInt(defines[name]));
+            this.references.declare(name, 'int', [], { scope: false, sourceRef: '(defines)', const: true }, initValue);
         }
     }
     loadBuiltInClass() {
@@ -180,6 +203,8 @@ module.exports = class Processor {
         this.references.declare('AIR_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
     }
     startExecution(statements) {
+        const t1 = performance.now();
+
         this.sourceRef = '(start-execution)';
 
         this.declareBuiltInConstants();
@@ -191,22 +216,43 @@ module.exports = class Processor {
         this.finalProofScope();
         this.scope.popInstanceType();
         if (this.proto) {
+            this.memoryUpdate();
+            console.log(`\nGenerating pilout (protobuf) ${Context.config.outputFile} .....`)
+            const t1 = performance.now();
             this.generateProtoOut();
+            this.memoryUpdate();
+            const t2 = performance.now();
+            if (fs.existsSync(Context.config.outputFile)) {
+                const stats = fs.statSync(Context.config.outputFile);
+                console.log('  > Proto size: ' + units.getHumanSize(stats.size));
+            }
+            this.totalProtoTime += (t2-t1);
+            console.log('  > Proto time: ' + units.getHumanTime(t2-t1));
         }
+        const t2 = performance.now();
+        this.memoryUpdate();
+        const compilationTime = t2 - t1;
+        console.log('  > Total proto time ('+(Math.round((this.totalProtoTime * 10000)/compilationTime)/100)+'%): ' + units.getHumanTime(this.totalProtoTime));
+        console.log('  > Memory: ' + units.getHumanSize(this.memoryInfo.maxMemory));
+        console.log('  > Total compilation: ' + units.getHumanTime(compilationTime));
     }
     generateProtoOut()
-    {        
+    {
         if (Context.config.protoOut === false) return;
+        this.memoryUpdate();
         this.proto.setPublics(this.publics);
         this.proto.setProofValues(this.proofValues);
         this.proto.setChallenges(this.challenges);
         let packed = new PackedExpressions();
         this.globalExpressions.pack(packed);
         this.proto.setGlobalConstraints(this.globalConstraints, packed);
+        this.proto.addHints(this.globalHints, packed, {airGroupId: false });
         this.proto.setGlobalExpressions(packed);
         this.proto.setGlobalSymbols(this.references);
         this.proto.encode();
+        this.memoryUpdate();
         this.proto.saveToFile(Context.config.outputFile);
+        this.memoryUpdate();
     }
     traceLog(text, color = '') {
         if (!this.trace) return;
@@ -234,63 +280,96 @@ module.exports = class Processor {
         }
         return false;
     }
+    getDirectStatement(st) {
+        if (st.type === 'code') {
+            return this.getDirectStatement(st.statements);
+        }
+        return st.type;
+    }
     executeStatement(st) {
         const __executeStatementCounter = this.executeStatementCounter++;
-        let activeTranspile = this.nextStatementTranspile;
-        if (activeTranspile) {
-            this.transpile = true;
-            this.nextStatementTranspile = false;
-        }
-        this.traceLog(`[TRACE] #${__executeStatementCounter} ${st.debug ?? ''} (DEEP:${this.scope.deep})`, '38;5;75');
+        let ignoreStatement = this.pragmas.nextStatement.ignore ?? false;
+        let activeTranspile = this.pragmas.nextStatement.transpile ?? false;
+        let statementIsPragma = (ignoreStatement || activeTranspile) && this.getDirectStatement(st) === 'pragma';
 
-        this.sourceRef = st.debug ? (st.debug.split(':').slice(0,2).join(':') ?? ''):'';
-        // if (st instanceof ExpressionItem) {
-        //     const res = st.instance();
-        //     return res;
-        // }
-        if (typeof st.type === 'undefined') {
-            console.log(st);
-            this.error(st, `Invalid statement (without type)`);
-        }
-        const method = ('exec_'+st.type).replace(/[-_][a-z]/g, (group) => group.slice(-1).toUpperCase());
-        if (Debug.active) console.log(`## DEBUG ## ${this.executeCounter}.${this.executeStatementCounter} ${method} ${st.debug}` );
-        if (!(method in this)) {
-            console.log('==== ERROR ====');
-            this.error(st, `Invalid statement type: ${st.type}`);
-        }
-        let res;
-        try {
-            if (this.breakpoints.includes(st.debug)) {
-                debugger;
-            }
-            if (this.transpile) {
-                this.transpiler.transpile(st);
-                EXIT_HERE;
-            } else {
-                res = this[method](st);
-            }
-        } catch (e) {
-            // console.log([Expression.constructor.name]);
-            console.log("EXCEPTION ON "+st.debug+" ("+this.callstack.join(' > ')+")");
+        if (!statementIsPragma) {
             if (activeTranspile) {
-                this.transpile = false;
+                this.transpile = true;
             }
-            throw e;
+            // clean for next statement
+            this.pragmas.nextStatement = {};
+        } else {
+            // clean ignore, need to wait to next, because current statement is pragma
+            ignoreStatement = false;
+        }
+
+        let res = new ExpressionItems.IntValue(0); // default value if ignore
+        if (!ignoreStatement) {
+            this.traceLog(`[TRACE] #${__executeStatementCounter} ${st.debug ?? ''} (DEEP:${this.scope.deep})`, '38;5;75');
+
+            this.sourceRef = st.debug ? (st.debug.split(':').slice(0,2).join(':') ?? ''):'';
+            // if (st instanceof ExpressionItem) {
+            //     const res = st.instance();
+            //     return res;
+            // }
+            if (typeof st.type === 'undefined') {
+                console.log(st);
+                this.error(st, `Invalid statement (without type)`);
+            }
+            const method = ('exec_'+st.type).replace(/[-_][a-z]/g, (group) => group.slice(-1).toUpperCase());
+            if (Debug.active) console.log(`## DEBUG ## ${this.executeCounter}.${this.executeStatementCounter} ${method} ${st.debug}` );
+            if (!(method in this)) {
+                console.log('==== ERROR ====');
+                this.error(st, `Invalid statement type: ${st.type}`);
+            }
+            try {
+                if (this.breakpoints.includes(st.debug)) {
+                    debugger;
+                }
+                if (this.transpile) {
+                    this.transpile = false;
+                    const transpiler = new Transpiler({processor: this});
+                    const res = transpiler.transpile(st, this.transpileOptions);
+                    this.transpileOptions = {};
+                    return res;
+                } else {
+                    res = this[method](st);
+                }
+            } catch (e) {
+                this.dumpExceptionInfo({method, st, msg: e.message});
+                if (activeTranspile) {
+                    this.transpile = false;
+                    throw e;
+                }
+            }
         }
         if (activeTranspile) {
             this.transpile = false;
         }
         return res;
     }
+    dumpExceptionInfo(info) {
+        let deep = this.callstack.length;
+        let index = deep - 1;
+        let lines = ['   0 '+info.msg+` at ${Context.sourceTag}`];
+        while (index >= 0) {
+            const cinfo = this.callstack[index];
+            lines.push(`  ${String(deep-index).padStart(2)} ${cinfo.call.padEnd(80)} [${cinfo.source}]` );
+            --index;
+        }
+        console.log(lines.join('\n'));
+        process.exit(1);
+    }
+
     execPragma(st) {
-        const params = st.value.split(/\s+/);
+        let params = st.value.split(/\s+/);
         const instr = params[0] ?? false;
         switch (instr) {
             case 'message':
-                    const ms = Math.floor(performance.now());
-                    console.log(`\x1B[46m${st.value.slice(8)} (${ms}ms +${ms-this.lastMs}ms)\x1B[0m`);
-                    this.lastMs = ms;
-                    break;
+                const ms = Math.floor(performance.now());
+                console.log(`\x1B[46m${st.value.slice(8)} (${ms}ms +${ms-this.lastMs}ms)\x1B[0m`);
+                this.lastMs = ms;
+                break;
             case 'debug':
                 if (params[1] === 'on') {
                     Debug.active = true;
@@ -298,7 +377,7 @@ module.exports = class Processor {
                     console.log('## DEBUG ON ##');
                     console.log('##############');
                 }
-                else if (params[1] === 'off') Debug.active = false;        
+                else if (params[1] === 'off') Debug.active = false;
                 break;
             case 'profile':
                 if (params[1] === 'on') {
@@ -306,7 +385,7 @@ module.exports = class Processor {
                 }
                 else if (params[1] === 'off') {
                     console.profileEnd();
-                }        
+                }
                 break;
             case 'exit':
                 EXIT_HERE;
@@ -315,31 +394,92 @@ module.exports = class Processor {
                 const name = params[1] ?? false;
                 const action = params[2] ?? 'start';
                 if (action === 'start')  {
-                    this.timers[name] = process.hrtime();
+                    this.timers[name] = Performance.now();
+                    // this.timers[name] = process.hrtime();
                 } else if (action === 'end') {
-                    const now = process.hrtime();
+                    // const now = process.hrtime();
+                    const now = Performance.now();
                     const start = this.timers[name] ?? now;
-                    const milliseconds = (now[0] - start[0]) * 1000 + Math.floor((now[1] - start[1])/1000000);
-                    console.log(`=========================> TIMER ${name} ${milliseconds} ms <===============================`);
+                    // const milliseconds = (now[0] - start[0]) * 1000 + Math.floor((now[1] - start[1])/1000000);
+                    const milliseconds = (now - start);
+                    console.log(`  \x1B[36m> Timer ${name} ${Math.round(milliseconds * 100)/100.0} ms\x1B[0m`);
                 }
+                break;
+            }
+            case 'memory': {
+                const mem = process.memoryUsage();
+                if (params[1] === 'print') {
+                    return this.showMemory(mem);
+                }
+                const name = params[1] ?? false;
+                const action = params[2] ?? 'start';
+                if (action === 'start')  {
+                    this.memory[name] = mem;
+                } else if (action === 'end') {
+                    const start = this.memory[name] ?? mem;
+                    return this.showMemory(start, mem);
+                } else {
+                    throw new Error(`Invalid action ${action} on pragma memory`);
+                }
+                break;
+            }
+            case 'fixed_dump':{
+                const [name, indexes] = utils.extractNameAndNumIndexes(params[1]);
+                const filename = params[2] ?? false;
+                const bytes = {byte: 1, word: 2, dword: 4, lword: 4}[params[3]] ?? false;
+                console.log('dumping.....');
+                console.log(name, indexes, filename, bytes);
+                Context.references.getItem(name, indexes).definition.dumpToFile(filename, bytes);
+                break;
+            }
+            case 'fixed_bytes':
+            case 'fixed_size':{
+                const bytes = {byte: 1, word: 2, dword: 4, lword: 4}[params[1]] ?? params[1];
+                if (bytes != 1 && bytes != 2 && bytes != 4 && bytes != 8) {
+                    throw new Error(`Invalid bytes ${params[1]} on pragma fixed_size (valid values: bytes, word, dword, lword) at ${Context.sourceRef}`);
+                }
+                this.pragmas.nextFixed.bytes = Number(bytes);
+                break;
+            }
+            case 'fixed_tmp':{
+                this.pragmas.nextFixed.temporal = true;
                 break;
             }
             case 'debugger':
                 debugger;
-                break;  
+                break;
+            case 'feature': {
+                this.pragmas.nextStatement.ignore = !(Context.config.features[params[1]] ?? false);
+                break;
+            }
             case 'transpile':
-                this.nextStatementTranspile = true;
+                this.transpileOptions = {};
+                this.pragmas.nextStatement.transpile = true;
+                for (let i = 1; i < params.length; ++i) {
+                    const pos = params[i].indexOf(':');
+                    if (pos < 0) {
+                        this.transpileOptions[params[i]] = true;
+                    } else {
+                        const key = params[i].substr(0, pos);
+                        const value = params[i].substr(pos+1);
+                        this.transpileOptions[key] = value;
+                    }
+                }
                 break;
-            case 'fixed':
-                this.nextStatementFixed = true;
-                break;
-            case 'dump': {                
+            case 'dump': {
                 const value = this.references.get(params[1]).value;
                 value.dump('*************** PRAGMA '+Context.sourceRef+' ***************');
                 break;
             }
+            default:
+                throw new Error(`Prama ${instr} not implemented`);
         }
-        
+
+    }
+    showMemory(m1, m2 = false) {
+        const concept = m2 === false ? 'use' : 'increment';
+        const _m2 = m2 === false ? {} : m2;
+        console.log(`\x1B[36m  > Memory ${concept}: ${units.getMB(m1.rss, m2.rss)} MB\x1B[0m`);
     }
     execProof(st) {
         this.scope.pushInstanceType('proof');
@@ -351,7 +491,7 @@ module.exports = class Processor {
         // console.log(mapInfo);
         // console.log(func.constructor.name);
         // callinfo.dumpArgs(mapInfo.eargs, 'CALLINFO');
-        this.callstack.push(mapInfo.scall ?? func.name);
+        this.callstack.push({call: mapInfo.scall ?? func.name, source: Context.sourceTag});
         ++this.functionDeep;
         this.scope.push();
         return mapInfo;
@@ -360,7 +500,7 @@ module.exports = class Processor {
         this.scope.pop();
         --this.functionDeep;
         this.callstack.pop();
-        if (Debug.active) console.log(`END CALL ${func.name}`, res);
+        if (Debug.active) console.log(`END CALL ${func.name}`);
     }
     executeFunctionCall(name, callinfo, options = {}) {
         const func = this.builtIn[name] ?? this.references.get(name);
@@ -372,7 +512,7 @@ module.exports = class Processor {
         if (!func) {
             this.error({}, `Undefined function ${name}`);
         }
-        if (func.isBridge) {   
+        if (func.isBridge) {
             return func.exec(callinfo, {}, options);
         } else if (options.alias) {
             throw new Error(`Alias can not be used on function calls at ${Context.sourceRef}`);
@@ -423,13 +563,24 @@ module.exports = class Processor {
         if (Debug.active) console.log(util.inspect(s.data, false, null, true));
         const res = this.processHintData(s.data);
         if (Debug.active) console.log(util.inspect(res, false, null, true));
-        this.hints.define(name, res);
+        if (this.scope.getInstanceType() === 'proof') {
+            if (Context.config.logHints) console.log(`  > define global hint \x1B[38;5;208m${name}\x1B[0m`)
+            this.globalHints.define(name, res);
+        }
+        else {
+            if (Context.config.logHints || Context.config.logGlobalHints) {
+                console.log(`  > define hint \x1B[38;5;208m${name}\x1B[0m`)
+            }
+            this.hints.define(name, res);
+        }
     }
     processHintData(hdata) {
         if (hdata instanceof Expression) {
             const value = hdata.eval();
             if (typeof value === 'bigint') return value;
-            return hdata.instance();
+            const res = hdata.instance();
+            if (Context.config.logHintExpressions) console.log('  > Hint expression: ' + res.toString());
+            return res;
         }
         if (hdata.type === 'array') {
             let result = [];
@@ -478,7 +629,7 @@ module.exports = class Processor {
             const _case = s.cases[index];
             if (_case.condition && _case.condition.values) {
                 for (const value of _case.condition.values) {
-                    if (value instanceof Expression) {  
+                    if (value instanceof Expression) {
                         const _key = value.asInt();
                         if (typeof values[_key] !== 'undefined') {
                             throw new Error(`Switch-case value ${_key} duplicated`);
@@ -487,7 +638,7 @@ module.exports = class Processor {
                     } else if (value.from && value.to && value.from instanceof Expression && value.to instanceof Expression) {
                         const _from = value.from.asInt();
                         const _to = value.to.asInt();
-                        if ((_to - _from) < MAX_SWITCH_CASE_RANGE) { 
+                        if ((_to - _from) < MAX_SWITCH_CASE_RANGE) {
                             while (_from <= _to) {
                                 if (typeof values[_from] !== 'undefined') {
                                     throw new Error(`Switch-case value ${_from} duplicated`);
@@ -497,7 +648,7 @@ module.exports = class Processor {
                             }
                         } else {
                             throw new Error(`Switch-case range too big ${from}..${to} (${_to-_from}) max: ${MAX_SWITCH_CASE_RANGE}`);
-                        }        
+                        }
                     } else {
                         console.log(value);
                         EXIT_HERE;
@@ -590,25 +741,49 @@ module.exports = class Processor {
         this.execute(s.init, `FOR ${this.sourceRef} INIT`);
         let index = 0;
         // while (this.expressions.e2bool(s.condition)) {
+        let tmark = performance.now();
+        let ttotal = 0;
+        let tcount = 0;
+        let mesure = true;
+        let t = [0,0,0,0];
+        let large = false;
         while (true) {
             if (index % 10000 === 0 && index) {
-                console.log(`inside FOR ${this.sourceRef} index:${index}`);
+                large = true;
+                let tmark2 = performance.now();
+                const ms = tmark2 - tmark;
+                ttotal += ms;
+                tcount += 1;
+                console.log(`> inside loop ${this.sourceTag} index:${index} time(ms):${Math.trunc(tmark2-tmark)} avg(ms):${Math.trunc(ttotal/tcount)} total(s):${Math.trunc(ttotal/1000)}`);
+                tmark = tmark2;
             }
             const loopCond = s.condition.eval().asBool();
             if (Debug.active) console.log('FOR.CONDITION', loopCond, s.condition.toString(), s.condition);
             if (!loopCond) break;
             // if only one statement, scope will not create.
             // if more than one statement, means a scope_definition => scope creation
+            // if (mesure) { t[2] = performance.now(); }
             result = this.execute(s.statements, `FOR ${this.sourceRef} I:${index}`);
             ++index;
+            // if (mesure) { t[3] = performance.now(); }
             if (this.abortInsideLoop(result)) {
                 result = result.getResult();
                 break;
             }
             if (Debug.active) console.log('INCREMENT', s.increment);
             this.execute(s.increment);
+            //if (mesure) {
+            //    t[4] = performance.now();
+            //    console.log(`PARTIAL TIMES T0:${t[1]-t[0]}ms T1:${t[2]-t[1]}ms T2:${t[3]-t[2]}ms T3:${t[4]-t[3]}ms`);
+            //    mesure = false;
+            //}
+        }
+        if (large) {
+            const tend = performance.now();
+            console.log(`> total loop ${this.sourceTag} ${Math.round((tmark-tend) * 100)/100.0} ms`);
         }
         this.scope.pop();
+        const tmark2 = performance.now();
         return this.clearLoopAbort(result);
     }
     clearLoopAbort(result) {
@@ -627,7 +802,7 @@ module.exports = class Processor {
         }
         if (result instanceof ReturnCmd) {
             return true;
-        }   
+        }
         return false;
     }
     execForIn(s) {
@@ -769,7 +944,7 @@ module.exports = class Processor {
     }
     execRequire(s) {
         const requireId = s.file.asString();
-        if (!s.contents) {
+        if (!s.contents && !this.loadedRequire[requireId]) {
             // TODO: check if sense use dynamic requires
             const sts = this.compiler.loadInclude(requireId, {preSrc: 'airtemplate __(int N=2**2) {\n', postSrc: '\n};\n'});
             if (sts === false) {
@@ -782,7 +957,7 @@ module.exports = class Processor {
         if (!this.loadedRequire[requireId]) {
             this.loadedRequire[requireId] = true;
             return this.execute(s.contents);
-        }    
+        }
     }
     execFunctionDefinition(s) {
         if (Debug.active) console.log('FUNCTION '+s.name);
@@ -886,22 +1061,22 @@ module.exports = class Processor {
         let airGroup = this.airGroups.get(name);
         if (!airGroup) {
             airGroup = new AirGroup(name, [], true);
-            this.airGroups.define(name, airGroup);            
+            this.airGroups.define(name, airGroup);
         }
         this.openAirGroup(airGroup);
         this.execute(s.statements);
         this.suspendCurrentAirGroup();
     }
     setAirGroupBuiltIntConstants(airGroup) {
-        this.references.set('AIRGROUP', [], airGroup ? airGroup.name : '');  
-        this.references.set('AIRGROUP_ID', [], new ExpressionItems.IntValue(airGroup ? airGroup.id : 0));  
+        this.references.set('AIRGROUP', [], airGroup ? airGroup.name : '');
+        this.references.set('AIRGROUP_ID', [], new ExpressionItems.IntValue(airGroup ? airGroup.id : 0));
     }
     /**
      * method to return id of airgroup, if this id not defined yet, use lastAirGroupId to set it
-     * @param {AirGroup} airGroup 
+     * @param {AirGroup} airGroup
      * @returns {number}
      */
-    getAirGroupId(airGroup) {    
+    getAirGroupId(airGroup) {
         const id = airGroup.getId();
         if (id !== false) {
             if (this.proto) {
@@ -917,20 +1092,20 @@ module.exports = class Processor {
         return this.lastAirGroupId;
     }
     /**
-     * Open or reopen a airgroup with name airGroupName, this means that 
+     * Open or reopen a airgroup with name airGroupName, this means that
      * start to executing inside airgroup scope
-     * @param {string} airGroupName 
-     * @param {AirGroup} airGroup 
+     * @param {string} airGroupName
+     * @param {AirGroup} airGroup
      */
     openAirGroup(airGroup) {
         this.airGroupStack.push(this.currentAirGroup);
         this.currentAirGroup = airGroup;
         this.scope.pushInstanceType('airgroup');
         this.context._airGroupName = airGroup.name;
-        this.airGroupId = this.getAirGroupId(airGroup);        
+        this.airGroupId = this.getAirGroupId(airGroup);
         Context.airGroupId = this.airGroupId;
         this.setAirGroupBuiltIntConstants(airGroup);
-    }    
+    }
     /**
     * close current airgroup and call defered funcions, clear scope of airgroup
     */
@@ -972,7 +1147,6 @@ module.exports = class Processor {
         return air;
     }
     closeAir() {
-        console.log(`END AIR ${Context.airName} #${Context.air.id}`);
         this.airStack.pop();
         if (this.proto) this.proto.popAir();
         this.updateAir();
@@ -988,7 +1162,7 @@ module.exports = class Processor {
     setAirBuiltInConstants(air) {
         this.references.set('BITS', [], air.bits ?? 0);
         // TODO: alert to AIR_ID because really was undefined
-        this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? 0));          
+        this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? 0));
     }
     executeAirTemplate(airTemplate, airTemplateFunc, callinfo, options = {}) {
         const name = options.alias ? options.alias : airTemplate.name;
@@ -996,6 +1170,8 @@ module.exports = class Processor {
         if (!airGroup) {
             throw new Exceptions.Runtime(`Instance airtemplate ${name} out of airgroup`);
         }
+        console.log(`\nAIR instance \x1B[38;5;208m${name}\x1B[0m in airgroup \x1B[38;5;208m${airGroup.name}\x1B[0m`);
+        const ti1 = performance.now();
         // airgroup was a function derivated class
         const mapinfo = this.prepareFunctionCall(airTemplateFunc, callinfo);
         airTemplateFunc.prepare(callinfo, mapinfo);
@@ -1006,26 +1182,53 @@ module.exports = class Processor {
         this.context.push(false, name);
         this.scope.pushInstanceType('air');
         airGroup.airStart(air.id);
+        this.memoryUpdate();
         let res = airTemplate.exec(air.name ,callinfo);
+        this.memoryUpdate();
         this.finalAirScope();
-        airGroup.airEnd(air.id);
+        if (typeof Context.config.test === 'object' && typeof Context.config.test.onAirEnd === 'function') {
+            Context.config.test.onAirEnd(this);
+        }
+        const witnessCols = this.witness.length;
+        const fixedCols = this.witness.length;
+        const constraints = this.constraints.length;
+        const N = this.rows;
+        airGroup.airEnd();
+        const ti2 = performance.now();
+        console.log('  > Witness cols: ' + witnessCols);
+        console.log('  > Fixed cols: ' + fixedCols);
+        console.log('  > Constraints: ' + constraints);
+        console.log('  > Execution time: ' + units.getHumanTime(ti2-ti1));
+
 
         if (this.proto) {
+            const t1 = performance.now();
+            this.memoryUpdate();
             this.airGroupProtoOut(this.currentAirGroup.id, air.id);
+            this.memoryUpdate();
+            const t2 = performance.now();
+            this.totalProtoTime += (t2-t1);
+            console.log('  > Proto time: ' + units.getHumanTime(t2-t1));
         }
 
         this.constraints = new Constraints();
 
+        const t1 = performance.now();
         this.clearAirScope(air.name);
         this.scope.popInstanceType(['witness', 'fixed', 'im']);
         // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
         this.closeAir(air);
 
-        // closing airgroup but no closing final        
+        // closing airgroup but no closing final
         // this.suspendCurrentAirGroup(false);
 
         this.finishFunctionCall(airTemplate);
+        this.memoryUpdate();
+
+        const t2 = performance.now();
+        console.log('  > Closing time: ' + units.getHumanTime(t2-t1));
+        console.log('  > Total time: ' + units.getHumanTime(t2-ti1));
 
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
     }
@@ -1051,15 +1254,28 @@ module.exports = class Processor {
     }
     airGroupProtoOut(airGroupId, airId) {
         if (Context.config.protoOut === false) return;
-        
+
         let packed = new PackedExpressions();
+        let chrono = new Chrono(Context.config.chronoProto ?? false);
+
+        chrono.start();
+
         this.proto.setFixedCols(this.fixeds);
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
+
         this.proto.setPeriodicCols(this.fixeds);
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-PERIODIC-COLS');
+
         this.proto.setWitnessCols(this.witness);
-        this.proto.setAirGroupValues(this.airGroupValues.getDataByAirGroupId(this.airGroupId));
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-WITNESS-COLS');
+
+        this.proto.setAirGroupValues(this.airGroupValues.getIdsByAirGroupId(this.airGroupId),
+                                     this.airGroupValues.getAggreationTypesByAirGroupId(this.airGroupId));
 
         // this.expressions.pack(packed, {instances: [air.fixeds, air.witness]});
         this.expressions.pack(packed, {instances: [this.fixeds, this.witness]});
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-EXPRESSIONS-PACK');
+
         this.proto.setConstraints(this.constraints, packed,
             {
                 labelsByType: {
@@ -1069,17 +1285,25 @@ module.exports = class Processor {
                 },
                 expressions: this.expressions
             });
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-CONSTRAINTS');
+
         const info = {airId, airGroupId};
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
-        this.proto.setSymbolsFromLabels(this.fixeds.labelRanges, 'fixed', info);
+        this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
         if (airId == 0) {
-            this.proto.setSymbolsFromLabels(this.airGroupValues.labelRanges, 'airgroupvalue', {airGroupId});
+
+            this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId), 'airgroupvalue', {airGroupId});
         }
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS');
+
         this.proto.addHints(this.hints, packed, {
                 airGroupId,
                 airId
             });
-        this.proto.setExpressions(packed);        
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-HINTS');
+        this.proto.setExpressions(packed);
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-EXPRESSIONS');
+        chrono.end('PROTO-AIRGROUP-OUT-END');
     }
     finalAirScope() {
         this.callDelayedFunctions('air', 'final');
@@ -1126,14 +1350,24 @@ module.exports = class Processor {
             let init = s.sequence ?? null;
             let seq = null;
             if (init) {
-                seq = new Sequence(init, ExpressionItems.IntValue.castTo(this.references.get('N')));
+                seq = new Sequence(init, {maxSize: ExpressionItems.IntValue.castTo(this.references.get('N'))});
                 if (Context.config.fixed !== false) seq.extend();
             } else if (s.init) {
                 seq = s.init.instance();
                 if (seq.dump) seq.dump();
                 else console.log(seq);
             }
-            this.declareFullReference(colname, 'fixed', lengths, {global}, seq);
+            let data = {global};
+            if (this.pragmas.nextFixed.bytes !== false) {
+                data.bytes = this.pragmas.nextFixed.bytes;
+                this.pragmas.nextFixed.bytes = false;
+            }
+            if (this.pragmas.nextFixed.temporal) {
+                data.temporal = true;
+                this.pragmas.nextFixed.temporal = false;
+            }
+
+            this.declareFullReference(colname, 'fixed', lengths, data, seq);
         }
     }
     execDebugger(s) {
@@ -1317,7 +1551,12 @@ module.exports = class Processor {
         } else {
             throw new Error(`Constraint definition on invalid scope (${scopeType}) ${Context.sourceRef}`);
         }
-        console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] > ${expr.toString({hideClass:true, hideLabel:false})} === 0 (${this.sourceRef})\x1B[0m`);    
+        if (Context.config.outputConstraints) {
+            console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] > ${expr.toString({hideClass:true, hideLabel:false})} === 0 (${this.sourceRef})\x1B[0m`);
+        }
+        if (Context.config.outputConstraints || Context.config.outputGlobalConstraints ) {
+            console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] (RAW) > ${expr.toString({hideClass:true, hideLabel:true})} === 0 (${this.sourceRef})\x1B[0m`);
+        }
     }
     execConstraint(s) {
         assert.instanceOf(s.left, Expression);
@@ -1343,6 +1582,7 @@ module.exports = class Processor {
             if (initialization) {
                 const init = s.multiple ? s.init.getItem([index]) : s.init;
                 if (init instanceof ExpressionItems.ExpressionList) {
+                    if (Context.sourceTag === 'gl_groups_small.pil:9') debugger;
                     initValue = init.eval();
                 } else {
                     if (Debug.active) console.log(name, s.vtype, Context.sourceRef);
@@ -1355,7 +1595,7 @@ module.exports = class Processor {
                             // if (initValue.dump) initValue.dump(); else console.log(initValue);
                             break;
                         case 'string':
-                            initValue = init.eval().asStringItem();;
+                            initValue = init.eval().asStringItem();
                             break;
                     }
                     if (Debug.active) console.log(name, s.vtype, initValue.toString ? initValue.toString() : initValue);
@@ -1385,7 +1625,7 @@ module.exports = class Processor {
         return this.evaluateTemplate(text);
     }
 
-    evaluateTemplate(template) {
+    evaluateTemplate(template, options = {}) {
         const regex = /\${[^}]*}/gm;
         let m;
         let tags = [];

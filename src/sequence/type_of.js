@@ -47,7 +47,7 @@ module.exports = class SequenceTypeOf extends SequenceBase {
     }
     seqList(e) {
         for (const value of e.values) {
-            if (!this.execute(value)) return false;
+            if (!this.insideExecute(value)) return false;
         }
         return this.isSequence || this.isList;
     }
@@ -57,7 +57,7 @@ module.exports = class SequenceTypeOf extends SequenceBase {
     paddingSeq(e) {       
         // a padding implies a sequence because padding wasn't compatible with list
         this.isList = false;
-        return this.execute(e.value);
+        return this.insideExecute(e.value);
     }
     expr(e) {
         if (typeof e !== 'bigint' && typeof e !== 'number' && e.asIntDefault(false) === false) {
@@ -70,7 +70,7 @@ module.exports = class SequenceTypeOf extends SequenceBase {
         this.checkNumericValues([e.times]);
         const times = this.e2num(e.times);
         for (let itime = 0; itime < times; ++itime) {
-            if (!this.execute(e.value)) return false;
+            if (!this.insideExecute(e.value)) return false;
         }
         return this.isSequence || this.isList;
     }    

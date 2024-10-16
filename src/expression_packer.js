@@ -4,7 +4,6 @@ const Context = require('./context.js');
 const { DefinitionItem } = require('./definition_items.js');
 const assert = require('./assert.js');
 
-
 module.exports = class ExpressionPacker {
     constructor(container = false, expression = false) {
         this.set(container, expression);
@@ -72,6 +71,10 @@ module.exports = class ExpressionPacker {
         // break;
         const id = ope.getId();
         const def = Context.references.getDefinitionByItem(ope, options);
+        if (typeof def === 'undefined') {
+            this.expression.dump();
+            throw new Error(`Definition not found for ${ope.constructor.name} ${id} ${ope.label ?? ''}`);
+        }
         assert.typeOf(def, 'object')
         assert.instanceOf(def, DefinitionItem);
         if (ope instanceof ExpressionItems.WitnessCol) {
@@ -81,6 +84,9 @@ module.exports = class ExpressionPacker {
 
         } else if (ope instanceof ExpressionItems.FixedCol) {
             // container.pushFixedCol(id, next ?? 0);
+            if (def.temporal) {
+                throw new Error(`Reference a temporal fixed column ${ope.label}`);
+            }
             this.container.pushFixedCol(id, ope.getRowOffset());
 
         } else if (ope instanceof ExpressionItems.Public) {

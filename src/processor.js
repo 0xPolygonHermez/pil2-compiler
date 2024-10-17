@@ -23,6 +23,7 @@ const PackedExpressions = require("./packed_expressions.js");
 const ProtoOut = require("./proto_out.js");
 const FixedCols = require("./fixed_cols.js");
 const WitnessCols = require("./witness_cols.js");
+const AirValues = require("./air_values.js");
 const AirGroupValues = require("./air_group_values.js");
 const Iterator = require("./iterator.js");
 const Context = require("./context.js");
@@ -110,6 +111,10 @@ module.exports = class Processor {
         this.airGroupValues = new AirGroupValues();
         ExpressionItem.setManager(ExpressionItems.AirGroupValue, this.airGroupValues);
         this.references.register('airgroupvalue', this.airGroupValues);
+
+        this.airValues = new AirValues();
+        ExpressionItem.setManager(ExpressionItems.AirValue, this.airValues);
+        this.references.register('airvalue', this.airValues);
 
         this.functions = new Indexable('function', Function, ExpressionItems.FunctionCall, {const: true});
         ExpressionItem.setManager(ExpressionItems.FunctionCall, this.functions);
@@ -1108,6 +1113,7 @@ module.exports = class Processor {
         // get airGroupId because during closing process this.airGroupId is set to false
         const airGroupId = this.airGroupId;
         this.finalAirGroupScope();
+        this.currentAirGroup.end();
         this.suspendCurrentAirGroup();
         this.references.clearScope('airgroup');
     }
@@ -1171,10 +1177,11 @@ module.exports = class Processor {
         airTemplateFunc.prepare(callinfo, mapinfo);
 
         const air = this.createAir(this.currentAirGroup, airTemplate, {...options, name});
+        this.currentAir = air;
 
         this.context.push(false, name);
         this.scope.pushInstanceType('air');
-        airGroup.airStart();
+        airGroup.airStart(air.id);
         this.memoryUpdate();
         let res = airTemplate.exec(air.name ,callinfo);
         this.memoryUpdate();
@@ -1401,9 +1408,40 @@ module.exports = class Processor {
         if (this.currentAirGroup === false) {
             throw new Error(`airgroupvalue ${name} must be declared inside airtemplate`);
         }
+
+        // resolve compiler expression
+        const stage = this.value2num(s.stage, 'stage');
+        console.log(['STAGE', stage, s.stage]);
+        const defaultValue = (typeof s.defaultValue === 'undefined' || s.defaultValue === false) ? false : this.value2bint(s.defaultValue, 'default');
+
         for (const value of s.items) {
             const lengths = this.decodeLengths(value);
-            const res = this.currentAirGroup.declareAirGroupValue(value.name, lengths, {aggregateType: s.aggregateType, airGroupId: this.airGroupId, sourceRef: this.sourceRef});
+            const data = {aggregateType: s.aggregateType, airGroupId: this.airGroupId, sourceRef: this.sourceRef, stage, defaultValue};
+            const res = this.currentAirGroup.declareAirGroupValue(value.name, lengths, data, this.currentAir.id);
+        }
+    }
+    value2num(value, label) {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'bigint' || typeof value === 'string') return Number(value);
+        if (typeof value.asInt === 'function') return Number(value.asInt());
+        throw new Error(`Invalid value ${value} for ${label} on ${Context.sourceRef}`);
+    }
+    value2bint(value, label) {
+        if (typeof value === 'bigint') return value;
+        if (typeof value === 'number' || typeof value === 'string') return BigInt(value);
+        if (typeof value.asInt === 'function') return value.asInt();
+        throw new Error(`Invalid value ${value} for ${label} on ${Context.sourceRef}`);
+    }
+    execAirValueDeclaration(s) {
+        const name = s.items[0].name ?? '';
+
+        if (this.currentAir === false) {
+            throw new Error(`airvalue ${name} must be declared inside airtemplate`);
+        }
+        for (const value of s.items) {
+            const lengths = this.decodeLengths(value);
+            const stage = s.stage;
+            const res = this.currentAir.declareAirValue(value.name, lengths, {sourceRef: this.sourceRef, stage});
         }
     }
     execChallengeDeclaration(s) {
@@ -1491,27 +1529,23 @@ module.exports = class Processor {
     execCode(s) {
         return this.execute(s.statements,`CODE ${this.sourceRef}`);
     }
-    execConstraint(s) {
+    defineConstraint(left, right) {
         const scopeType = this.scope.getInstanceType();
-        let id, expr, prefix = '';
 
-        assert.instanceOf(s.left, Expression);
-        assert.instanceOf(s.right, Expression);
-        if (Debug.active) s.left.dump('LEFT-CONSTRAINT 1');
-        // s.right.dump('RIGHT-CONSTRAINT 1');
-        const left = s.left.instance();
-        // const right = s.right.instance();
-        if (Debug.active) left.dump('LEFT-CONSTRAINT 2');
-        // right.dump('RIGHT-CONSTRAINT 2');
-        const _left = s.left.instance({simplify: true})
-        const _right = s.right.instance({simplify: true});
-        if (Debug.active) _left.dump('LEFT-CONSTRAINT 3');
-        if (Debug.active) _right.dump('RIGHT-CONSTRAINT 3');
+        assert.instanceOf(left, ExpressionItem);
+        assert.instanceOf(right, ExpressionItem);
+
+        left = left instanceof Expression ? left : new Expression(left);
+        right = right instanceof Expression ? right : new Expression(right);
+
+        const _left = left.instance({simplify: true})
+        const _right =right.instance({simplify: true});
+        let id, expr, prefix = '';
         if (scopeType === 'air') {
-            id = this.constraints.define(_left, _right,false,this.sourceRef);
+            id = this.constraints.define(_left, _right, false, Context.sourceRef);
             expr = this.constraints.getExpr(id);
         } else if (scopeType === 'proof') {
-            id = this.globalConstraints.define(s.left.instance({simplify: true}), s.right.instance({simplify: true}),false,this.sourceRef);
+            id = this.globalConstraints.define(_left, _right, false, Context.sourceRef);
             expr = this.globalConstraints.getExpr(id);
             prefix = 'GLOBAL';
         } else {
@@ -1523,6 +1557,13 @@ module.exports = class Processor {
         if (Context.config.outputConstraints || Context.config.outputGlobalConstraints ) {
             console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] (RAW) > ${expr.toString({hideClass:true, hideLabel:true})} === 0 (${this.sourceRef})\x1B[0m`);
         }
+    }
+    execConstraint(s) {
+        assert.instanceOf(s.left, Expression);
+        assert.instanceOf(s.right, Expression);
+        const left = s.left.instance();
+        const right = s.right.instance();
+        this.defineConstraint(left, right);
     }
     execVariableDeclaration(s) {
         if (Debug.active) console.log('VARIABLE DECLARATION '+Context.sourceRef+' init:'+s.init);

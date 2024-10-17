@@ -199,9 +199,23 @@ class Reference {
         }
         return [evaluatedIndexes, fromIndex, toIndex];
     }
+    getArraySize() {
+        if (!this.array) return 0;
+        return this.array.size;
+    }
+    getNthItem(nth, options) {
+        if (!this.array) {
+            throw new Error('getNthItem implemented only for arrays');
+        }
+        if (this.instance.runtimeRow) {
+            throw new Error('getNthItem not implemented for runtime rows');
+        }
+        const indexes = this.array.offsetToIndexes(nth);
+        return this.getItem(indexes, options);
+    }
     getItem(indexes, options = {}) {
         let locator = this.locator;
-        let label = options.label;
+        let label = options.label ?? this.name;
 
         if (Debug.active) {
             console.log(indexes);

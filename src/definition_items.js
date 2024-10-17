@@ -9,6 +9,7 @@ const Publictable = require("./definition_items/publictable.js");
 const RuntimeItem = require("./definition_items/runtime_item.js");
 const StringVariable = require("./definition_items/string_variable.js");
 const AirGroupValue = require("./definition_items/air_group_value.js");
+const AirValue = require("./definition_items/air_value.js");
 const Variable = require("./definition_items/variable.js");
 const WitnessCol = require("./definition_items/witness_col.js");
 const FixedCol = require("./definition_items/fixed_col.js");
@@ -26,6 +27,7 @@ module.exports = {
     Publictable,
     RuntimeItem,
     StringVariable,
+    AirValue,
     AirGroupValue,
     Variable,
     WitnessCol,

@@ -16,10 +16,11 @@ const SYMBOL_TYPES = {
     PERIODIC_COL: 2,
     WITNESS_COL: 3,
     PROOF_VALUE: 4,
-    SUBPROOF_VALUE: 5,
+    AIR_GROUP_VALUE: 5,
     PUBLIC_VALUE: 6,
     PUBLIC_TABLE: 7,
     CHALLENGE: 8,
+    AIR_VALUE: 9,
 };
 
 const HINT_FIELD_TYPES = {
@@ -67,7 +68,7 @@ class AirOut {
     }   
 
     fixUndefinedData() {
-        if (typeof this.subproofs === 'undefined') this.subproofs = [];
+        if (typeof this.airGroups === 'undefined') this.airGroups = [];
         if (typeof this.symbols === 'undefined') this.symbols = [];
         if (typeof this.hints === 'undefined') this.hints = [];
         if (typeof this.publicTables === 'undefined') this.publicTables = [];
@@ -75,25 +76,25 @@ class AirOut {
         if (typeof this.constraints === 'undefined') this.constraints = [];
     }
     preprocessAirout() {
-        for(let i=0; i<this.subproofs.length; i++) {
-            const subproof = this.subproofs[i];
-            subproof.subproofId = i;
+        for(let i=0; i<this.airGroups.length; i++) {
+            const airGroup = this.airGroups[i];
+            airGroup.airGroupId = i;
 
-            const subAirValues = this.getSubAirValuesBySubproofId(i);
+            const subAirValues = this.getSubAirValuesByAirGroupId(i);
 
-            for(let j=0; j<subproof.airs.length; j++) {
-                const air = subproof.airs[j];
-                air.subproofId = i;
+            for(let j=0; j<airGroup.airs.length; j++) {
+                const air = airGroup.airs[j];
+                air.airGroupId = i;
                 air.airId = j;
 
-                air.symbols = this.getSymbolsBySubproofIdAirId(subproof.subproofId, air.airId);
+                air.symbols = this.getSymbolsByAirGroupIdAirId(airGroup.airGroupId, air.airId);
 
                 for(const subAirValue of subAirValues) {
                     air.symbols.push( { ...subAirValue, airId: j });
                 }
-                air.hints = this.getHintsBySubproofIdAirId(subproof.subproofId, air.airId);
+                air.hints = this.getHintsByAirGroupIdAirId(airGroup.airGroupId, air.airId);
                 air.numChallenges = this.numChallenges;
-                air.aggregationTypes = subproof.subproofvalues;
+                air.aggregationTypes = airGroup.airGroupvalues;
             }
         }
     }
@@ -101,7 +102,7 @@ class AirOut {
     printInfo() {
         log.info("[audit]", `··· AirOut Info`);
         log.info("[audit]", `    Name: ${this.name}`);
-        log.info("[audit]", `    #Subproofs: ${this.subproofs.length}`);
+        log.info("[audit]", `    #AirGroups: ${this.airGroups.length}`);
 
         log.info("[audit]", `    #ProofValues: ${this.numProofValues}`);
         log.info("[audit]", `    #PublicValues: ${this.numPublicValues}`);
@@ -112,13 +113,13 @@ class AirOut {
         if (this.hints) log.info("[audit]", `    #Hints: ${this.hints.length}`);
         if (this.symbols) log.info("[audit]", `    #Symbols: ${this.symbols.length}`);
 
-        for (const subproof of this.subproofs) this.printSubproofInfo(subproof);
+        for (const airGroup of this.airGroups) this.printAirGroupInfo(airGroup);
     }
 
-    printSubproofInfo(subproof) {
-        log.info("[audit]", `    > Subproof '${subproof.name}':`);
+    printAirGroupInfo(airGroup) {
+        log.info("[audit]", `    > AirGroup '${airGroup.name}':`);
 
-        for(const air of subproof.airs) this.printAirInfo(air);
+        for(const air of airGroup.airs) this.printAirInfo(air);
     }
 
     printAirInfo(air) {
@@ -129,26 +130,26 @@ class AirOut {
         if (air.constraints) log.info("[audit]", `         Constraints: ${air.constraints.length}`);
     }
 
-    get numSubproofs() {
-        return this.subproofs === undefined ? 0 : this.subproofs.length;
+    get numAirGroups() {
+        return this.airGroups === undefined ? 0 : this.airGroups.length;
     }
 
     get numStages() {
         return this.numChallenges?.length ?? 1;
     }
 
-    getSubproofById(subproofId) {
-        if(this.subproofs === undefined) return undefined;
+    getAirGroupById(airGroupId) {
+        if(this.airGroups === undefined) return undefined;
 
-        return this.subproofs[subproofId];
+        return this.airGroups[airGroupId];
     }
 
-    getAirBySubproofIdAirId(subproofId, airId) {
-        if(this.subproofs === undefined) return undefined;
-        if(this.subproofs[subproofId].airs === undefined) return undefined;
+    getAirByAirGroupIdAirId(airGroupId, airId) {
+        if(this.airGroups === undefined) return undefined;
+        if(this.airGroups[airGroupId].airs === undefined) return undefined;
 
-        const air = this.subproofs[subproofId].airs[airId];
-        air.subproofId = subproofId;
+        const air = this.airGroups[airGroupId].airs[airId];
+        air.airGroupId = airGroupId;
         air.airId = airId;
         return air;
     }
@@ -181,16 +182,16 @@ class AirOut {
         return this.symbols.find(symbol => symbol.name === name);
     }
 
-    getSymbolsBySubproofId(subproofId) {
+    getSymbolsByAirGroupId(airGroupId) {
         if(this.symbols === undefined) return [];
 
-        return this.symbols.filter(symbol => symbol.subproofId === subproofId);
+        return this.symbols.filter(symbol => symbol.airGroupId === airGroupId);
     }
 
-    getSubAirValuesBySubproofId(subproofId) {
+    getSubAirValuesByAirGroupId(airGroupId) {
         if(this.symbols === undefined) return [];
 
-        return this.symbols.filter(symbol => symbol.subproofId === subproofId && symbol.type === SYMBOL_TYPES.SUBPROOF_VALUE && symbol.airId === undefined);
+        return this.symbols.filter(symbol => symbol.airGroupId === airGroupId && symbol.type === SYMBOL_TYPES.AIR_GROUP_VALUE && symbol.airId === undefined);
     }
 
     getSymbolsByAirId(airId) {
@@ -199,18 +200,18 @@ class AirOut {
         return this.symbols.filter(symbol => symbol.airId === airId);
     }
 
-    getSymbolsBySubproofIdAirId(subproofId, airId) {
+    getSymbolsByAirGroupIdAirId(airGroupId, airId) {
         if(this.symbols === undefined) return [];
 
         return this.symbols.filter(
-            (symbol) => (symbol.subproofId === undefined) || (symbol.subproofId === subproofId && symbol.airId === airId));
+            (symbol) => (symbol.airGroupId === undefined) || (symbol.airGroupId === airGroupId && symbol.airId === airId));
     }
 
-    getSymbolsByStage(subproofId, airId, stageId, symbolType) {
+    getSymbolsByStage(airGroupId, airId, stageId, symbolType) {
         if (this.symbols === undefined) return [];
     
         const symbols = this.symbols.filter(symbol =>
-            symbol.subproofId === subproofId &&
+            symbol.airGroupId === airGroupId &&
             symbol.airId === airId &&
             symbol.stage === stageId &&
             (symbolType === undefined || symbol.type === symbolType)
@@ -219,11 +220,11 @@ class AirOut {
         return symbols.sort((a, b) => a.id - b.id);
     }
 
-    getColsBySubproofIdAirId(subproofId, airId) {
+    getColsByAirGroupIdAirId(airGroupId, airId) {
         if (this.symbols === undefined) return [];
     
         const symbols = this.symbols.filter(symbol =>
-            symbol.subproofId === subproofId &&
+            symbol.airGroupId === airGroupId &&
             symbol.airId === airId &&
             ([1, 2, 3].includes(symbol.type))
         );
@@ -231,8 +232,8 @@ class AirOut {
         return symbols.sort((a, b) => a.id - b.id);
     }
 
-    getWitnessSymbolsByStage(subproofId, airId, stageId) {
-        return this.getSymbolsByStage(subproofId, airId, stageId, SYMBOL_TYPES.WITNESS_COL);
+    getWitnessSymbolsByStage(airGroupId, airId, stageId) {
+        return this.getSymbolsByStage(airGroupId, airId, stageId, SYMBOL_TYPES.WITNESS_COL);
     }
 
     getSymbolByName(name) {
@@ -247,10 +248,10 @@ class AirOut {
         return this.hints[hintId];
     }
 
-    getHintsBySubproofId(subproofId) {
+    getHintsByAirGroupId(airGroupId) {
         if(this.hints === undefined) return [];
 
-        return this.hints.filter(hint => hint.subproofId === subproofId);
+        return this.hints.filter(hint => hint.airGroupId === airGroupId);
     }
 
     getHintsByAirId(airId) {
@@ -259,23 +260,17 @@ class AirOut {
         return this.hints.filter(hint => hint.airId === airId);
     }
 
-    getHintsBySubproofIdAirId(subproofId, airId) {
+    getHintsByAirGroupIdAirId(airGroupId, airId) {
         if(this.hints === undefined) return [];
 
         return this.hints.filter(
-            (hint) => (hint.subproofId === undefined) || ( hint.subproofId === subproofId && hint.airId === airId));
+            (hint) => (hint.airGroupId === undefined) || ( hint.airGroupId === airGroupId && hint.airId === airId));
     }
     verifyExpressions() {
-        for (let subproofId = 0; subproofId < this.subproofs.length; ++subproofId) {
-            for (let airId = 0; airId < this.subproofs[subproofId].airs.length; ++airId) {
-                this.verifyAirExpressions(subproofId, airId);
-                this.verifyAirConstraints(subproofId, airId);                
-
-
-                break;
-
-
-
+        for (let airGroupId = 0; airGroupId < this.airGroups.length; ++airGroupId) {
+            for (let airId = 0; airId < this.airGroups[airGroupId].airs.length; ++airId) {
+                this.verifyAirExpressions(airGroupId, airId);
+                this.verifyAirConstraints(airGroupId, airId);                
             }
         }
     }
@@ -283,14 +278,14 @@ class AirOut {
         for (let hintId = 0; hintId < this.hints.length; ++hintId) {
             const hint = this.hints[hintId];
             const name = hint.name;
-            const subproofId = hint.subproofId;
+            const airGroupId = hint.airGroupId;
             const airId = hint.airId;
-            const expressions = this.subproofs[subproofId].airs[airId].expressions;
+            const expressions = this.airGroups[airGroupId].airs[airId].expressions;
             let referenced = new Array(expressions.length).fill(false);
-            let ctx = {path: '', subproofId, airId, expressions, referenced};
+            let ctx = {path: '', airGroupId, airId, expressions, referenced};
             for (let hintFieldId = 0; hintFieldId < hint.hintFields.length; ++hintFieldId) {
-                ctx.path = `[S:${subproofId} A:${airId}] ${name} [${hintFieldId}]`;
-                // console.log(`VERIFY HINT FIELD ${ctx.path} subproof:${subproofId} air:${airId}`);
+                ctx.path = `[S:${airGroupId} A:${airId}] ${name} [${hintFieldId}]`;
+                // console.log(`VERIFY HINT FIELD ${ctx.path} airGroup:${airGroupId} air:${airId}`);
                 this.verifyHintField(ctx, hintFieldId, hint.hintFields[hintFieldId]);
             }
         }
@@ -319,29 +314,30 @@ class AirOut {
         }
         ctx.path = _ctxpath;
     }
-    verifyAirExpressions(subproofId, airId) {
-        const air = this.subproofs[subproofId].airs[airId];
+    verifyAirExpressions(airGroupId, airId) {
+        const air = this.airGroups[airGroupId].airs[airId];
         const expressions = air.expressions ?? [];
         const expressionsCount = expressions.length;
         // TODO: detect circular dependencies   
         let referenced = new Array(expressionsCount).fill(false);
-        let ctx = {path: `[subproof:${subproofId} air:${airId}]`, air: air.name, referenced, expressions, subproofId, airId};
+        let ctx = {path: `[airGroup:${airGroupId} air:${airId}]`, air: air.name, referenced, expressions, airGroupId, airId};
         for (let expressionId = 0; expressionId < expressionsCount; ++expressionId) {
             ctx.referenced[expressionId] = true;            
             this.verifyExpression(ctx, expressionId, expressions[expressionId]);
             ctx.referenced[expressionId] = false;            
         }        
     }
-    verifyAirConstraints(subproofId, airId) {
-        const air = this.subproofs[subproofId].airs[airId];
+    verifyAirConstraints(airGroupId, airId) {
+        const air = this.airGroups[airGroupId].airs[airId];
         const expressions = air.expressions ?? [];
         const constraints = air.constraints ?? [];
         const expressionsCount = expressions.length;
         // TODO: detect circular dependencies   
         let referenced = new Array(expressionsCount).fill(false);
-        let ctx = {path: `[subproof:${subproofId} air:${airId}]`, air: air.name, referenced, expressions, subproofId, airId};
+        let ctx = {path: `[airGroup:${airGroupId} air:${airId}]`, air: air.name, referenced, expressions, airGroupId, airId};
         console.log(`\x1B[1;36m##### AIR: ${air.name}  #####\x1B[0m`);
         for (let constraintId = 0; constraintId < constraints.length; ++constraintId) {
+            console.log(`--- constraint ${constraintId+1}/${constraints.length} ---`);
             const constraint = constraints[constraintId];
             const frame = Object.keys(constraint)[0];
             const expressionId = constraint[frame].expressionIdx.idx;
@@ -385,8 +381,8 @@ class AirOut {
             case 'proofValue':
                 // TODO: verify proofValue
                 break;
-            case 'subproofValue':
-                // TODO: verify subproofValue
+            case 'airGroupValue':
+                // TODO: verify airGroupValue
                 break;
             case 'publicValue':
                 // TODO: verify publicValue
@@ -474,10 +470,11 @@ class AirOut {
             EXIT_HERE;
         }
         let res = defaultResult;
+        console.log(this.symbols);
         for (let index = 0; index < this.symbols.length; ++index) {
             let symbol = this.symbols[index];
             if (symbol.type !== type) continue;
-            if (typeof symbol.subproofId !== 'undefined' && symbol.subproofId !== ctx.subproofId) continue;
+            if (typeof symbol.airGroupId !== 'undefined' && symbol.airGroupId !== ctx.airGroupId) continue;
             if (typeof symbol.airId !== 'undefined' && symbol.airId !== ctx.airId) continue;
             if (typeof symbol.stage !== 'undefined' && symbol.stage !== stage) continue;
             if (symbol.dim) {
@@ -497,7 +494,7 @@ class AirOut {
             }
             return res;
         }
-        console.log(`NOT FOUND SYMBOL g:${ctx.subproofId} a:${ctx.airId} s:${stage} t:${type} id:${id})`);
+        console.log(`NOT FOUND SYMBOL g:${ctx.airGroupId} a:${ctx.airId} s:${stage} t:${type} id:${id})`);
         EXIT_HERE;
     }
     buf2bint(buf) {
@@ -546,8 +543,10 @@ class AirOut {
                 return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.CHALLENGE);
             case 'proofValue':
                 return this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.PROOF_VALUE);
-            case 'subproofValue':
-                return this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.SUBPROOF_VALUE);
+            case 'airGroupValue':
+                return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.AIR_GROUP_VALUE);
+            case 'airValue':
+                return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.AIR_VALUE);
             case 'publicValue':
                 return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.PUBLIC_VALUE);
             case 'periodicCol':
@@ -633,7 +632,7 @@ class AirOut {
             case 'constant':
             case 'challenge':
             case 'proofValue':
-            case 'subproofValue':
+            case 'airGroupValue':
             case 'publicValue':
                 return 0;
             case 'periodicCol':

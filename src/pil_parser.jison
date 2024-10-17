@@ -296,7 +296,7 @@ statement_list_closed
         { $$ = { statements: [$1] } }
 
     | lcs
-        { $$ = { statements: [] } }        
+        { $$ = { statements: [] } }
     ;
 
 statement_block
@@ -1219,8 +1219,6 @@ proof_value_declaration
 air_group_value_declaration
     : AIR_GROUP_VALUE AGGREGATE '(' IDENTIFIER ')' stage_definition col_declaration_list
         { $$ = { type: 'air_group_value_declaration', aggregateType: $4, stage: $6.stage ?? DEFAULT_AIR_GROUP_VALUE_STAGE, defaultValue: false, items: $7.items } }
-    | AIR_GROUP_VALUE AGGREGATE '(' IDENTIFIER ')' stage_definition DEFAULT '(' expression ')' col_declaration_list
-        { $$ = { type: 'air_group_value_declaration', aggregateType: $4, stage: $6.stage ?? DEFAULT_AIR_GROUP_VALUE_STAGE, defaultValue: $9, items: $11.items } }
     ;
 
 air_template_definition

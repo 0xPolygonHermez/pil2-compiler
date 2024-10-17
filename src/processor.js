@@ -336,7 +336,7 @@ module.exports = class Processor {
                     res = this[method](st);
                 }
             } catch (e) {
-                this.dumpExceptionInfo({method, st, msg: e.message});
+                this.dumpExceptionInfo({method, st, e});
                 if (activeTranspile) {
                     this.transpile = false;
                     throw e;
@@ -351,13 +351,16 @@ module.exports = class Processor {
     dumpExceptionInfo(info) {
         let deep = this.callstack.length;
         let index = deep - 1;
-        let lines = ['   0 '+info.msg+` at ${Context.sourceTag}`];
+        let lines = ['   0 '+info.e.message+` at ${Context.sourceTag}`];
         while (index >= 0) {
             const cinfo = this.callstack[index];
             lines.push(`  ${String(deep-index).padStart(2)} ${cinfo.call.padEnd(80)} [${cinfo.source}]` );
             --index;
         }
         console.log(lines.join('\n'));
+        if (Context.config.verbose) {
+            throw info.e;
+        }
         process.exit(1);
     }
 
@@ -1529,41 +1532,43 @@ module.exports = class Processor {
     execCode(s) {
         return this.execute(s.statements,`CODE ${this.sourceRef}`);
     }
-    defineConstraint(left, right) {
+    execConstraint(s) {
         const scopeType = this.scope.getInstanceType();
-
-        assert.instanceOf(left, ExpressionItem);
-        assert.instanceOf(right, ExpressionItem);
-
-        left = left instanceof Expression ? left : new Expression(left);
-        right = right instanceof Expression ? right : new Expression(right);
-
-        const _left = left.instance({simplify: true})
-        const _right =right.instance({simplify: true});
         let id, expr, prefix = '';
+
+        assert.instanceOf(s.left, Expression);
+        assert.instanceOf(s.right, Expression);
+        if (Debug.active) s.left.dump('LEFT-CONSTRAINT 1');
+        // s.right.dump('RIGHT-CONSTRAINT 1');
+        const left = s.left.instance();
+        // const right = s.right.instance();
+        if (Debug.active) left.dump('LEFT-CONSTRAINT 2');
+        // right.dump('RIGHT-CONSTRAINT 2');
+        const _left = s.left.instance({simplify: true})
+        const _right = s.right.instance({simplify: true});
+        if (Debug.active) _left.dump('LEFT-CONSTRAINT 3');
+        if (Debug.active) _right.dump('RIGHT-CONSTRAINT 3');
+        let global = (scopeType === 'proof');
         if (scopeType === 'air') {
-            id = this.constraints.define(_left, _right, false, Context.sourceRef);
+            id = this.constraints.define(_left, _right,false,this.sourceRef);
             expr = this.constraints.getExpr(id);
-        } else if (scopeType === 'proof') {
-            id = this.globalConstraints.define(_left, _right, false, Context.sourceRef);
+        } else if (global) {
+            id = this.globalConstraints.define(_left, _right,false,this.sourceRef);
             expr = this.globalConstraints.getExpr(id);
-            prefix = 'GLOBAL';
+            prefix = 'Global ';
         } else {
             throw new Error(`Constraint definition on invalid scope (${scopeType}) ${Context.sourceRef}`);
         }
-        if (Context.config.outputConstraints) {
-            console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] > ${expr.toString({hideClass:true, hideLabel:false})} === 0 (${this.sourceRef})\x1B[0m`);
+        if (Context.config.outputConstraints || (Context.config.outputGlobalConstraints && scopeType === 'proof')) {
+            const prompt = global ? '> ': '  > ';
+            const color = global ? '\x1B[38;2;93;240;0m': '\x1B[38;2;192;255;2m';
+            if (Context.config.bothConstraintsFormat || !Context.config.rawConstraintsFormat) {
+                console.log(`${prompt}${prefix}Constraint [${Context.proofLevel}] > ${color}${expr.toString({hideClass:true, hideLabel:false})} === 0\x1B[0m (${this.sourceRef})`);
+            }
+            if (Context.config.bothConstraintsFormat || Context.config.rawConstraintsFormat) {
+                console.log(`${prompt}${prefix}Constraint [${Context.proofLevel}] (RAW) > ${color}${expr.toString({hideClass:true, hideLabel:true})} === 0\x1B[0m (${this.sourceRef})`);
+            }
         }
-        if (Context.config.outputConstraints || Context.config.outputGlobalConstraints ) {
-            console.log(`\x1B[1;36;44m${prefix}CONSTRAINT [${Context.proofLevel}] (RAW) > ${expr.toString({hideClass:true, hideLabel:true})} === 0 (${this.sourceRef})\x1B[0m`);
-        }
-    }
-    execConstraint(s) {
-        assert.instanceOf(s.left, Expression);
-        assert.instanceOf(s.right, Expression);
-        const left = s.left.instance();
-        const right = s.right.instance();
-        this.defineConstraint(left, right);
     }
     execVariableDeclaration(s) {
         if (Debug.active) console.log('VARIABLE DECLARATION '+Context.sourceRef+' init:'+s.init);

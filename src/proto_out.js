@@ -6,6 +6,7 @@ const util = require('util');
 const assert = require('./assert.js');
 const Context = require('./context.js');
 const StringValue = require('./expression_items/string_value.js');
+const IntValue = require('./expression_items/int_value.js');
 
 const MAX_CHALLENGE = 200;
 const MAX_STAGE = 20;
@@ -543,6 +544,9 @@ module.exports = class ProtoOut {
                 if (value.isString) {
                     return { stringValue: value.asString() };
                 }
+                if (value instanceof IntValue) {
+                    return { operand: {constant: { value: this.bint2buf(value.asInt())}} }
+                }
             }
             const expressionId = hdata.pack(options.packed, options);
             return { operand: { expression: { idx: expressionId } }};
@@ -557,6 +561,9 @@ module.exports = class ProtoOut {
         }
         if (typeof hdata === 'bigint' || typeof hdata === 'number') {
             return { operand: {constant: { value: this.bint2buf(BigInt(hdata))}} }
+        }
+        if (hdata instanceof IntValue) {
+            return { operand: {constant: { value: this.bint2buf(hdata.asInt())}} }
         }
         if (typeof hdata === 'string') {
             return { stringValue: hdata };

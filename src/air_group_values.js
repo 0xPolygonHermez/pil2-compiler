@@ -29,4 +29,15 @@ module.exports = class AirGroupValues extends Indexable {
         }
         return result;
     }
+    getIdsByAirGroupId(airGroupId) {
+        let result = [];
+        for (let index = 0; index < this.values.length; ++index) {
+            if (this.values[index].airGroupId != airGroupId) continue;
+            result.push(index);
+        }
+        return result;
+    }
+    getAggreationTypesByAirGroupId(airGroupId) {
+        return this.values.filter(x => x.airGroupId == airGroupId).map(x => x.aggregateType);
+    }
 }

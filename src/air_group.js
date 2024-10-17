@@ -19,9 +19,9 @@ module.exports = class AirGroup {
         this.openedAirIds = 0;
     }
     end() {
-        for (let airId = 0; airId < this.airs.length; ++airId) {   
+        for (let airId = 0; airId < this.airs.length; ++airId) {
             this.checkAirGroupValues(airId);
-        }   
+        }
     }
     getId(id) {
         return this.id;
@@ -46,19 +46,13 @@ module.exports = class AirGroup {
     }
     checkAirGroupValues(airId) {
         for (const name in this.airGroupValues) {
-            const airGroupValue = this.airGroupValues[name];    
+            const airGroupValue = this.airGroupValues[name];
             console.log(airGroupValue);
 
             // TODO: verify case
             if (airGroupValue.insideAirGroupContainer) continue;
-        
+
             if (typeof airGroupValue.airs[airId] === 'undefined') {
-                if (airGroupValue.data.defaultValue !== false) {
-                    console.log(airId);                    
-                    this.defineAirGroupValueDefaultConstraints(airGroupValue);
-                    airGroupValue.airs[airId] = true;
-                    continue;
-                }
                 throw new Error(`airgroupval ${name} declared on previous ${this.name} instance, isn't declared on current air instance`);
             }
         }
@@ -78,13 +72,6 @@ module.exports = class AirGroup {
         // check state
         if (airGroupValue.data.stage != data.stage) {
             throw new Error(`airgroupval ${name} has different previous stage ${airGroupValue.data.stage} declared at ${airGroupValue.data.sourceRef} than now ${data.stage} at ${data.sourceRef}`);
-        }
-
-        // check default value
-        if (airGroupValue.data.defaultValue !== data.defaultValue) {
-            const previousDefaultValue = airGroupValue.data.defaultValue === false ? '(no specified)': airGroupValue.data.defaultValue;
-            const dataDefaultValue = data.defaultValue === false ? '(no specified)': data.defaultValue;
-            throw new Error(`airgroupval ${name} has different previous defaultValue ${previousDefaultValue} declared at ${airGroupValue.data.sourceRef} than now ${dataDefaultValue} at ${data.sourceRef}`);
         }
     }
     declareAirGroupValue(name, lengths, data, airId) {
@@ -109,18 +96,4 @@ module.exports = class AirGroup {
         airGroupValue.airs[airId] = Context.sourceRef;
         return airGroupValue.res;
     }
-    defineAirGroupValueDefaultConstraints(airGroupValue) {
-        const reference = airGroupValue.reference;
-        const size = reference.getArraySize();
-        const defaultValue = new ExpressionItems.IntValue(airGroupValue.definition.defaultValue);
-        if (size === 0) {
-            Context.processor.defineConstraint(reference.getItem(), defaultValue);
-            return;
-        }
-        // define a constraint for each item in the array
-        for (let nth = 0; nth < size; ++nth) {
-            Context.processor.defineConstraint(reference.getNthItem(nth), defaultValue);
-        }
-    }
 }
-    

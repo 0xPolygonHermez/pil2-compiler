@@ -9,13 +9,11 @@ module.exports = class AirGroupValue extends ProofStageItem {
         this.aggregateType = data.aggregateType;
         this.sourceRef = data.sourceRef;
         this.label = data.label;
-        this.defaultValue = data.defaultValue;
         this.relativeId = data.relativeId ?? false;
     }
     clone() {
-        return new AirGroupValue(this.id, { stage: this.stage, 
+        return new AirGroupValue(this.id, { stage: this.stage,
                                             aggregateType: this.aggregateType,
-                                            defaultValue: this.defaultValue,
                                             sourceRef: this.sourceRef,
                                             airGroupId: this.airGroupId,
                                             label: (this.label && typeof this.label.clone === 'function') ? this.label.clone : this.label});

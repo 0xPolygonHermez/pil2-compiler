@@ -24,6 +24,8 @@ const OPTIONS = {
     'no-proto-fixed-data': { describe: 'no store data of fixed inside pilout' },
     'output-constraints': { describe: 'output all air and global constraints generated' },
     'output-global-constraints': { describe: 'output all global constraints generated' },
+    'raw-constraints-format': { describe: 'if output constraints are enabled only in raw format' },
+    'both-constraints-format': { describe: 'if output constraints are enabled show named and raw format' },
     'ignore-unknown-pragmas': { describe: 'ignore unknown pragmas' }
     // TODO: option to force witness name as snake_case and air, airtemplate, airgroup in CamelCase
 }

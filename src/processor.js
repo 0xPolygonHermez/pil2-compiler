@@ -1272,7 +1272,7 @@ module.exports = class Processor {
         this.proto.setWitnessCols(this.witness);
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-WITNESS-COLS');
 
-        this.proto.setAirGroupValues(this.airGroupValues.getIdsByAirGroupId(this.airGroupId),
+        this.proto.setAirGroupValues(this.airGroupValues.getDataByAirGroupId(this.airGroupId),
                                      this.airGroupValues.getAggreationTypesByAirGroupId(this.airGroupId));
 
         // this.expressions.pack(packed, {instances: [air.fixeds, air.witness]});
@@ -1414,12 +1414,10 @@ module.exports = class Processor {
 
         // resolve compiler expression
         const stage = this.value2num(s.stage, 'stage');
-        console.log(['STAGE', stage, s.stage]);
-        const defaultValue = (typeof s.defaultValue === 'undefined' || s.defaultValue === false) ? false : this.value2bint(s.defaultValue, 'default');
 
         for (const value of s.items) {
             const lengths = this.decodeLengths(value);
-            const data = {aggregateType: s.aggregateType, airGroupId: this.airGroupId, sourceRef: this.sourceRef, stage, defaultValue};
+            const data = {aggregateType: s.aggregateType, airGroupId: this.airGroupId, sourceRef: this.sourceRef, stage};
             const res = this.currentAirGroup.declareAirGroupValue(value.name, lengths, data, this.currentAir.id);
         }
     }

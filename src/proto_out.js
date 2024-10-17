@@ -182,16 +182,15 @@ module.exports = class ProtoOut {
         this.currentAirGroup.airGroupValues = [];
         for (let index = 0; index < airGroupValues.length; ++index) {
             const airGroupValue = airGroupValues[index];
-            console.log('setAirGroupValue', airGroupValue);
             const stage = airGroupValue.stage;
-            const defaultValue = airGroupValue.defaultValue;
 
-            this.airGroupValueId2ProtoId[airGroupValue.id] = [index, airGroupValue.stage];
+            this.airGroupValueId2ProtoId[airGroupValue.id] = [index, stage];
             const aggType = SPV_AGGREGATIONS.indexOf(airGroupValue.aggregateType);
             if (aggType < 0) {
+                console.log(airGroupValue);
                 throw new Error(`Invalid aggregation type ${airGroupValue.aggregateType} on ${Context.sourceRef}`);
             }
-            this.currentAirGroup.airGroupValues.push({aggType, stage, defaultValue});
+            this.currentAirGroup.airGroupValues.push({aggType, stage});
         }
     }
     setGlobalSymbols(symbols) {
@@ -217,7 +216,6 @@ module.exports = class ProtoOut {
                     ...data,
                     ...sym2proto
                 };
-                console.log(payout);
                 this.pilOut.symbols.push(payout);
             } catch (e) {
                 console.log(e.stack)

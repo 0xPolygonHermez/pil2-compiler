@@ -36,19 +36,16 @@ module.exports = class AirGroup {
         return air;
     }
     airStart(airId) {
-        console.log(`****************** AIR_START ${airId} *********************** ${this.openedAirIds}`);
         ++this.openedAirIds;
     }
     airEnd(airId) {
-        console.log(`****************** AIR_END ${airId} *********************** ${this.openedAirIds}`);
+
         this.checkAirGroupValues(airId);
         --this.openedAirIds;
     }
     checkAirGroupValues(airId) {
         for (const name in this.airGroupValues) {
             const airGroupValue = this.airGroupValues[name];
-            console.log(airGroupValue);
-
             // TODO: verify case
             if (airGroupValue.insideAirGroupContainer) continue;
 

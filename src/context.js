@@ -8,8 +8,7 @@ module.exports = class Context {
         this.Fr = Fr;
         this._processor = processor;
         this.namespace = '';
-        this.airGroup = false;
-        this.stack = [];        
+        this.namespaceStack = [];
         this.config = {debug: {}, test: {}, ...config};
         this.uses = [];
         this.seqCodeType = config.seqCodeType ?? 'fast';
@@ -22,11 +21,11 @@ module.exports = class Context {
         this._instance._processor.memoryUpdate();
     }
     static get SeqCodeType() {
-        return this._instance.seqCodeType;   
+        return this._instance.seqCodeType;
     }
     static set SeqCodeType(value) {
         this._instance.seqCodeType = value;
-    }        
+    }
     static get rows() {
         return this._instance._processor.rows;
     }
@@ -91,17 +90,8 @@ module.exports = class Context {
     static applyTemplates(value) {
         return this._instance.applyTemplates(value);
     }
-    static getFullName(name) {
-        return this._instance._getFullName(name);
-    }
-    setNamespace(namespace, airGroup) {
-        this.namespace = namespace;
-        if (typeof airGroup !== 'undefined') {
-            this.airGroup = airGroup;
-        }
-    }
-    getAirGroup() {
-        return this.airGroup;
+    static getFullName(name, options = {}) {
+        return this._instance._getFullName(name, options);
     }
     getNamespace() {
         return this.namespace;
@@ -116,9 +106,8 @@ module.exports = class Context {
         if (!value.includes('${')) return value;
         return this._processor.evaluateTemplate(value);
     }
-    getNames(name) {
+    getNames(name, options = {}) {
         if (typeof name.name !== 'undefined') {
-            console.log(name);
             throw new Error('Invalid name used on getNames');
         }
 
@@ -131,11 +120,22 @@ module.exports = class Context {
             return names;
         }
         name = names[0];
-        const fullName = this._getFullName(name);
-        return name === fullName ? [name]:[name, fullName];
+
+        // check if exists a forced name (by container, options, etc..)
+        const forcedFullName = this._getForcedFullName(name, options);
+        if (forcedFullName === false && this.namespaceStack.length > 0) {
+            // if no forced name, add all stack namespaces (airgroup, air,...)
+            for (const ns of this.namespaceStack) {
+                const additionalName = ns + '.' + name;
+                if (names.includes(additionalName)) continue;
+                names.push(additionalName);
+            }
+            return names;
+        }
+        return name === forcedFullName ? [name]:[name, forcedFullName];
     }
     decodeName(name) {
-        const regex = /((?<airgroup>\w*)::)?((?<namespace>\w*)\.)?(?<name>\w+)/gm;
+        const regex = /((?<air>\w*)::)?((?<namespace>\w*)\.)?(?<name>\w+)/gm;
 
         let m;
 
@@ -144,12 +144,11 @@ module.exports = class Context {
             if (m.index === regex.lastIndex) {
                 regex.lastIndex++;
             }
-            return [m.groups.airgroup, m.groups.namespace, m.groups.name];
+            return [m.groups.air, m.groups.namespace, m.groups.name];
         }
     }
-    _getFullName(name) {
+    _getForcedFullName(name, options = {}) {
         if (typeof name !== 'string') {
-            console.log(name);
             throw new Error(`getFullName invalid argument`);
         }
         name = this.applyTemplates(name);
@@ -158,16 +157,34 @@ module.exports = class Context {
         }
 
         const parts = name.split('.');
-        if (parts.length === 1 && this.airGroup !== false && this.airGroup !== '') {
-            name = this.airGroup + '.' + name;
+
+        if (parts.length === 1 && options.namespace) {
+            return options.namespace + '.' + name;
+        }
+        if (parts.length > 1) {
+            return name;
+        }
+        return false;
+    }
+    _getFullName(name, options = {}) {
+        const res = this._getForcedFullName(name, options);
+        if (res !== false) {
+            return res;
+        }
+        if (this.namespace !== false && this.namespace !== '') {
+            name = this.namespace + '.' + name;
         }
         return name;
     }
-    push(namespace, airGroup) {
-        this.stack.push([this.airGroup, this.namespace]);
-        this.setNamespace(namespace, airGroup);
+    push(namespace) {
+        if (namespace === false) {
+            throw new Error('Invalid namespace');
+        }
+        this.namespaceStack.push(namespace);
+        this.namespace = namespace;
     }
     pop() {
-        [this.airGroup, this.namespace] = this.stack.pop();
+        this.namespaceStack.pop();
+        this.namespace = this.namespaceStack.length ? this.namespaceStack[this.namespaceStack.length - 1] : '';
     }
 }

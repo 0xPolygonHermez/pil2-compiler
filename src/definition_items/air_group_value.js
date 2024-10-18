@@ -9,7 +9,6 @@ module.exports = class AirGroupValue extends ProofStageItem {
         this.aggregateType = data.aggregateType;
         this.sourceRef = data.sourceRef;
         this.label = data.label;
-        this.relativeId = data.relativeId ?? false;
     }
     clone() {
         return new AirGroupValue(this.id, { stage: this.stage,

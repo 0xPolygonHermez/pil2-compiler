@@ -4,6 +4,8 @@ const Air = require("./air.js")
 const Context = require('./context.js');
 const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js");
 const ExpressionItems = require('./expression_items.js');
+const assert = require('./assert.js');
+
 module.exports = class AirGroup {
     constructor (name, statements, aggregate) {
         // TODO: when instance a airgroup return an integer (as a handler id)
@@ -39,7 +41,7 @@ module.exports = class AirGroup {
         ++this.openedAirIds;
     }
     airEnd(airId) {
-
+        assert.typeOf(airId, 'number');
         this.checkAirGroupValues(airId);
         --this.openedAirIds;
     }
@@ -73,14 +75,14 @@ module.exports = class AirGroup {
     }
     declareAirGroupValue(name, lengths, data, airId) {
         // colDeclaration(s, type, ignoreInit, fullName = true, data = {}) {
-        const fullname = Context.getFullName(name);
+        const fullname = Context.getFullName(name, {namespace: this.name});
         const insideAirGroupContainer = Context.references.getContainerScope() === 'airgroup';
         if (this.openedAirIds <= 0) {
             throw new Error(`airgroupval ${name} must be declared inside airgroup (air)`);
         }
 
         const airGroupValue = this.airGroupValues[name] ?? false;
-        if (typeof airGroupValue !== 'undefined') {
+        if (airGroupValue === false) {
             const res = Context.references.declare(fullname, 'airgroupvalue', lengths, data);
             const definition = Context.references.get(fullname);
             const reference = Context.references.getReference(fullname);

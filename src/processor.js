@@ -995,10 +995,10 @@ module.exports = class Processor {
         }
 
         // TODO: verify if namespace just was declared in this case airgroup must be the same
-        this.context.push(namespace, airGroup);
+        this.context.push(namespace);
         this.scope.push();
         this.execute(s.statements, `NAMESPACE ${namespace}`);
-        this.scope.pop(['witness', 'fixed', 'im']);
+        this.scope.pop(['witness', 'fixed', 'im', 'airvalue']);
         this.context.pop();
     }
     evalExpressionList(e) {
@@ -1104,6 +1104,7 @@ module.exports = class Processor {
         this.airGroupStack.push(this.currentAirGroup);
         this.currentAirGroup = airGroup;
         this.scope.pushInstanceType('airgroup');
+        this.context.push(airGroup.name);
         this.context._airGroupName = airGroup.name;
         this.airGroupId = this.getAirGroupId(airGroup);
         Context.airGroupId = this.airGroupId;
@@ -1128,6 +1129,7 @@ module.exports = class Processor {
         this.currentAirGroup = this.airGroupStack[this.airGroupStack.length - 1];
         this.airGroupId = this.currentAirGroup ? this.currentAirGroup.getId() : false;
         this.airGroupStack.pop();
+        this.context.pop();
         Context.airGroupId = this.airGroupId;
         this.setAirGroupBuiltIntConstants(this.currentAirGroup);
     }
@@ -1182,7 +1184,7 @@ module.exports = class Processor {
         const air = this.createAir(this.currentAirGroup, airTemplate, {...options, name});
         this.currentAir = air;
 
-        this.context.push(false, name);
+        this.context.push(name);
         this.scope.pushInstanceType('air');
         airGroup.airStart(air.id);
         this.memoryUpdate();
@@ -1196,7 +1198,7 @@ module.exports = class Processor {
         const fixedCols = this.witness.length;
         const constraints = this.constraints.length;
         const N = this.rows;
-        airGroup.airEnd();
+        airGroup.airEnd(air.id);
         const ti2 = performance.now();
         console.log('  > Witness cols: ' + witnessCols);
         console.log('  > Fixed cols: ' + fixedCols);
@@ -1218,7 +1220,7 @@ module.exports = class Processor {
 
         const t1 = performance.now();
         this.clearAirScope(air.name);
-        this.scope.popInstanceType(['witness', 'fixed', 'im']);
+        this.scope.popInstanceType(['witness', 'fixed', 'im', 'airvalue']);
         // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
         this.closeAir(air);
@@ -1294,11 +1296,11 @@ module.exports = class Processor {
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
         if (airId == 0) {
-
-            this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId), 'airgroupvalue', {airGroupId});
+            this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId, ['stage']), 'airgroupvalue', {airGroupId});
         }
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS');
 
+        this.proto.setSymbolsFromLabels(this.airValues.getLabels(['stage']), 'airvalue', info);
         this.proto.addHints(this.hints, packed, {
                 airGroupId,
                 airId
@@ -1314,6 +1316,7 @@ module.exports = class Processor {
     clearAirScope(label = '') {
         this.references.clearType('fixed', label);
         this.references.clearType('witness', label);
+        this.references.clearType('airvalue', label);
         this.references.clearScope('air');
         this.expressions.clear(label);
         this.hints.clear();

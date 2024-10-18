@@ -196,7 +196,7 @@ module.exports = class ProtoOut {
     setSymbolsFromLabels(labels, type, data = {}) {
         let symbols = [];
         for (const label of labels) {
-            symbols.push([label.label, {type, locator: label.from, array: label.multiarray, data: {}}]);
+            symbols.push([label.label, {type, locator: label.from, array: label.multiarray, data: {}, ...(label.data ?? {})}]);
         }
         this._setSymbols(symbols, data);
     }
@@ -237,15 +237,15 @@ module.exports = class ProtoOut {
                 return {type: REF_TYPE_WITNESS_COL, id: protoId, stage};
             }
             case 'airgroupvalue': {
-                const stage = assert.returnTypeOf(ref.data.stage, 'number');
+                const stage = assert.returnTypeOf(ref.stage, 'number');
                 const airGroupId = assert.returnTypeOf(ref.data.airGroupId, 'number');
                 return {type: REF_TYPE_AIR_GROUP_VALUE, id, airGroupId, stage};
             }
             case 'airvalue': {
-                const stage = assert.returnTypeOf(ref.data.stage, 'number');
+                const stage = assert.returnTypeOf(ref.stage, 'number');
                 const airGroupId = assert.returnTypeOf(ref.data.airGroupId, 'number');
                 const airId = assert.returnTypeOf(ref.data.airId, 'number');
-                return {type: REF_TYPE_AIR_GROUP_VALUE, id, airId, airGroupId, stage};
+                return {type: REF_TYPE_AIR_VALUE, id, airId, airGroupId, stage};
             }
             case 'proofvalue':
                 return {type: REF_TYPE_PROOF_VALUE, id};

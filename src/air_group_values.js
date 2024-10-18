@@ -12,10 +12,21 @@ module.exports = class AirGroupValues extends Indexable {
 
         return value ? value.label : `airgroupvalue(${airGroupId},${id})`;
     }
-    getLabelsByAirGroupId(airGroupId) {
-        return this.labelRanges.toArray().filter(x => this.values[x.from].airGroupId === airGroupId);
+    getLabelsByAirGroupId(airGroupId, dataFields = []) {
+        let labels = [];
+        for (const label of this.labelRanges) {
+            const value = this.values[label.from];
+            if (value.airGroupId != airGroupId) continue;
+            let data = {};
+            for (const field of dataFields) {
+                data[field] = value[field];
+            }
+            labels.push({...label, data});
+        }
+        return labels;
+        // return this.labelRanges.toArray().filter(x => this.values[x.from].airGroupId === airGroupId);
     }
-    getEmptyValue(id, options) {
+    getEmptyValue(id, options = {}) {
         const airGroupId = options.airGroupId;
         const relativeId = this.values.reduce((res, spv) => spv.airGroupId === airGroupId ? res + 1 : res, 0);
         let definition = super.getEmptyValue(id, {relativeId, ...options});

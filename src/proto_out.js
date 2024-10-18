@@ -46,8 +46,6 @@ module.exports = class ProtoOut {
         this.currentAirGroup = null;
         this.witnessId2ProtoId = [];
         this.fixedId2ProtoId = [];
-        this.airGroupValueId2ProtoId = [];
-        this.airValueId2ProtoId = [];
         this.options = options;
         this.bigIntType = options.bigIntType ?? 'Buffer';
         this.toBaseField = this.mapBigIntType();
@@ -184,7 +182,6 @@ module.exports = class ProtoOut {
             const airGroupValue = airGroupValues[index];
             const stage = airGroupValue.stage;
 
-            this.airGroupValueId2ProtoId[airGroupValue.id] = [index, stage];
             const aggType = SPV_AGGREGATIONS.indexOf(airGroupValue.aggregateType);
             if (aggType < 0) {
                 console.log(airGroupValue);
@@ -240,16 +237,15 @@ module.exports = class ProtoOut {
                 return {type: REF_TYPE_WITNESS_COL, id: protoId, stage};
             }
             case 'airgroupvalue': {
-                const [stage, protoId] = this.airGroupValueId2ProtoId[id];
-                assert.typeOf(protoId, 'number');
-                assert.typeOf(stage, 'number');
-                return {type: REF_TYPE_AIR_GROUP_VALUE, id: protoId, airGroupId: ref.data.airGroupId, stage};
+                const stage = assert.returnTypeOf(ref.data.stage, 'number');
+                const airGroupId = assert.returnTypeOf(ref.data.airGroupId, 'number');
+                return {type: REF_TYPE_AIR_GROUP_VALUE, id, airGroupId, stage};
             }
             case 'airvalue': {
-                const [stage, protoId] = this.airValueId2ProtoId[id];
-                assert.typeOf(protoId, 'number');
-                assert.typeOf(stage, 'number');
-                return {type: REF_TYPE_AIR_GROUP_VALUE, id: protoId, airGroupId: ref.data.airGroupId, stage};
+                const stage = assert.returnTypeOf(ref.data.stage, 'number');
+                const airGroupId = assert.returnTypeOf(ref.data.airGroupId, 'number');
+                const airId = assert.returnTypeOf(ref.data.airId, 'number');
+                return {type: REF_TYPE_AIR_GROUP_VALUE, id, airId, airGroupId, stage};
             }
             case 'proofvalue':
                 return {type: REF_TYPE_PROOF_VALUE, id};
@@ -422,35 +418,9 @@ module.exports = class ProtoOut {
                     ope.witnessCol.stage = stage;
                 }
                 break;
-            case 'airGroupValue': {
-                    const [protoId,stage] = this.airGroupValueId2ProtoId[ope.airGroupValue.idx] ?? [false];
-                    if (protoId === false) {
-                        throw new Error(`Translate: Found invalid airGroupValue idx ${ope.airGroupValue.idx}`);
-                    }
-                    ope.airGroupValue.idx = protoId;
-                    ope.airGroupValue.stage = stage;
-                }
-                break;
-            case 'airValue': {
-                    const [protoId,stage] = this.airValueId2ProtoId[ope.airValue.idx] ?? [false];
-                    if (protoId === false) {
-                        throw new Error(`Translate: Found invalid airValue idx ${ope.airValue.idx}`);
-                    }
-                    ope.airValue.idx = protoId;
-                    ope.airValue.stage = stage;
-                }
-                break;
-            case 'challenge': {
-                    /* const id = ope.challenge.idx;
-                    const [protoId, stage] = this.challengeId2Proto[id] ?? [false, false];
-                    if (protoId === false) {
-                        console.log(ope);
-                        throw new Error(`Translate: Found invalid airgroupval ${id}`);
-                    }
-                    ope.challenge.idx = protoId;
-                    ope.challenge.stage = stage;*/
-                }
-                break;
+            // airGroupValue not need to translate or to add extra information
+            // airValue not need to translate or to add extra information
+            // challenge not need to translate or to add extra information
             case 'constant':
                 ope.constant.value = this.toBaseField(ope.constant.value);
                 break;

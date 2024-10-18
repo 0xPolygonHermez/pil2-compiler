@@ -34,6 +34,14 @@ function returnNotInstanceOf(actual, cls, message) {
     _message(message, `value is an instance of ${cls}`, actual);
 }
 
+function returnTypesOf(actual, typename, message) {
+    if (!Array.isArray(actual)) {
+        _message(message, `value type ${typeof actual} isn't array`, actual);
+    }
+    if (actual.every((value) => typeof actual === typename)) return actual;
+    _message(message, `any value type [${actual.map((value) => typeof value).join()}] isn't type ${typename}`, actual);
+}
+
 function returnTypeOf(actual, typename, message) {
     if (typeof actual === typename) return actual;
     _message(message, `value type ${typeof actual} isn't type ${typename}`, actual);
@@ -99,6 +107,7 @@ const _exports = {
     typeOf : () => {},
     notTypeOf : () => {},
     returnTypeOf : (value) => value,
+    returnTypesOf : (value) => value,
     returnNotTypeOf : (value) => value,
     ok : () => {},
 }
@@ -121,6 +130,7 @@ function enable(value = true) {
     _exports.notTypeOf = notTypeOf;
     _exports.ok = ok;
     _exports.returnTypeOf = returnTypeOf;
+    _exports.returnTypesOf = returnTypesOf;
     _exports.returnNotTypeOf = returnNotTypeOf;
     _showState();
 }
@@ -141,6 +151,7 @@ function disable() {
     _exports.notTypeOf = () => {};
     _exports.ok = () => {};
     _exports.returnTypeOf = (value) => value;
+    _exports.returnTypesOf = (value) => value;
     _exports.returnNotTypeOf = (value) => value;
     _showState();
 }

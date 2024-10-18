@@ -132,6 +132,9 @@ module.exports = class Context {
             }
             return names;
         }
+        if (forcedFullName === false) {
+            return [name];
+        }
         return name === forcedFullName ? [name]:[name, forcedFullName];
     }
     decodeName(name) {

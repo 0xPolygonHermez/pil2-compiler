@@ -239,9 +239,11 @@ module.exports = class ProtoOut {
             case 'airgroupvalue': {
                 const stage = assert.returnTypeOf(ref.stage, 'number');
                 const airGroupId = assert.returnTypeOf(ref.data.airGroupId, 'number');
-                return {type: REF_TYPE_AIR_GROUP_VALUE, id, airGroupId, stage};
+                const relativeId = assert.returnTypeOf(ref.relativeId, 'number');
+                return {type: REF_TYPE_AIR_GROUP_VALUE, id: relativeId, airGroupId, stage};
             }
             case 'airvalue': {
+                console.log(ref.stage, typeof ref.stage)
                 const stage = assert.returnTypeOf(ref.stage, 'number');
                 const airGroupId = assert.returnTypeOf(ref.data.airGroupId, 'number');
                 const airId = assert.returnTypeOf(ref.data.airId, 'number');

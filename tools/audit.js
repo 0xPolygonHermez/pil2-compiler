@@ -495,9 +495,16 @@ class AirOut {
                 name += '[' + indexes.join('][') + ']';
             }
         }
-        let text = name.padEnd(40) + '|' + symbol.id.toString().padStart(5) + '|' + this.getSymbolType(symbol.type).padEnd(20) + '|' + (symbol.stage ?? '').toString().padStart(5) +
-                   '|' + symbol.airGroupId.toString().padStart(5) + '|' + (symbol.airId ?? '').toString().padStart(4) + '|' + symbol.debugLine;
+        let text;
+        try {
+            text = name.padEnd(40) + '|' + symbol.id.toString().padStart(5) + '|' + this.getSymbolType(symbol.type).padEnd(20) + '|' + (symbol.stage ?? '').toString().padStart(5) +
+                    '|' + symbol.airGroupId.toString().padStart(5) + '|' + (symbol.airId ?? '').toString().padStart(4) + '|' + symbol.debugLine;
+        } catch(e) {
+            console.log(symbol);
+            throw e;
+        }
         console.log(text);
+
     }
     displaySymbols() {
         console.log('\n\x1B[44mname                                    |   id|type                |stage|group| air|debug                                                                   \x1B[0m');
@@ -536,6 +543,7 @@ class AirOut {
             }
             return res;
         }
+
         throw new Error(`NOT FOUND SYMBOL g:${ctx.airGroupId} a:${ctx.airId} s:${stage} t:${this.getSymbolType(type)} id:${id})`);
     }
     buf2bint(buf) {

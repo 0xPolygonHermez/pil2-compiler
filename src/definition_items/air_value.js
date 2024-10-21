@@ -1,12 +1,13 @@
 const ProofStageItem = require("./proof_stage_item.js");
 const AirValueItem = require('../expression_items/air_value.js')
+const Context = require('../context.js');
 
 const assert = require('../assert.js');
 module.exports = class AirValue extends ProofStageItem {
     constructor (id, data = {}) {
         super(id, data.stage);
-        const airId = data.airId ?? false;
-        assert.strictEqual(typeof data.airId, 'number');
+        const airId = data.airId ?? Context.airId;
+        assert.typeOf(airId, 'number');
         this.airId = airId;
         this.sourceRef = data.sourceRef;
         this.label = data.label;

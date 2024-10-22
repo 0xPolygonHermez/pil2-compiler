@@ -1277,6 +1277,8 @@ module.exports = class Processor {
         this.proto.setAirGroupValues(this.airGroupValues.getDataByAirGroupId(this.airGroupId),
                                      this.airGroupValues.getAggreationTypesByAirGroupId(this.airGroupId));
 
+        this.proto.setAirValues(this.airValues.values);
+
         // this.expressions.pack(packed, {instances: [air.fixeds, air.witness]});
         this.expressions.pack(packed, {instances: [this.fixeds, this.witness]});
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-EXPRESSIONS-PACK');

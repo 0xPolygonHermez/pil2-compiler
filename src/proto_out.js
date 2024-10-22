@@ -190,6 +190,14 @@ module.exports = class ProtoOut {
             this.currentAirGroup.airGroupValues.push({aggType, stage});
         }
     }
+    setAirValues(airValues) {
+        this.currentAir.airValues = [];
+        for (let index = 0; index < airValues.length; ++index) {
+            const airValue = airValues[index];
+            const stage = airValue.stage;
+            this.currentAir.airValues.push({stage});
+        }
+    }
     setGlobalSymbols(symbols) {
         this._setSymbols(symbols.keyValuesOfTypes(['public', 'proofvalue', 'challenge', 'publictable']));
     }
@@ -243,7 +251,6 @@ module.exports = class ProtoOut {
                 return {type: REF_TYPE_AIR_GROUP_VALUE, id: relativeId, airGroupId, stage};
             }
             case 'airvalue': {
-                console.log(ref.stage, typeof ref.stage)
                 const stage = assert.returnTypeOf(ref.stage, 'number');
                 const airGroupId = assert.returnTypeOf(ref.data.airGroupId, 'number');
                 const airId = assert.returnTypeOf(ref.data.airId, 'number');

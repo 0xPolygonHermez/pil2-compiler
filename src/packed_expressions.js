@@ -136,6 +136,9 @@ module.exports = class PackedExpressions {
             case 'airGroupValue':
                 return this.getLabel('airgroupvalue', props.idx, options);
 
+            case 'airValue':
+                return this.getLabel('airvalue', props.idx, options);
+
             case 'proofValue':
                 return this.getLabel('proofvalue', props.idx, options);
 

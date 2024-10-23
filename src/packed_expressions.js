@@ -50,12 +50,12 @@ module.exports = class PackedExpressions {
         this.values.push({challenge: {stage, idx}});
     }
     pushAirGroupValue (idx, airGroupId) {
-        assert.defined(idx);    
-        if (this.version >= 2) {
-            this.values.push({airGroupValue: {idx, airGroupId}});
-        } else {
-            this.values.push({subproofValue: {idx, subproofId : airGroupId}});
-        }
+        assert.defined(idx);
+        this.values.push({airGroupValue: {idx, airGroupId}});
+    }
+    pushAirValue (idx) {
+        assert.defined(idx);
+        this.values.push({airValue: {idx}});
     }
     pushProofValue (idx) {
         assert.defined(idx);
@@ -133,8 +133,11 @@ module.exports = class PackedExpressions {
             case 'challenge':
                 return this.getLabel('challenge', props.idx, options);
 
-            case 'subproofValue':
+            case 'airGroupValue':
                 return this.getLabel('airgroupvalue', props.idx, options);
+
+            case 'airValue':
+                return this.getLabel('airvalue', props.idx, options);
 
             case 'proofValue':
                 return this.getLabel('proofvalue', props.idx, options);

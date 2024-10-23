@@ -103,7 +103,11 @@ module.exports = class ExpressionPacker {
 
         } else if (ope instanceof ExpressionItems.AirGroupValue) {
             const def = Context.references.getDefinitionByItem(ope);
-            this.container.pushAirGroupValue(def.id, def.airGroupId);
+            this.container.pushAirGroupValue(def.relativeId, def.airGroupId);
+        } else if (ope instanceof ExpressionItems.AirValue) {
+            const def = Context.references.getDefinitionByItem(ope);
+            // no use relativeId, because air live only inside air, as witness or fixed col.
+            this.container.pushAirValue(def.id);
         } else if (ope instanceof ExpressionItems.ExpressionReference) {
             const defvalue = Context.references.getDefinitionByItem(ope).getValue();
             if (defvalue.isExpression) {

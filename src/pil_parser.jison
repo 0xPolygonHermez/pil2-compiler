@@ -27,6 +27,7 @@ constant                                    { return 'CONSTANT' }
 const                                       { return 'CONST' }
 proofval                                    { return 'PROOF_VALUE' }
 airgroupval                                 { return 'AIR_GROUP_VALUE' }
+airval                                      { return 'AIR_VALUE' }
 airgroup                                    { return 'AIR_GROUP' }
 airtemplate                                 { return 'AIR_TEMPLATE' }
 air                                         { return 'AIR' }
@@ -70,7 +71,6 @@ return                                      { return 'RETURN' }
 \"[^"]*\"                                   { yytext = yytext.slice(1,-1); return 'STRING'; }
 \`[^`]*\`                                   { yytext = yytext.slice(1,-1); return 'TEMPLATE_STRING'; }
 [a-zA-Z_][a-zA-Z$_0-9]*                     { return 'IDENTIFIER'; }
-\&[a-zA-Z_][a-zA-Z$_0-9]*                   { yytext = yytext.slice(1); return 'REFERENCE'; }
 \@[a-zA-Z_][a-zA-Z$_0-9]*                   { yytext = yytext.slice(1); return 'HINT'; }
 \$[0-9][0-9]*                               { yytext = yytext.slice(1); return 'POSITIONAL_PARAM'; }
 \*\*                                        { return 'POW'; }
@@ -161,7 +161,11 @@ return                                      { return 'RETURN' }
 %nonassoc '('
 
 %{
-const DEFAULT_STAGE = 1;
+const DEFAULT_COL_WITNESS_STAGE = 1;
+const DEFAULT_CHALLENGE_STAGE = 2;
+const DEFAULT_AIR_VALUE_STAGE = 1;
+const DEFAULT_AIR_GROUP_VALUE_STAGE = 2;
+
 const util = require('util');
 const Expression = require('../src/expression.js');
 const ExpressionFactory = require('../src/expression_factory.js');
@@ -292,6 +296,7 @@ statement_list_closed
         { $$ = { statements: [$1] } }
 
     | lcs
+        { $$ = { statements: [] } }
     ;
 
 statement_block
@@ -299,7 +304,7 @@ statement_block
         { $$ = $1; }
 
     | %prec EMPTY
-
+        { $$ = { statements: [] } }
     ;
 
 declare_block
@@ -416,32 +421,18 @@ argument
     : basic_type IDENTIFIER
         { $$ = { type: $1.type, name: $2, reference: false, dim: 0 } }
 
-    | basic_type REFERENCE
-        { $$ = { type: $1.type, name: $2, reference: true, dim: 0 } }
-
     | basic_type IDENTIFIER type_array
         { $$ = { type: $1.type, name: $2, reference: false, dim: $3.dim } }
-
-    | basic_type REFERENCE type_array
-        { $$ = { type: $1.type, name: $2, reference: true, dim: $3.dim } }
 
     | basic_type IDENTIFIER '=' expression
         { $$ = { type: $1.type, name: $2, reference: false, defaultValue: $4, dim: 0 } }
 
-    | basic_type REFERENCE '=' expression
-        { $$ = { type: $1.type, name: $2, reference: true, defaultValue: $4, dim: 0 } }
-
     | basic_type IDENTIFIER type_array '=' expression
         { $$ = { type: $1.type, name: $2, reference: false, defaultValue: $5, dim: $3.dim } }
-
-    | basic_type REFERENCE type_array '=' expression
-        { $$ = { type: $1.type, name: $2, reference: true, defaultValue: $5, dim: $3.dim } }
 
     | basic_type IDENTIFIER type_array '=' '[' expression_list ']'
         { $$ = { type: $1.type, name: $2, reference: false, defaultValue: $6, dim: $3.dim } }
 
-    | basic_type REFERENCE type_array '=' '[' expression_list ']'
-        { $$ = { type: $1.type, name: $2, reference: true, defaultValue: $6, dim: $3.dim } }
     ;
 
 basic_type
@@ -481,10 +472,10 @@ basic_type
     | PROOF_VALUE
         { $$ = { type: 'proof' } }
 
-    | AIR_GROUP_VALUE
+    | AIR_GROUP
         { $$ = { type: 'airgroup' } }
 
-    | AIR_VALUE
+    | AIR
         { $$ = { type: 'air' } }
 
     | PUBLIC
@@ -562,6 +553,9 @@ declare_item
     | air_group_value_declaration
         { $$ = $1 }
 
+    | air_value_declaration
+        { $$ = $1 }
+
     | variable_declaration
         { $$ = $1 }
     ;
@@ -595,6 +589,9 @@ statement_no_closed
         { $$ = $1 }
 
     | air_group_value_declaration
+        { $$ = $1 }
+
+    | air_value_declaration
         { $$ = $1 }
 
     | no_closed_container_definition
@@ -978,7 +975,7 @@ stage_definition
         { $$ = { stage: $3 } }
 
     | %prec NO_STAGE
-        { $$ = { stage: DEFAULT_STAGE } }
+        { $$ = {} }
     ;
 
 flexible_string
@@ -1151,9 +1148,6 @@ col_declaration_ident
     : IDENTIFIER
         { $$ = { name: $1 } }
 
-    | REFERENCE
-        { $$ = { name: $1, reference: true } }
-
     | TEMPLATE_STRING
         { $$ = { name: $1, template: true } }
 
@@ -1179,21 +1173,26 @@ col_declaration_list
 
 col_declaration
     : COL WITNESS stage_definition col_declaration_list
-        { $$ = { type: 'witness_col_declaration', items: $4.items, stage: $3.stage } }
+        { $$ = { type: 'witness_col_declaration', items: $4.items, stage: $3.stage ?? DEFAULT_COL_WITNESS_STAGE } }
 
-    | COL FIXED stage_definition col_declaration_list
-        { $$ = { type: 'fixed_col_declaration', items: $4.items, stage: $3.stage } }
+    | COL FIXED col_declaration_list
+        { $$ = { type: 'fixed_col_declaration', items: $3.items } }
 
-    | COL FIXED stage_definition col_declaration_ident '=' expression  // (1)
-        { $$ = { type: 'fixed_col_declaration', items: [$4], stage: $3.stage, init: $6 } }
+    | COL FIXED col_declaration_ident '=' expression  // (1)
+        { $$ = { type: 'fixed_col_declaration', items: [$3], init: $5 } }
 
-    | COL FIXED stage_definition col_declaration_ident '=' sequence_definition  // (1)
-        { $$ = { type: 'fixed_col_declaration',  items: [$4], stage: $3.stage, sequence: $6 } }
+    | COL FIXED col_declaration_ident '=' sequence_definition  // (1)
+        { $$ = { type: 'fixed_col_declaration',  items: [$3], sequence: $5 } }
+    ;
+
+air_value_declaration
+    : AIR_VALUE stage_definition col_declaration_list
+        { $$ = { type: 'air_value_declaration', items: $3.items, stage: $2.stage ?? DEFAULT_AIR_VALUE_STAGE } }
     ;
 
 challenge_declaration
     : CHALLENGE stage_definition col_declaration_list
-        { $$ = { type: 'challenge_declaration', items: $3.items, stage: $2.stage } }
+        { $$ = { type: 'challenge_declaration', items: $3.items, stage: $2.stage ?? DEFAULT_CHALLENGE_STAGE } }
     ;
 
 public_declaration
@@ -1218,13 +1217,12 @@ proof_value_declaration
     ;
 
 air_group_value_declaration
-    : AIR_GROUP_VALUE AGGREGATE '(' IDENTIFIER ')' col_declaration_list
-        { $$ = { type: 'air_group_value_declaration', aggregateType: $4, items: $6.items } }
+    : AIR_GROUP_VALUE AGGREGATE '(' IDENTIFIER ')' stage_definition col_declaration_list
+        { $$ = { type: 'air_group_value_declaration', aggregateType: $4, stage: $6.stage ?? DEFAULT_AIR_GROUP_VALUE_STAGE, defaultValue: false, items: $7.items } }
     ;
 
-
 air_template_definition
-    : AIR_TEMPLATE IDENTIFIER '(' arguments_list ')'  '{' statement_block '}'
+    : AIR_TEMPLATE IDENTIFIER '(' arguments_list ')' '{' statement_block '}'
         { $$ = { type: 'air_template_definition', name: $2, ...$4, statements: $7.statements } }
 
     | AIR_TEMPLATE IDENTIFIER '{' statement_block '}'
@@ -1451,11 +1449,6 @@ name_reference
     | IDENTIFIER '.' name_reference_right
         { $$ = { name: $1 + '.' + $3.name } }
 
-    | REFERENCE
-        { $$ = { name: $1 } }
-
-    | REFERENCE '.' name_reference_right
-        { $$ = { name: $1 + '.' + $3.name } }
     ;
 
 name_reference_right

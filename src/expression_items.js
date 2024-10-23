@@ -13,6 +13,7 @@ const RuntimeItem = require("./expression_items/runtime_item.js");
 const StackItem = require("./expression_items/stack_item.js");
 const StringTemplate = require("./expression_items/string_template.js");
 const StringValue = require("./expression_items/string_value.js");
+const AirValue = require("./expression_items/air_value.js");
 const AirGroupValue = require("./expression_items/air_group_value.js");
 const ValueItem = require("./expression_items/value_item.js");
 const WitnessCol = require("./expression_items/witness_col.js");
@@ -40,6 +41,7 @@ module.exports = {
     StackItem,
     StringTemplate,
     StringValue,
+    AirValue,
     AirGroupValue,
     ValueItem,
     WitnessCol,

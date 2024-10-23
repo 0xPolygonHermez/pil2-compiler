@@ -4,6 +4,8 @@ const Air = require("./air.js")
 const Context = require('./context.js');
 const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js");
 const ExpressionItems = require('./expression_items.js');
+const assert = require('./assert.js');
+
 module.exports = class AirGroup {
     constructor (name, statements, aggregate) {
         // TODO: when instance a airgroup return an integer (as a handler id)
@@ -11,11 +13,17 @@ module.exports = class AirGroup {
         this.airs = [];
         this.aggregate = aggregate;
         this.name = name;
+        this.airGroupValues = {};
 
         this.insideFirstAir = false;
         this.spvDeclaredInFirstAir = {};
         this.spvDeclaredInsideThisAir = {};
-        this.insideAir = false;
+        this.openedAirIds = 0;
+    }
+    end() {
+        for (let airId = 0; airId < this.airs.length; ++airId) {
+            this.checkAirGroupValues(airId);
+        }
     }
     getId(id) {
         return this.id;
@@ -29,51 +37,62 @@ module.exports = class AirGroup {
         this.airs.push(air);
         return air;
     }
-    airStart() {
-        this.insideAir = true;
-        this.insideFirstAir = (this.airs.length === 1);
-        if (!this.insideFirstAir) {
-            this.spvDeclaredInsideThisAir = Object.fromEntries(Object.keys(this.spvDeclaredInFirstAir).map(x => [x,false]));
-        }
+    airStart(airId) {
+        ++this.openedAirIds;
     }
-    airEnd() {
-        if (!this.insideFirstAir) {
-            const spvNonDeclared = Object.keys(this.spvDeclaredInsideThisAir).filter(name => this.spvDeclaredInsideThisAir[name] === false);
-            for (const name of spvNonDeclared) {
-                if (this.spvDeclaredInFirstAir[name].insideAirGroupContainer) continue;
+    airEnd(airId) {
+        assert.typeOf(airId, 'number');
+        this.checkAirGroupValues(airId);
+        --this.openedAirIds;
+    }
+    checkAirGroupValues(airId) {
+        for (const name in this.airGroupValues) {
+            const airGroupValue = this.airGroupValues[name];
+            // TODO: verify case
+            if (airGroupValue.insideAirGroupContainer) continue;
+
+            if (typeof airGroupValue.airs[airId] === 'undefined') {
                 throw new Error(`airgroupval ${name} declared on previous ${this.name} instance, isn't declared on current air instance`);
             }
         }
-        this.insideFirstAir = false;
-        this.insideAir = false;
     }
-    declareAirGroupValue(name, lengths = [], data = {}) {
+    checkSameAirGroupValueDeclaration(airGroupValue, name, lengths, data) {
+        // check array dims and lengths
+        const sameLengths = airGroupValue.lengths.length === lengths.length && airGroupValue.lengths.every((length, index) => lengths[index] === length);
+        if (!sameLengths) {
+            throw new Error(`airgroupval ${name} has different previous index lengths [${airGroupValue.lengths.join('][')}] declared at ${airGroupValue.data.sourceRef} than now [${lengths.join('][')}] at ${data.sourceRef}`);
+        }
+
+        // check aggretation type
+        if (airGroupValue.data.aggregateType !== data.aggregateType) {
+            throw new Error(`airgroupval ${name} has different previous aggregation type '${airGroupValue.data.aggregateType}' declared at ${airGroupValue.data.sourceRef} than now '${data.aggregateType}' at ${data.sourceRef}`);
+        }
+
+        // check state
+        if (airGroupValue.data.stage != data.stage) {
+            throw new Error(`airgroupval ${name} has different previous stage ${airGroupValue.data.stage} declared at ${airGroupValue.data.sourceRef} than now ${data.stage} at ${data.sourceRef}`);
+        }
+    }
+    declareAirGroupValue(name, lengths, data, airId) {
         // colDeclaration(s, type, ignoreInit, fullName = true, data = {}) {
-        const fullname = Context.getFullName(name);
+        const fullname = Context.getFullName(name, {namespace: this.name});
         const insideAirGroupContainer = Context.references.getContainerScope() === 'airgroup';
-        if (!this.insideAir) {
+        if (this.openedAirIds <= 0) {
             throw new Error(`airgroupval ${name} must be declared inside airgroup (air)`);
         }
-        if (this.insideFirstAir) {
-            // this.colDeclaration(s, 'airgroupvalue', true, false, {aggregateType: s.aggregateType});
+
+        const airGroupValue = this.airGroupValues[name] ?? false;
+        if (airGroupValue === false) {
             const res = Context.references.declare(fullname, 'airgroupvalue', lengths, data);
-            this.spvDeclaredInFirstAir[name] = {res, lengths: [...lengths], insideAirGroupContainer};
+            const definition = Context.references.get(fullname);
+            const reference = Context.references.getReference(fullname);
+            const _airGroupValue = {res, name, definition, reference, lengths: [...lengths], insideAirGroupContainer, data, airs: []};
+            _airGroupValue.airs[airId] = Context.sourceRef;
+            this.airGroupValues[name] = _airGroupValue;
             return res;
         }
-
-        // insideFirsAir = false. Check airgroupval it's same declared on first air "execution"
-        const previousLengths = (this.spvDeclaredInFirstAir[name] ?? {lengths: false}).lengths;
-        if (previousLengths === false) {
-            throw new Error(`airgroupval ${name} not declared on first air execution`);
-        }
-        const sameLengths = previousLengths.length === lengths.length && previousLengths.every((length, index) => lengths[index] === length);
-        if (!sameLengths) {
-            throw new Error(`airgroupval ${name} has different index lengths [${previousLengths.join('][')}] declared than now [${lengths.join('][')}]`);
-        }
-
-        // mark this airgroupval as declared
-        this.spvDeclaredInsideThisAir[name] = true;
-
-        return this.spvDeclaredInFirstAir[name].res;
+        this.checkSameAirGroupValueDeclaration(airGroupValue, name, lengths, data);
+        airGroupValue.airs[airId] = Context.sourceRef;
+        return airGroupValue.res;
     }
 }

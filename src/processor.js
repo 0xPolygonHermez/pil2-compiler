@@ -23,6 +23,7 @@ const PackedExpressions = require("./packed_expressions.js");
 const ProtoOut = require("./proto_out.js");
 const FixedCols = require("./fixed_cols.js");
 const WitnessCols = require("./witness_cols.js");
+const AirValues = require("./air_values.js");
 const AirGroupValues = require("./air_group_values.js");
 const Iterator = require("./iterator.js");
 const Context = require("./context.js");
@@ -110,6 +111,10 @@ module.exports = class Processor {
         this.airGroupValues = new AirGroupValues();
         ExpressionItem.setManager(ExpressionItems.AirGroupValue, this.airGroupValues);
         this.references.register('airgroupvalue', this.airGroupValues);
+
+        this.airValues = new AirValues();
+        ExpressionItem.setManager(ExpressionItems.AirValue, this.airValues);
+        this.references.register('airvalue', this.airValues);
 
         this.functions = new Indexable('function', Function, ExpressionItems.FunctionCall, {const: true});
         ExpressionItem.setManager(ExpressionItems.FunctionCall, this.functions);
@@ -990,10 +995,10 @@ module.exports = class Processor {
         }
 
         // TODO: verify if namespace just was declared in this case airgroup must be the same
-        this.context.push(namespace, airGroup);
+        this.context.push(namespace);
         this.scope.push();
         this.execute(s.statements, `NAMESPACE ${namespace}`);
-        this.scope.pop(['witness', 'fixed', 'im']);
+        this.scope.pop(['witness', 'fixed', 'im', 'airvalue']);
         this.context.pop();
     }
     evalExpressionList(e) {
@@ -1099,6 +1104,7 @@ module.exports = class Processor {
         this.airGroupStack.push(this.currentAirGroup);
         this.currentAirGroup = airGroup;
         this.scope.pushInstanceType('airgroup');
+        this.context.push(airGroup.name);
         this.context._airGroupName = airGroup.name;
         this.airGroupId = this.getAirGroupId(airGroup);
         Context.airGroupId = this.airGroupId;
@@ -1111,6 +1117,7 @@ module.exports = class Processor {
         // get airGroupId because during closing process this.airGroupId is set to false
         const airGroupId = this.airGroupId;
         this.finalAirGroupScope();
+        this.currentAirGroup.end();
         this.suspendCurrentAirGroup();
         this.references.clearScope('airgroup');
     }
@@ -1122,6 +1129,7 @@ module.exports = class Processor {
         this.currentAirGroup = this.airGroupStack[this.airGroupStack.length - 1];
         this.airGroupId = this.currentAirGroup ? this.currentAirGroup.getId() : false;
         this.airGroupStack.pop();
+        this.context.pop();
         Context.airGroupId = this.airGroupId;
         this.setAirGroupBuiltIntConstants(this.currentAirGroup);
     }
@@ -1174,10 +1182,11 @@ module.exports = class Processor {
         airTemplateFunc.prepare(callinfo, mapinfo);
 
         const air = this.createAir(this.currentAirGroup, airTemplate, {...options, name});
+        this.currentAir = air;
 
-        this.context.push(false, name);
+        this.context.push(name);
         this.scope.pushInstanceType('air');
-        airGroup.airStart();
+        airGroup.airStart(air.id);
         this.memoryUpdate();
         let res = airTemplate.exec(air.name ,callinfo);
         this.memoryUpdate();
@@ -1189,7 +1198,7 @@ module.exports = class Processor {
         const fixedCols = this.witness.length;
         const constraints = this.constraints.length;
         const N = this.rows;
-        airGroup.airEnd();
+        airGroup.airEnd(air.id);
         const ti2 = performance.now();
         console.log('  > Witness cols: ' + witnessCols);
         console.log('  > Fixed cols: ' + fixedCols);
@@ -1211,7 +1220,7 @@ module.exports = class Processor {
 
         const t1 = performance.now();
         this.clearAirScope(air.name);
-        this.scope.popInstanceType(['witness', 'fixed', 'im']);
+        this.scope.popInstanceType(['witness', 'fixed', 'im', 'airvalue']);
         // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
         this.closeAir(air);
@@ -1265,8 +1274,10 @@ module.exports = class Processor {
         this.proto.setWitnessCols(this.witness);
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-WITNESS-COLS');
 
-        this.proto.setAirGroupValues(this.airGroupValues.getIdsByAirGroupId(this.airGroupId),
+        this.proto.setAirGroupValues(this.airGroupValues.getDataByAirGroupId(this.airGroupId),
                                      this.airGroupValues.getAggreationTypesByAirGroupId(this.airGroupId));
+
+        this.proto.setAirValues(this.airValues.values);
 
         // this.expressions.pack(packed, {instances: [air.fixeds, air.witness]});
         this.expressions.pack(packed, {instances: [this.fixeds, this.witness]});
@@ -1287,11 +1298,11 @@ module.exports = class Processor {
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
         if (airId == 0) {
-
-            this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId), 'airgroupvalue', {airGroupId});
+            this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId, ['stage', 'relativeId']), 'airgroupvalue', {airGroupId});
         }
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS');
 
+        this.proto.setSymbolsFromLabels(this.airValues.getLabels(['stage']), 'airvalue', info);
         this.proto.addHints(this.hints, packed, {
                 airGroupId,
                 airId
@@ -1307,6 +1318,7 @@ module.exports = class Processor {
     clearAirScope(label = '') {
         this.references.clearType('fixed', label);
         this.references.clearType('witness', label);
+        this.references.clearType('airvalue', label);
         this.references.clearScope('air');
         this.expressions.clear(label);
         this.hints.clear();
@@ -1404,9 +1416,38 @@ module.exports = class Processor {
         if (this.currentAirGroup === false) {
             throw new Error(`airgroupvalue ${name} must be declared inside airtemplate`);
         }
+
+        // resolve compiler expression
+        const stage = this.value2num(s.stage, 'stage');
+
         for (const value of s.items) {
             const lengths = this.decodeLengths(value);
-            const res = this.currentAirGroup.declareAirGroupValue(value.name, lengths, {aggregateType: s.aggregateType, airGroupId: this.airGroupId, sourceRef: this.sourceRef});
+            const data = {aggregateType: s.aggregateType, airGroupId: this.airGroupId, sourceRef: this.sourceRef, stage};
+            const res = this.currentAirGroup.declareAirGroupValue(value.name, lengths, data, this.currentAir.id);
+        }
+    }
+    value2num(value, label) {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'bigint' || typeof value === 'string') return Number(value);
+        if (typeof value.asInt === 'function') return Number(value.asInt());
+        throw new Error(`Invalid value ${value} for ${label} on ${Context.sourceRef}`);
+    }
+    value2bint(value, label) {
+        if (typeof value === 'bigint') return value;
+        if (typeof value === 'number' || typeof value === 'string') return BigInt(value);
+        if (typeof value.asInt === 'function') return value.asInt();
+        throw new Error(`Invalid value ${value} for ${label} on ${Context.sourceRef}`);
+    }
+    execAirValueDeclaration(s) {
+        const name = s.items[0].name ?? '';
+
+        if (this.currentAir === false) {
+            throw new Error(`airvalue ${name} must be declared inside airtemplate`);
+        }
+        for (const value of s.items) {
+            const lengths = this.decodeLengths(value);
+            const stage = s.stage;
+            const res = this.currentAir.declareAirValue(value.name, lengths, {sourceRef: this.sourceRef, stage});
         }
     }
     execChallengeDeclaration(s) {
@@ -1515,7 +1556,7 @@ module.exports = class Processor {
             id = this.constraints.define(_left, _right,false,this.sourceRef);
             expr = this.constraints.getExpr(id);
         } else if (global) {
-            id = this.globalConstraints.define(s.left.instance({simplify: true}), s.right.instance({simplify: true}),false,this.sourceRef);
+            id = this.globalConstraints.define(_left, _right,false,this.sourceRef);
             expr = this.globalConstraints.getExpr(id);
             prefix = 'Global ';
         } else {

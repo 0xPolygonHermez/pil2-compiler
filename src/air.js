@@ -16,4 +16,10 @@ module.exports = class Air {
         }
         Air._airnames[this.name] = Context.sourceRef;
     }
+    declareAirValue(name, lengths = [], data = {}) {
+        const fullname = Context.getFullName(name);
+        const insideAirContainer = Context.references.getContainerScope() === 'air';
+        const res = Context.references.declare(fullname, 'airvalue', lengths, data);
+        return res;
+    }
 }

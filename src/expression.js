@@ -42,7 +42,7 @@ class Expression extends ExpressionItem {
     static unitaryOperators = ExpressionOperationsInfo.getUnitaryOperations();
     static context;
 
-    constructor () {
+    constructor (value) {
         super();
         this.stack = [];
         this.fixedRowAccess = false;
@@ -52,6 +52,9 @@ class Expression extends ExpressionItem {
         } else {
             this.assertIsAlone = () => {};
             this.assertExpressionItem = (value) => value;
+        }
+        if (typeof value !== 'undefined') {
+            this._set(value);
         }
     }
     get reference() {

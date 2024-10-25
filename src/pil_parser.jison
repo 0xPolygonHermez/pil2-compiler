@@ -32,6 +32,7 @@ airgroup                                    { return 'AIR_GROUP' }
 airtemplate                                 { return 'AIR_TEMPLATE' }
 air                                         { return 'AIR' }
 proof                                       { return 'PROOF' }
+commit                                      { return 'COMMIT' }
 
 int                                         { return 'INT' }
 fe                                          { return 'FE' }
@@ -457,6 +458,9 @@ basic_type
     | COL WITNESS
         { $$ = { type: 'witness' } }
 
+    | COL IDENTIFIER
+        { $$ = { type: 'custom' } }
+
     | COL FIXED
         { $$ = { type: 'fixed' } }
 
@@ -558,6 +562,9 @@ declare_item
 
     | variable_declaration
         { $$ = $1 }
+
+    | commit_declaration
+        { $$ = $1 }
     ;
 
 statement_no_closed
@@ -592,6 +599,9 @@ statement_no_closed
         { $$ = $1 }
 
     | air_value_declaration
+        { $$ = $1 }
+
+    | commit_declaration
         { $$ = $1 }
 
     | no_closed_container_definition
@@ -978,6 +988,22 @@ stage_definition
         { $$ = {} }
     ;
 
+name_id_list
+    : name_id_list ',' name_id
+        { $$ = $1; $$.names.push($3) }
+
+    | name_id
+        { $$ = { names: [$1] } }
+    ;
+
+public_reference
+    : PUBLIC '(' name_id_list ')' %prec PUBLIC
+        { $$ = { public: $3, names:$3.names } }
+
+    | %prec NO_PUBLIC
+        { $$ = {} }
+    ;
+
 flexible_string
     : STRING
         { $$ = { type: 'string', value: $1 } }
@@ -1175,6 +1201,9 @@ col_declaration
     : COL WITNESS stage_definition col_declaration_list
         { $$ = { type: 'witness_col_declaration', items: $4.items, stage: $3.stage ?? DEFAULT_COL_WITNESS_STAGE } }
 
+    | COL IDENTIFIER stage_definition col_declaration_list
+        { $$ = { type: 'custom_col_declaration', items: $4.items, stage: $3.stage ?? false, commit: $2 } }
+
     | COL FIXED col_declaration_list
         { $$ = { type: 'fixed_col_declaration', items: $3.items } }
 
@@ -1214,6 +1243,11 @@ public_table_declaration
 proof_value_declaration
     : PROOF_VALUE col_declaration_list
         { $$ = { type: 'proof_value_declaration', items: $2.items } }
+    ;
+
+commit_declaration
+    : COMMIT stage_definition public_reference IDENTIFIER
+        { $$ = { type: 'commit_declaration', publics: $3.names, stage: $2.stage ?? false, name: $4 } }
     ;
 
 air_group_value_declaration

@@ -428,7 +428,7 @@ module.exports = class References {
         let reference = false;
         if (!explicitContainer) {
             reference = this.containers.getReferenceInsideCurrent(lname, false);
-        } else {            
+        } else {
             if (['proof', 'airgroup', 'air'].includes(explicitContainer)) {
                 const scopeId = Context.scope.getScopeId(explicitContainer);
                 if (scopeId === false) {
@@ -460,7 +460,7 @@ module.exports = class References {
             this.visibilityStack[index]
         }
     }
-    isVisible(def) {    
+    isVisible(def) {
         if (Debug.active) console.log('ISVISIBLE', (def.constructor ?? {name: '_'}).name, def);
         const res = !def.scopeId || def.scopeId === 1 || !this.hasScope(def.type) || def.type === 'function' ||
                     def.scopeId >= this.visibilityScope[0] || (this.visibilityScope[1] !== false && def.scopeId <= this.visibilityScope[1]);

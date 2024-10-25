@@ -29,6 +29,7 @@ const REF_TYPE_PUBLIC_VALUE = 6;
 const REF_TYPE_PUBLIC_TABLE = 7;
 const REF_TYPE_CHALLENGE = 8;
 const REF_TYPE_AIR_VALUE = 9;
+const REF_TYPE_CUSTOM_COL = 10;
 
 const SPV_AGGREGATIONS = ['sum', 'prod'];
 module.exports = class ProtoOut {
@@ -46,6 +47,7 @@ module.exports = class ProtoOut {
         this.currentAirGroup = null;
         this.witnessId2ProtoId = [];
         this.fixedId2ProtoId = [];
+        this.customId2ProtoId = [];
         this.options = options;
         this.bigIntType = options.bigIntType ?? 'Buffer';
         this.toBaseField = this.mapBigIntType();
@@ -244,6 +246,10 @@ module.exports = class ProtoOut {
                 const [stage, protoId] = this.witnessId2ProtoId[id];
                 return {type: REF_TYPE_WITNESS_COL, id: protoId, stage};
             }
+            case 'customcol': {
+                const [stage, protoId, commitId] = this.customId2ProtoId[id];
+                return {type: REF_TYPE_CUSTOM_COL, id: protoId, stage, commitId};
+            }
             case 'airgroupvalue': {
                 const stage = assert.returnTypeOf(ref.stage, 'number');
                 const airGroupId = assert.returnTypeOf(ref.data.airGroupId, 'number');
@@ -342,31 +348,53 @@ module.exports = class ProtoOut {
     }
     setWitnessCols(cols) {
         const stageWidths = this.setupAirProperty('stageWidths');
-        // sort by stage
         this.witnessId2ProtoId = [];
+        this.getGetRelativeStageWidths(cols, this.witnessId2ProtoId, stageWidths, 1);
+        // sort by stage
+    }
+    getGetRelativeStageWidths(cols, translationTable, stageWidths, initialStage, extraCols = []) {
         let stages = [];
         for (const col of cols) {
-            if (col.stage < 1) {
+            if (col.stage < initialStage) {
                 throw new Error(`Invalid stage ${col.stage}`);
             }
-            const stageIndex = col.stage - 1;
+            const stageIndex = col.stage - initialStage;
             if (typeof stages[stageIndex] === 'undefined') {
                 stages[stageIndex] = [];
             }
             stages[stageIndex].push(col.id);
         }
-        let stageId = 0;
+        let stageId = initialStage;
         for (const _stage of stages) {
             const stage = _stage ?? []; // stages without elements
-            ++stageId;      // stageId starts by 1 (stage0 constant generation)
 
             stageWidths.push(stage.length);
 
             // colIdx must be relative stage
             let index = 0;
-            for (const witnessId of stage) {
-                this.witnessId2ProtoId[witnessId] = [stageId, index++];
+            for (const id of stage) {
+                translationTable[id] = [stageId, index++, ...extraCols];
             }
+            ++stageId;
+        }
+    }
+    setCustomCommit(commit, stageWidths) {
+        return {
+                name: commit.name,
+                publicValues: [],
+                stageWidths,
+            };
+    }
+    setCustomCols(cols) {
+        const customCommits = this.setupAirProperty('customCommits');
+        const commits = cols.getCommits();
+        this.customId2ProtoId = [];
+        for (const commit of commits) {
+            const commitCols = cols.getColsByCommit(commit);
+            let stageWidths = [];
+            const commitId = customCommits.length;
+            this.getGetRelativeStageWidths(commitCols, this.customId2ProtoId, stageWidths, 0, [commitId]);
+            customCommits.push(this.setCustomCommit(commit, stageWidths));
         }
     }
     setExpressions(packedExpressions) {
@@ -425,6 +453,17 @@ module.exports = class ProtoOut {
                     }
                     ope.witnessCol.colIdx = protoId;
                     ope.witnessCol.stage = stage;
+                }
+                break;
+            case 'customCol': {
+                    const [stage, protoId, commitId] = this.customId2ProtoId[ope.customCol.colIdx] ?? [false, false];
+                    // console.log(`TRANSLATE customCol colIdx:${ope.customCol.colIdx}=>${protoId} rowOffset:${ope.customCol.rowOffset} stage:${ope.customCol.stage}=>${stage}`);
+                    if (protoId === false) {
+                        throw new Error(`Translate: Found invalid customCol ${ope.customCol.colIdx}`);
+                    }
+                    ope.customCol.commitId = commitId;
+                    ope.customCol.colIdx = protoId;
+                    ope.customCol.stage = stage;
                 }
                 break;
             // airGroupValue not need to translate or to add extra information

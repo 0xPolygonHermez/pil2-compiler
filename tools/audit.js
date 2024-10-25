@@ -21,6 +21,7 @@ const SYMBOL_TYPES = {
     PUBLIC_TABLE: 7,
     CHALLENGE: 8,
     AIR_VALUE: 9,
+    CUSTOM_COL: 10,
 };
 
 const HINT_FIELD_TYPES = {
@@ -126,7 +127,8 @@ class AirOut {
     printAirInfo(air) {
         log.info("[audit]", `       + Air '${air.name}'`);
         log.info("[audit]", `         NumRows:     ${air.numRows}`);
-        log.info("[audit]", `         Stages:      ${air.stageWidths.length}`);
+        if (air.stageWidths) log.info("[audit]", `         Stages:      ${air.stageWidths.length}`);
+        if (air.customCommits) log.info("[audit]", `         Custom Commits:      ${air.customCommits.length}`);
         if (air.expressions) log.info("[audit]", `         Expressions: ${air.expressions.length}`);
         if (air.constraints) log.info("[audit]", `         Constraints: ${air.constraints.length}`);
     }
@@ -150,6 +152,7 @@ class AirOut {
             case SYMBOL_TYPES.PUBLIC_TABLE: return 'PUBLIC_TABLE';
             case SYMBOL_TYPES.CHALLENGE: return 'CHALLENGE';
             case SYMBOL_TYPES.AIR_VALUE: return 'AIR_VALUE';
+            case SYMBOL_TYPES.CUSTOM_COL: return 'CUSTOM_COL';
         }
         return `(${type})`;
     }
@@ -411,8 +414,8 @@ class AirOut {
             case 'witnessCol':
                 // TODO: verify witnessCol
                 break;
-            case 'fixedCol':
-                // TODO: verify fixedCol
+            case 'customCol':
+                // TODO: verify customCol
                 break;
             case 'expression': {
                     const idx = data.idx;
@@ -498,7 +501,7 @@ class AirOut {
         let text;
         try {
             text = name.padEnd(40) + '|' + symbol.id.toString().padStart(5) + '|' + this.getSymbolType(symbol.type).padEnd(20) + '|' + (symbol.stage ?? '').toString().padStart(5) +
-                    '|' + symbol.airGroupId.toString().padStart(5) + '|' + (symbol.airId ?? '').toString().padStart(4) + '|' + symbol.debugLine;
+                    '|' + (symbol.airGroupId ?? '').toString().padStart(5) + '|' + (symbol.airId ?? '').toString().padStart(4) + '|' + (symbol.commitId ?? '').toString().padStart(6)+ '|' + symbol.debugLine;
         } catch(e) {
             console.log(symbol);
             throw e;
@@ -507,25 +510,28 @@ class AirOut {
 
     }
     displaySymbols() {
-        console.log('\n\x1B[44mname                                    |   id|type                |stage|group| air|debug                                                                   \x1B[0m');
+        console.log('\n\x1B[44mname                                    |   id|type                |stage|group| air|commit|debug                                                                   \x1B[0m');
         for (let index = 0; index < this.symbols.length; ++index) {
             this.displaySymbol(this.symbols[index]);
         }
     }
-    getSymbol(ctx, id, stage, type, defaultResult) {
+    getSymbol(ctx, id, stage, type, commitId, defaultResult) {
         // TODO: row_offset
         if (typeof type === 'undefined') {
             console.log(id, stage, type);
             EXIT_HERE;
         }
         let res = defaultResult;
+        const _commitId = commitId ?? false;
+        const _stage = stage ?? false;
         for (let index = 0; index < this.symbols.length; ++index) {
             let symbol = this.symbols[index];
             if (symbol.type !== type) continue;
             if (typeof symbol.airGroupId !== 'undefined' && symbol.airGroupId !== ctx.airGroupId) continue;
             if (typeof symbol.airId !== 'undefined' && symbol.airId !== ctx.airId) continue;
             // stage is optional
-            if (typeof symbol.stage !== 'undefined' && typeof stage !== 'undefined' && symbol.stage !== stage) continue;
+            if (typeof symbol.stage !== 'undefined' && _stage !== false && symbol.stage !== stage) continue;
+            if (typeof symbol.commitId !== 'undefined' && _commitId !== false && symbol.commitId !== commitId) continue;
             if (symbol.dim) {
                 if (id < symbol.id) continue;
                 this.initOffsets(symbol);
@@ -602,11 +608,13 @@ class AirOut {
                 return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.PERIODIC_COL);
             case 'witnessCol':
                 return this.getSymbol(ctx, data.colIdx, data.stage, SYMBOL_TYPES.WITNESS_COL);
+            case 'customCol':
+                return this.getSymbol(ctx, data.colIdx, data.stage, SYMBOL_TYPES.CUSTOM_COL, data.commitId);
             case 'fixedCol':
                 return this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.FIXED_COL);
             case 'expression': {
                     const idx = data.idx;
-                    const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false);
+                    const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false, false);
                     if (intermediate !==  false) {
                         return '@@@'+intermediate;
                     }
@@ -687,10 +695,11 @@ class AirOut {
             case 'periodicCol':
             case 'witnessCol':
             case 'fixedCol':
+            case 'customCol':
                 return 1;
             case 'expression': {
                     const idx = data.idx;
-                    const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false);
+                    const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false, false);
                     if (ctx.referenced[idx]) {
                         console.log(cls, idx, data);
                         throw new Error(`${ctx.path} circular reference idx:${idx}`);

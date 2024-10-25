@@ -89,6 +89,9 @@ module.exports = class ExpressionPacker {
             }
             this.container.pushFixedCol(id, ope.getRowOffset());
 
+        } else if (ope instanceof ExpressionItems.CustomCol) {
+            this.container.pushCustomCol(id, ope.getRowOffset(), def.stage);
+
         } else if (ope instanceof ExpressionItems.Public) {
             // container.pushPublicValue(id)
             this.container.pushPublicValue(id);

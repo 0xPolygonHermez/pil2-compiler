@@ -296,9 +296,9 @@ class AirOut {
         for (let hintId = 0; hintId < this.hints.length; ++hintId) {
             const hint = this.hints[hintId];
             const name = hint.name;
-            const airGroupId = hint.airGroupId;
-            const airId = hint.airId;
-            const expressions = this.airGroups[airGroupId].airs[airId].expressions;
+            const airGroupId = hint.airGroupId ?? false;
+            const airId = hint.airId ?? false;
+            const expressions = airGroupId === false && airId === false ? [] : this.airGroups[airGroupId].airs[airId].expressions;
             let referenced = new Array(expressions.length).fill(false);
             let ctx = {path: '', airGroupId, airId, expressions, referenced};
             for (let hintFieldId = 0; hintFieldId < hint.hintFields.length; ++hintFieldId) {
@@ -400,6 +400,9 @@ class AirOut {
                 // TODO: verify proofValue
                 break;
             case 'airGroupValue':
+                // TODO: verify airGroupValue
+                break;
+            case 'airValue':
                 // TODO: verify airGroupValue
                 break;
             case 'publicValue':
@@ -690,6 +693,7 @@ class AirOut {
             case 'challenge':
             case 'proofValue':
             case 'airGroupValue':
+            case 'airValue':
             case 'publicValue':
                 return 0;
             case 'periodicCol':

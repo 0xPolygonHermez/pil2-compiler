@@ -25,12 +25,20 @@ module.exports = class References {
     getContainerScope() {
         return this.containers.getCurrentScope();
     }
-    getDefinitionByItem(item, options = {}) {
+    getLabelByItem(item, options = {}) {
+        const instance = this.getInstanceByItem(item, options);
+        if (instance === null) {
+            return false;
+        }
+        return instance.getLabel(item.id, options);
+    }
+    getInstanceByItem(item, options = {}) {
         let instance = null;
         const instances = [...(options.instances ?? []), ...Object.values(this.types).map(x => x.instance)];
         for (const _instance of instances) {
             if (Debug.active) console.log(_instance);
-            if (_instance.expressionItemClass === item.constructor) {
+            const _constructor = item.constructor;
+            if (_instance.expressionItemClass === _constructor || _instance.expressionItemConstClass === _constructor || _instance.definitionClass == _constructor) {
                 instance = _instance;
                 break;
             }
@@ -38,6 +46,10 @@ module.exports = class References {
         if (instance === null && item.constructor.name === 'ExpressionReference') {
             instance = this.types.expr.instance;
         }
+        return instance;
+    }
+    getDefinitionByItem(item, options = {}) {
+        const instance = this.getInstanceByItem(item, options);
 
         if (Debug.active) console.log(instance, item.constructor.name, item.id, Object.keys(this.types),Object.values(this.types).map(x => x.instance.expressionItemClass));
         const res = instance.get ? instance.get(item.id): false;

@@ -148,7 +148,7 @@ module.exports = class FixedCol extends ProofItem {
             return this.sequence.getIntValue(row);
         }
         if (row >= this.size) {
-            console.trace([row, this.rows, this.bytes, this.size]);
+            throw new Error(`Out-of-bounds on fixed, to access to row ${row} valid indexs [0..${this.size}] N=${Context.rows} in ${Context.references.getLabelByItem(this)}`);
         }
         return BigInt(this.values[row]);
     }

@@ -378,10 +378,10 @@ module.exports = class ProtoOut {
             ++stageId;
         }
     }
-    setCustomCommit(commit, stageWidths) {
+    setCustomCommit(commit, stageWidths, publics = []) {
         return {
                 name: commit.name,
-                publicValues: [],
+                publicValues: publics,
                 stageWidths,
             };
     }
@@ -394,7 +394,7 @@ module.exports = class ProtoOut {
             let stageWidths = [];
             const commitId = customCommits.length;
             this.getGetRelativeStageWidths(commitCols, this.customId2ProtoId, stageWidths, 0, [commitId]);
-            customCommits.push(this.setCustomCommit(commit, stageWidths));
+            customCommits.push(this.setCustomCommit(commit, stageWidths, commit.publics.map(x => { return {idx: x.id} })));
         }
     }
     setExpressions(packedExpressions) {

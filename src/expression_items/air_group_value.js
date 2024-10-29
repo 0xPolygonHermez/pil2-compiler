@@ -3,6 +3,9 @@ module.exports = class AirGroupValue extends ProofItem {
     constructor (id) {
         super(id);
     }
+    get degree() {
+        return 0;
+    }
     getTag() {
         return 'airgroupvalue';
     }

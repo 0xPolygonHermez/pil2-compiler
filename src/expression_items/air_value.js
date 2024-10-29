@@ -3,6 +3,9 @@ module.exports = class AirValue extends ProofItem {
     constructor (id) {
         super(id);
     }
+    get degree() {
+        return 0;
+    }
     getTag() {
         return 'airvalue';
     }

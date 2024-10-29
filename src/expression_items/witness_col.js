@@ -8,6 +8,9 @@ module.exports = class WitnessCol extends ProofItem {
         super(id);
         if (Debug.active) console.log('CONSTRUCTOR_WITNESS', id, this.id);
     }
+    get degree() {
+        return 1;
+    }
     getTag() {
         return 'witness';
     }

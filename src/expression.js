@@ -54,6 +54,15 @@ class Expression extends ExpressionItem {
             this.assertExpressionItem = (value) => value;
         }
     }
+    get degree() {
+        if (this.isAlone()) {
+            return this.getAloneOperand().degree;
+        }
+        if (this.stack.length === 0) {
+            return -1;
+        }
+        return this.stackPosDegree(this.stack.length - 1);
+    }
     get reference() {
         if (!this.isAlone()) return false;
         const operand = this.getAloneOperand();
@@ -1152,6 +1161,41 @@ class Expression extends ExpressionItem {
         }
         const res = this.stackPosToString(top ,0, {...options, dumpToString: true});
         return res;
+    }
+    stackPosDegree(pos, options) {
+        const st = this.stack[pos];
+        if (st.op === false) {
+            return st.operands[0].degree ?? -1;
+        }
+        switch (st.op) {
+            case 'add':
+            case 'sub': {
+                const degree1 = this.operandDegree(st.operands[0], pos);
+                const degree2 = this.operandDegree(st.operands[1], pos);
+                return (degree1 == -1 || degree2 == -1) ? -1 : (degree1 > degree2 ? degree1 : degree2);
+            }
+            case 'mul': {
+                const degree1 = this.operandDegree(st.operands[0], pos);
+                const degree2 = this.operandDegree(st.operands[1], pos);
+                return (degree1 == -1 || degree2 == -1) ? -1 : degree1 + degree2;
+            }
+            case 'neg': {
+                return this.operandDegree(st.operands[0], pos);
+            }
+        }
+        console.log('not found DEGREE for operation', st.op);
+        return -1;
+    }
+    operandDegree(operand, pos, options) {
+        if (operand instanceof ExpressionItems.StackItem) {
+            const absolutePos = operand.getAbsolutePos(pos);
+            return this.stackPosDegree(absolutePos, options);
+        }
+        if (typeof operand.degree === 'number') {
+            return operand.degree;
+        }
+        console.log('not found DEGREE', operand);
+        return -1;
     }
     stackPosToString(pos, parentOperation, options) {
         const st = this.stack[pos];

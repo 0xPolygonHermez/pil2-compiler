@@ -1,6 +1,5 @@
 const ProofItem = require("./proof_item.js");
-
-module.exports = class ProofValue extends ProofItem {
+module.exports = class AirValue extends ProofItem {
     constructor (id) {
         super(id);
     }
@@ -8,9 +7,9 @@ module.exports = class ProofValue extends ProofItem {
         return 0;
     }
     getTag() {
-        return 'proofvalue';
+        return 'airvalue';
     }
     cloneInstance() {
-        return new ProofValue(this.id);
+        return new AirValue(this.id);
     }
 }

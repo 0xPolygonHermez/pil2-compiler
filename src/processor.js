@@ -1195,12 +1195,12 @@ module.exports = class Processor {
             Context.config.test.onAirEnd(this);
         }
         const witnessCols = this.witness.length;
-        const fixedCols = this.witness.length;
+        const fixedCols = this.fixeds.length;
         const constraints = this.constraints.length;
         const N = this.rows;
         airGroup.airEnd(air.id);
         const ti2 = performance.now();
-        console.log('  > Witness cols: ' + witnessCols);
+        console.log('  > Witness cols: ' + witnessCols + ' from stage 1 (' + this.witness.countByStage(1).join() + ')');
         console.log('  > Fixed cols: ' + fixedCols);
         console.log('  > Constraints: ' + constraints);
         console.log('  > Execution time: ' + units.getHumanTime(ti2-ti1));

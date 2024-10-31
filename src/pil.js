@@ -26,7 +26,12 @@ const OPTIONS = {
     'output-global-constraints': { describe: 'output all global constraints generated' },
     'raw-constraints-format': { describe: 'if output constraints are enabled only in raw format' },
     'both-constraints-format': { describe: 'if output constraints are enabled show named and raw format' },
-    'ignore-unknown-pragmas': { describe: 'ignore unknown pragmas' }
+    'ignore-unknown-pragmas': { describe: 'ignore unknown pragmas' },
+    'debug-fixed-cols': { describe: 'debug fixed columns' },
+    'debug-witness-cols': { describe: 'debug witness columns' },
+    'debug-fixed-cols-match': { describe: 'debug fixed columns match with pattern' },
+    'debug-witness-cols-match': { describe: 'debug witness columns match with pattern' },
+    'debug-constraints-match': { describe: 'debug constraints match with pattern' }
     // TODO: option to force witness name as snake_case and air, airtemplate, airgroup in CamelCase
 }
 

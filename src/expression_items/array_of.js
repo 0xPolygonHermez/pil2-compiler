@@ -19,7 +19,7 @@ module.exports = class ArrayOf extends RuntimeItem {
         return true;
     }
     toString(options) {
-        return super.toString(options)+'['+this._array.lengths.join('],[')+`] D${this.dim}`;
+        return super.toString(options)+'['+this._array.lengths.join('][')+`] D${this.dim}`;
     }
     get dim() {
         return this._array.dim;
@@ -53,7 +53,7 @@ module.exports = class ArrayOf extends RuntimeItem {
     getLevelLength(indexes) {
         return this._array.getLevelLength(indexes);
     }
-    toArrays(indexes = []) {        
+    toArrays(indexes = []) {
         let level = indexes.length;
         if (level >= this._array.dim) {
             return this.getItem(indexes);

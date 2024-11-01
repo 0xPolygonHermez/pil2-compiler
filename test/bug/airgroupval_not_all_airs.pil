@@ -1,0 +1,34 @@
+airtemplate A(int N = 2**16) {
+    airgroupval aggregate(prod) default(1) agvA;
+    col witness a;
+    col witness b,c,d;
+
+    a + 2 * b === c;
+}
+airtemplate B(int N = 2**16) {
+    airgroupval aggregate(sum) default(0) agvB;
+    col witness a;
+    col witness b,c,d;
+
+    a * b + c === 0;
+}
+airgroup AB {
+    A();
+    B();
+}
+
+airgroup AA {
+    A() alias AA_A1;
+    A() alias AA_A2;
+}
+
+airgroup BB {
+    B() alias BB_B1;
+    B() alias BB_B2;
+}
+
+airgroup BAB {
+    B() alias BAB_B1;
+    A() alias BAB_A;
+    B() alias BAB_B2;
+}

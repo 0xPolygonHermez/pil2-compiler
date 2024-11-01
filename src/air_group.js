@@ -48,11 +48,13 @@ module.exports = class AirGroup {
     checkAirGroupValues(airId) {
         for (const name in this.airGroupValues) {
             const airGroupValue = this.airGroupValues[name];
-            // TODO: verify case
-            if (airGroupValue.insideAirGroupContainer) continue;
-
             if (typeof airGroupValue.airs[airId] === 'undefined') {
-                throw new Error(`airgroupval ${name} declared on previous ${this.name} instance, isn't declared on current air instance`);
+                const defaultValue = airGroupValue.data.defaultValue ?? false;
+                if (defaultValue === false) {
+                    throw new Error(`airgroupval ${name} declared on previous ${this.name} instance without default value, but isn't declared on current air instance`);
+                }
+                Context.processor.addAirGroupValueDefaultValueConstraint(airId, airGroupValue, defaultValue);
+                airGroupValue.airs[airId] = Context.sourceTag;
             }
         }
     }
@@ -71,6 +73,11 @@ module.exports = class AirGroup {
         // check state
         if (airGroupValue.data.stage != data.stage) {
             throw new Error(`airgroupval ${name} has different previous stage ${airGroupValue.data.stage} declared at ${airGroupValue.data.sourceRef} than now ${data.stage} at ${data.sourceRef}`);
+        }
+
+        // default value
+        if (airGroupValue.data.defaultValue != data.defaultValue) {
+            throw new Error(`airgroupval ${name} has different previous defaultValue ${airGroupValue.data.defaultValue} declared at ${airGroupValue.data.sourceRef} than now ${data.defaultValue} at ${data.sourceRef}`);
         }
     }
     declareAirGroupValue(name, lengths, data, airId) {

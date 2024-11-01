@@ -453,6 +453,24 @@ module.exports = class ProtoOut {
             this.pilOut.constraints.push(payload);
         }
     }
+    addAirGroupValueDefaultValueConstraint(airId, airGroupId, airGroupValueId, defaultValue) {
+        const airGroup = this.pilOut.airGroups[airGroupId] ?? this.currentAirGroup;
+        const air = airGroup.airs[airId];
+        const expressionPayload = {
+            sub: {
+                lhs: { airGroupValue: { idx: airGroupValueId, airGroupId } },
+                rhs: { constant: { value: this.toBaseField(defaultValue) } }
+            }
+        }
+        const exprId = air.expressions.push(expressionPayload) - 1;
+        const constraintPayload = {
+            everyRow: {
+                expressionIdx: { idx: exprId },
+                debugLine: `airgroup default value (${defaultValue}) constraint`
+            }
+        };
+        air.constraints.push(constraintPayload);
+    }
     setConstraints(constraints, packed, options = {}) {
         let airConstraints = this.setupAirProperty('constraints');
         for (const [index, constraint] of constraints.keyValues()) {

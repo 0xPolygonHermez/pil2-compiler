@@ -1116,10 +1116,35 @@ module.exports = class Processor {
     closeCurrentAirGroup() {
         // get airGroupId because during closing process this.airGroupId is set to false
         const airGroupId = this.airGroupId;
+        const summaryInfo = this.prepareAirGroupSummary(airGroupId);
         this.finalAirGroupScope();
         this.currentAirGroup.end();
+        if (this.proto) {
+            this.proto.setAirGroupValues(this.airGroupValues.getDataByAirGroupId(airGroupId),
+                                         this.airGroupValues.getAggreationTypesByAirGroupId(airGroupId));
+            this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId, ['stage', 'relativeId']), 'airgroupvalue', {airGroupId});
+        }
         this.suspendCurrentAirGroup();
+
         this.references.clearScope('airgroup');
+        this.showAirGroupSummary(summaryInfo);
+    }
+    prepareAirGroupSummary(airGroupId) {
+        return {name: this.currentAirGroup.name,
+                agvs: this.airGroupValues.getDataByAirGroupId(airGroupId).map(agv => { return {name: agv.label, aggregateType: agv.aggregateType, stage: agv.stage, default: agv.defaultValue}}),
+                airs: this.currentAirGroup.airs.map(air => { return {name: air.name, template: air.airTemplate.name, bits: air.bits}})};
+    }
+    showAirGroupSummary(info) {
+        const agvNameMaxWidth = info.agvs.reduce((max, agv) => agv.name.length > max ? agv.name.length : max, 0);
+        const airNameMaxWidth = info.airs.reduce((max, air) => air.name.length > max ? air.name.length : max, 0);
+        console.log(`\nAIRGROUP \x1B[38;5;208m${info.name}\x1B[0m summary\n  > AirGroupValues:`);
+        for (const agv of info.agvs) {
+            console.log(`    · \x1B[38;5;208m${agv.name.padEnd(agvNameMaxWidth)}\x1B[0m aggregate:\x1B[38;5;208m${agv.aggregateType.padEnd(4)}\x1B[0m stage:\x1B[38;5;208m${agv.stage}\x1B[0m default:\x1B[38;5;208m${agv.default === false ? '(none)':agv.default}\x1B[0m`);
+        }
+        console.log(`  > Airs:`);
+        for (const air of info.airs) {
+            console.log(`    · \x1B[38;5;208m${air.name.padEnd(airNameMaxWidth)}\x1B[0m rows:\x1B[38;5;208m2^${air.bits.toString().padEnd(2)}\x1B[0m template:\x1B[38;5;208m${air.template}\x1B[0m`);
+        }
     }
     /**
     * "suspend" current because this airgroup could be opened again
@@ -1175,7 +1200,8 @@ module.exports = class Processor {
         if (!airGroup) {
             throw new Exceptions.Runtime(`Instance airtemplate ${name} out of airgroup`);
         }
-        console.log(`\nAIR instance \x1B[38;5;208m${name}\x1B[0m in airgroup \x1B[38;5;208m${airGroup.name}\x1B[0m`);
+        const template = name === airTemplate.name ? '' : `(${airGroup.name})`
+        console.log(`\nAIR instance \x1B[38;5;208m${name}${template}\x1B[0m in airgroup \x1B[38;5;208m${airGroup.name}\x1B[0m`);
         const ti1 = performance.now();
         // airgroup was a function derivated class
         const mapinfo = this.prepareFunctionCall(airTemplateFunc, callinfo);
@@ -1221,6 +1247,7 @@ module.exports = class Processor {
         const t1 = performance.now();
         this.clearAirScope(air.name);
         this.scope.popInstanceType(['witness', 'fixed', 'im', 'airvalue']);
+
         // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
         this.closeAir(air);
@@ -1274,9 +1301,6 @@ module.exports = class Processor {
         this.proto.setWitnessCols(this.witness);
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-WITNESS-COLS');
 
-        this.proto.setAirGroupValues(this.airGroupValues.getDataByAirGroupId(this.airGroupId),
-                                     this.airGroupValues.getAggreationTypesByAirGroupId(this.airGroupId));
-
         this.proto.setAirValues(this.airValues.values);
 
         // this.expressions.pack(packed, {instances: [air.fixeds, air.witness]});
@@ -1297,9 +1321,6 @@ module.exports = class Processor {
         const info = {airId, airGroupId};
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
-        if (airId == 0) {
-            this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId, ['stage', 'relativeId']), 'airgroupvalue', {airGroupId});
-        }
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS');
 
         this.proto.setSymbolsFromLabels(this.airValues.getLabels(['stage']), 'airvalue', info);
@@ -1413,16 +1434,24 @@ module.exports = class Processor {
     execAirGroupValueDeclaration(s) {
         const name = s.items[0].name ?? '';
 
-        if (this.currentAirGroup === false) {
-            throw new Error(`airgroupvalue ${name} must be declared inside airtemplate`);
+        const scopeType = this.scope.getInstanceType();
+
+        if (scopeType !== 'air') {
+            throw new Error(`airgroupvalue ${name} must be declared inside air scope (current scope: ${scopeType})`);
+        }
+
+        if (s.aggregateType === false) {
+            throw new Error(`airgroupvalue ${name} without aggregation type, aggregation type is mandatory`);
         }
 
         // resolve compiler expression
         const stage = this.value2num(s.stage, 'stage');
 
+        const defaultValue = s.defaultValue ? this.value2num(s.defaultValue, 'defaultValue') : false;
+
         for (const value of s.items) {
             const lengths = this.decodeLengths(value);
-            const data = {aggregateType: s.aggregateType, airGroupId: this.airGroupId, sourceRef: this.sourceRef, stage};
+            const data = {aggregateType: s.aggregateType, airGroupId: this.airGroupId, sourceRef: this.sourceRef, stage, defaultValue};
             const res = this.currentAirGroup.declareAirGroupValue(value.name, lengths, data, this.currentAir.id);
         }
     }
@@ -1535,12 +1564,24 @@ module.exports = class Processor {
     execCode(s) {
         return this.execute(s.statements,`CODE ${this.sourceRef}`);
     }
+    addAirGroupValueDefaultValueConstraint(airId, airGroupValue, defaultValue) {
+        if (airId === Context.airId) {
+            const item = airGroupValue.reference.getItem();
+            let expr = new Expression();
+            expr.insertOperation('sub', [item, new ExpressionItems.FeValue(defaultValue)]);
+            this.constraints.defineExpressionAsConstraint(expr);
+        } else if (this.proto) {
+            // adding directly to proto, becaused in this version all constraints of air was
+            // cleared after stored in proto.
+            this.proto.addAirGroupValueDefaultValueConstraint(airId, airGroupValue.data.airGroupId, airGroupValue.definition.relativeId, defaultValue);
+        }
+    }
     execConstraint(s) {
         const scopeType = this.scope.getInstanceType();
-        let id, expr, prefix = '';
 
         assert.instanceOf(s.left, Expression);
         assert.instanceOf(s.right, Expression);
+
         if (Debug.active) s.left.dump('LEFT-CONSTRAINT 1');
         // s.right.dump('RIGHT-CONSTRAINT 1');
         const left = s.left.instance();
@@ -1552,19 +1593,18 @@ module.exports = class Processor {
         if (Debug.active) _left.dump('LEFT-CONSTRAINT 3');
         if (Debug.active) _right.dump('RIGHT-CONSTRAINT 3');
         let global = (scopeType === 'proof');
-        if (scopeType === 'air') {
-            id = this.constraints.define(_left, _right,false,this.sourceRef);
-            expr = this.constraints.getExpr(id);
-        } else if (global) {
-            id = this.globalConstraints.define(_left, _right,false,this.sourceRef);
-            expr = this.globalConstraints.getExpr(id);
-            prefix = 'Global ';
-        } else {
+
+        if (!global && scopeType !== 'air') {
             throw new Error(`Constraint definition on invalid scope (${scopeType}) ${Context.sourceRef}`);
         }
+        const constraints = global ? this.globalConstraints : this.constraints;
+        const id = constraints.define(_left, _right,false,this.sourceRef);
+
         if (Context.config.outputConstraints || (Context.config.outputGlobalConstraints && scopeType === 'proof')) {
             const prompt = global ? '> ': '  > ';
             const color = global ? '\x1B[38;2;93;240;0m': '\x1B[38;2;192;255;2m';
+            const expr = constraints.getExpr(id);
+            const prefix = global ? 'Global ' : '';
             if (Context.config.bothConstraintsFormat || !Context.config.rawConstraintsFormat) {
                 console.log(`${prompt}${prefix}Constraint [${Context.proofLevel}] > ${color}${expr.toString({hideClass:true, hideLabel:false})} === 0\x1B[0m (${this.sourceRef})`);
             }

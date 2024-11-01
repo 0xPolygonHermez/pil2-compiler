@@ -601,7 +601,7 @@ module.exports = class Processor {
             return result;
         }
         if (Debug.active) console.log(hdata);
-        EXIT_HERE;
+        throw new Error('Invalid hint data');
     }
     execIf(s) {
         for (let icond = 0; icond < s.conditions.length; ++icond) {

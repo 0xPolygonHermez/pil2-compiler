@@ -630,7 +630,7 @@ data_object
         { $$ = { type: 'object', data: {}}; $$.data[$1] = $3 }
 
     | IDENTIFIER
-        { $$ = {data: {}}; $$.data[$1] = ExpressionFactory.fromObject({type: 'reference', name: $1 }) }
+        { $$ = { type: 'object', data: {}}; $$.data[$1] = ExpressionFactory.fromObject({type: 'reference', name: $1 }) }
     ;
 
 data_array

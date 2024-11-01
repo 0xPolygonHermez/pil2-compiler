@@ -57,6 +57,7 @@ class AirOut {
         const AirOut = protobuf.loadSync(airoutProto).lookupType("PilOut");
 
         const decoded = AirOut.decode(airoutEncoded);
+        console.log(decoded);
         Object.assign(this, AirOut.toObject(decoded));
         this.fixUndefinedData();
 
@@ -288,6 +289,7 @@ class AirOut {
                 this.verifyAirConstraints(airGroupId, airId);
             }
         }
+        this.verifyGlobalConstraints();
     }
     verifyHints() {
         for (let hintId = 0; hintId < this.hints.length; ++hintId) {
@@ -356,6 +358,25 @@ class AirOut {
             const constraint = constraints[constraintId];
             const frame = Object.keys(constraint)[0];
             const expressionId = constraint[frame].expressionIdx.idx;
+            ctx.referenced[expressionId] = true;
+            const res = this.expressionToString(ctx, expressionId, expressions[expressionId]);
+            const degree = this.expressionDegree(ctx, expressionId, expressions[expressionId]);
+            console.log(`CONSTRAINT.${constraintId} [${degree > 3 ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
+            ctx.referenced[expressionId] = false;
+        }
+    }
+    verifyGlobalConstraints() {
+        const expressions = this.expressions ?? [];
+        const constraints = this.constraints ?? [];
+        const expressionsCount = expressions.length;
+        // TODO: detect circular dependencies
+        let referenced = new Array(expressionsCount).fill(false);
+        let ctx = {path: `[global]`, referenced, expressions};
+        console.log(`\x1B[1;36m##### GLOBAL  #####\x1B[0m`);
+        for (let constraintId = 0; constraintId < constraints.length; ++constraintId) {
+            console.log(`--- constraint ${constraintId+1}/${constraints.length} ---`);
+            const constraint = constraints[constraintId];
+            const expressionId = constraint.expressionIdx.idx;
             ctx.referenced[expressionId] = true;
             const res = this.expressionToString(ctx, expressionId, expressions[expressionId]);
             const degree = this.expressionDegree(ctx, expressionId, expressions[expressionId]);
@@ -528,7 +549,7 @@ class AirOut {
             if (typeof symbol.airGroupId !== 'undefined' && symbol.airGroupId !== ctx.airGroupId) continue;
             if (typeof symbol.airId !== 'undefined' && symbol.airId !== ctx.airId) continue;
             // stage is optional
-            if (typeof symbol.stage !== 'undefined' && typeof stage !== 'undefined' && symbol.stage !== stage) continue;
+            if (typeof symbol.stage !== 'undefined' && (stage ?? false) !== false && symbol.stage !== stage) continue;
             if (symbol.dim) {
                 if (id < symbol.id) continue;
                 this.initOffsets(symbol);
@@ -596,7 +617,7 @@ class AirOut {
             case 'proofValue':
                 return this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.PROOF_VALUE);
             case 'airGroupValue':
-                return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.AIR_GROUP_VALUE);
+                return this.getSymbol({airGroupId: data.airGroupId, ...ctx}, data.idx, false, SYMBOL_TYPES.AIR_GROUP_VALUE);
             case 'airValue':
                 return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.AIR_VALUE);
             case 'publicValue':

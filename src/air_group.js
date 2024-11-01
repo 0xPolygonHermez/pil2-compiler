@@ -81,7 +81,7 @@ module.exports = class AirGroup {
         }
     }
     declareAirGroupValue(name, lengths, data, airId) {
-        // colDeclaration(s, type, ignoreInit, fullName = true, data = {}) {
+        // force name space was name of airgroup
         const fullname = Context.getFullName(name, {namespace: this.name});
         const insideAirGroupContainer = Context.references.getContainerScope() === 'airgroup';
         if (this.openedAirIds <= 0) {
@@ -89,6 +89,7 @@ module.exports = class AirGroup {
         }
 
         const airGroupValue = this.airGroupValues[name] ?? false;
+        console.log(`\x1B[36m[AIRGROUP] DECLARE ${name} (${fullname}) ${this.name} ${airId} ${airGroupValue === false ? '(new)':''}\x1B[0m`);
         if (airGroupValue === false) {
             const res = Context.references.declare(fullname, 'airgroupvalue', lengths, data);
             const definition = Context.references.get(fullname);

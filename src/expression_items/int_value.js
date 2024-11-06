@@ -14,6 +14,9 @@ class IntValue extends ValueItem {
         assert.typeOf(value, 'bigint');
         super(value);
     }
+    get degree() {
+        return 0;
+    }
     get type() {
         return 'int';
     }
@@ -26,7 +29,7 @@ class IntValue extends ValueItem {
     }
     cloneInstance() {
         return new IntValue(this.value);
-    }    
+    }
     static castTo(value) {
         if (value instanceof IntValue) {
             return value.value;

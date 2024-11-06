@@ -6,6 +6,9 @@ module.exports = class FixedCol extends ProofItem {
     constructor (id) {
         super(id);
     }
+    get degree() {
+        return 1;
+    }
     getId() {
         return this.id;
     }

@@ -7,6 +7,13 @@ module.exports = class ExpressionReference extends ProofItem {
         this.id = id;
         this.instance = instance;
     }
+    get degree() {
+        const value = this.instance.get(this.id).getValue();
+        if (typeof value.degree === 'number') {
+            return value.degree;
+        }
+        return -1;
+    }
     getTag() {
         return 'im';
     }

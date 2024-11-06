@@ -5,6 +5,9 @@ module.exports = class FeValue extends ValueItem {
     constructor (value = 0n) {
         super(value);
     }
+    get degree() {
+        return 0;
+    }
     cloneInstance() {
         return new FeValue(this.value);
     }

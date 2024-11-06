@@ -207,7 +207,7 @@ module.exports = class Processor {
         this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('AIRGROUP', 'string', [], { global: true, sourceRef: this.sourceRef });
-        this.references.declare('AIRGROUP_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('AIRGROUP_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
         this.references.declare('AIR_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
     }
     startExecution(statements) {
@@ -609,7 +609,7 @@ module.exports = class Processor {
             return result;
         }
         if (Debug.active) console.log(hdata);
-        EXIT_HERE;
+        throw new Error('Invalid hint data');
     }
     execIf(s) {
         for (let icond = 0; icond < s.conditions.length; ++icond) {
@@ -1080,7 +1080,7 @@ module.exports = class Processor {
     }
     setAirGroupBuiltIntConstants(airGroup) {
         this.references.set('AIRGROUP', [], airGroup ? airGroup.name : '');
-        this.references.set('AIRGROUP_ID', [], new ExpressionItems.IntValue(airGroup ? airGroup.id : 0));
+        this.references.set('AIRGROUP_ID', [], new ExpressionItems.IntValue(airGroup ? airGroup.id : -1));
     }
     /**
      * method to return id of airgroup, if this id not defined yet, use lastAirGroupId to set it

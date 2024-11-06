@@ -315,7 +315,7 @@ case 120:
  this.$ = { type: 'object', data: {}}; this.$.data[$$[$0-2]] = $$[$0] 
 break;
 case 121:
- this.$ = {data: {}}; this.$.data[$$[$0]] = ExpressionFactory.fromObject({type: 'reference', name: $$[$0] }) 
+ this.$ = { type: 'object', data: {}}; this.$.data[$$[$0]] = ExpressionFactory.fromObject({type: 'reference', name: $$[$0] }) 
 break;
 case 122:
  this.$ = $$[$0-2]; this.$.data.push($$[$0]) 

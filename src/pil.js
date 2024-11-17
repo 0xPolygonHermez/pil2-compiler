@@ -156,11 +156,11 @@ async function run() {
             return [key, value];
         }));
 
-    const out = compile(F, fullFileName, null, config);
+    return compile(F, fullFileName, null, config);
 }
 
-run().then(()=> {
-    process.exitCode = 0;
+run().then(res => {
+    process.exitCode = res ? 0 : 1;
 }, (err) => {
     console.log(err.stack);
     if (err.pos) {

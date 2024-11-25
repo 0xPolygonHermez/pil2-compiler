@@ -1357,23 +1357,24 @@ module.exports = class Processor {
     }
     callDelayedFunctions(scope, event) {
         const _scope = this.getDelayedScope(scope);
-        const delayedCalls = this.delayedCalls[_scope] ? (this.delayedCalls[_scope][event] ?? false) : false;
-        if (Context.config.logDelayedCalls) {
-            console.log(`  > [delayed call] execute delayed calls \x1B[38;5;208m${scope}@${event}\x1B[0m  => [${delayedCalls ? Object.keys(delayedCalls).map(x => '\x1B[38;5;208m'+x+'\x1B[0m').join(','):''}]`);
-        }
-        if (delayedCalls === false) {
-            return false;
-        }
-        for (const fname in delayedCalls) {
-            if (Context.config.logDelayedCalls) {
-                console.log(`  > [delayed call] execute \x1B[38;5;208m${fname}\x1B[0m`);
+        let reentrant = false;
+        while (true) {
+            const delayedCalls = this.delayedCalls[_scope] ? (this.delayedCalls[_scope][event] ?? false) : false;
+            if (Context.config.logDelayedCalls && (!reentrant || delayedCalls !== false)) {
+                console.log(`  > [delayed call] execute ${reentrant?'reentrant ':''}delayed calls \x1B[38;5;208m${scope}@${event}\x1B[0m  => [${delayedCalls ? Object.keys(delayedCalls).map(x => '\x1B[38;5;208m'+x+'\x1B[0m').join(','):''}]`);
             }
-            this.execCall({ op: 'call', function: {name: fname}, args: [] });
+            if (delayedCalls === false) {
+                return false;
+            }
+            delete this.delayedCalls[_scope][event];
+            for (const fname in delayedCalls) {
+                if (Context.config.logDelayedCalls) {
+                    console.log(`  > [delayed call] execute ${reentrant?'reentrant ':''}\x1B[38;5;208m${fname}\x1B[0m`);
+                }
+                this.execCall({ op: 'call', function: {name: fname}, args: [] });
+            }
+            reentrant = true;
         }
-        if (Context.config.logDelayedCalls) {
-            console.log(`  > [delayed call] clear \x1B[38;5;208m${_scope}@${event}\x1B[0m`);
-        }
-        this.delayedCalls[_scope][event] = {};
     }
     execWitnessColDeclaration(s) {
         this.declare(s, 'witness', false, true, {stage: s.stage ? Number(s.stage):0 });

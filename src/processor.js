@@ -1545,11 +1545,12 @@ module.exports = class Processor {
         if (typeof this.delayedCalls[_scope][event] === 'undefined') {
             this.delayedCalls[_scope][event] = {};
         }
-        if (typeof this.delayedCalls[_scope][event][fname] === 'undefined') {
+        const redundant = typeof this.delayedCalls[_scope][event][fname] !== 'undefined'
+        if (!redundant) {
             this.delayedCalls[_scope][event][fname] = {sourceRefs: []};
         }
-        if (Context.config.logDelayedCalls) {
-            console.log(`  > [delayed call] register \x1B[38;5;208m${fname}\x1B[0m at ${Context.sourceTag} on \x1B[38;5;208m${scope}@${event}\x1B[0m`);
+        if (Context.config.logDelayedCalls && !redundant || Context.config.logRedundantDelayCalls) {
+            console.log(`  > [delayed call] ${redundant?'redundant ':''}register \x1B[38;5;208m${fname}\x1B[0m at ${Context.sourceTag} on \x1B[38;5;208m${scope}@${event}\x1B[0m`);
         }
 
         this.delayedCalls[_scope][event][fname].sourceRefs.push(Context.sourceRef);

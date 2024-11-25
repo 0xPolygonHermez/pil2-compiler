@@ -1357,13 +1357,21 @@ module.exports = class Processor {
     }
     callDelayedFunctions(scope, event) {
         const _scope = this.getDelayedScope(scope);
-        if (Debug.active) console.log(`call all registered delayed calls scope:${_scope} ${event}`);
-        if (typeof this.delayedCalls[_scope] === 'undefined' || typeof this.delayedCalls[_scope][event] === 'undefined') {
+        const delayedCalls = this.delayedCalls[_scope] ? (this.delayedCalls[_scope][event] ?? false) : false;
+        if (Context.config.logDelayedCalls) {
+            console.log(`  > [delayed call] execute delayed calls \x1B[38;5;208m${scope}@${event}\x1B[0m  => [${delayedCalls ? Object.keys(delayedCalls).map(x => '\x1B[38;5;208m'+x+'\x1B[0m').join(','):''}]`);
+        }
+        if (delayedCalls === false) {
             return false;
         }
-        for (const fname in this.delayedCalls[_scope][event]) {
-            if (Debug.active) console.log(`call ${fname} registered delayed call scope:${_scope} ${event}`);
+        for (const fname in delayedCalls) {
+            if (Context.config.logDelayedCalls) {
+                console.log(`  > [delayed call] execute \x1B[38;5;208m${fname}\x1B[0m`);
+            }
             this.execCall({ op: 'call', function: {name: fname}, args: [] });
+        }
+        if (Context.config.logDelayedCalls) {
+            console.log(`  > [delayed call] clear \x1B[38;5;208m${_scope}@${event}\x1B[0m`);
         }
         this.delayedCalls[_scope][event] = {};
     }
@@ -1531,8 +1539,6 @@ module.exports = class Processor {
         }
 
         const _scope = this.getDelayedScope(scope);
-        if (Debug.active) console.log(`adding delayed function call on scope:${_scope} event:${event} fname:${fname} ${Context.sourceRef}`);
-
         if (typeof this.delayedCalls[_scope] === 'undefined') {
             this.delayedCalls[_scope] = {};
         }
@@ -1542,6 +1548,10 @@ module.exports = class Processor {
         if (typeof this.delayedCalls[_scope][event][fname] === 'undefined') {
             this.delayedCalls[_scope][event][fname] = {sourceRefs: []};
         }
+        if (Context.config.logDelayedCalls) {
+            console.log(`  > [delayed call] register \x1B[38;5;208m${fname}\x1B[0m at ${Context.sourceTag} on \x1B[38;5;208m${scope}@${event}\x1B[0m`);
+        }
+
         this.delayedCalls[_scope][event][fname].sourceRefs.push(Context.sourceRef);
     }
     execExpr(s) {

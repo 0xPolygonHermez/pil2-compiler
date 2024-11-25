@@ -21,6 +21,7 @@ const OPTIONS = {
     // TODO: log-hint (names), full log only of specified hints
     'log-hints': { describe: 'log all hints' },
     'log-fixed-resize': { describe: 'log all resizing of fixed' },
+    'log-delayed-calls': { describe: 'log all delayed calls (finals)'},
     'no-proto-fixed-data': { describe: 'no store data of fixed inside pilout' },
     'output-constraints': { describe: 'output all air and global constraints generated' },
     'output-global-constraints': { describe: 'output all global constraints generated' },

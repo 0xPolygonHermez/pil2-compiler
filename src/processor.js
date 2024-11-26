@@ -1357,15 +1357,24 @@ module.exports = class Processor {
     }
     callDelayedFunctions(scope, event) {
         const _scope = this.getDelayedScope(scope);
-        if (Debug.active) console.log(`call all registered delayed calls scope:${_scope} ${event}`);
-        if (typeof this.delayedCalls[_scope] === 'undefined' || typeof this.delayedCalls[_scope][event] === 'undefined') {
-            return false;
+        let reentrant = false;
+        while (true) {
+            const delayedCalls = this.delayedCalls[_scope] ? (this.delayedCalls[_scope][event] ?? false) : false;
+            if (Context.config.logDelayedCalls && (!reentrant || delayedCalls !== false)) {
+                console.log(`  > [delayed call] execute ${reentrant?'reentrant ':''}delayed calls \x1B[38;5;208m${scope}@${event}\x1B[0m  => [${delayedCalls ? Object.keys(delayedCalls).map(x => '\x1B[38;5;208m'+x+'\x1B[0m').join(','):''}]`);
+            }
+            if (delayedCalls === false) {
+                return false;
+            }
+            delete this.delayedCalls[_scope][event];
+            for (const fname in delayedCalls) {
+                if (Context.config.logDelayedCalls) {
+                    console.log(`  > [delayed call] execute ${reentrant?'reentrant ':''}\x1B[38;5;208m${fname}\x1B[0m`);
+                }
+                this.execCall({ op: 'call', function: {name: fname}, args: [] });
+            }
+            reentrant = true;
         }
-        for (const fname in this.delayedCalls[_scope][event]) {
-            if (Debug.active) console.log(`call ${fname} registered delayed call scope:${_scope} ${event}`);
-            this.execCall({ op: 'call', function: {name: fname}, args: [] });
-        }
-        this.delayedCalls[_scope][event] = {};
     }
     execWitnessColDeclaration(s) {
         this.declare(s, 'witness', false, true, {stage: s.stage ? Number(s.stage):0 });
@@ -1531,17 +1540,20 @@ module.exports = class Processor {
         }
 
         const _scope = this.getDelayedScope(scope);
-        if (Debug.active) console.log(`adding delayed function call on scope:${_scope} event:${event} fname:${fname} ${Context.sourceRef}`);
-
         if (typeof this.delayedCalls[_scope] === 'undefined') {
             this.delayedCalls[_scope] = {};
         }
         if (typeof this.delayedCalls[_scope][event] === 'undefined') {
             this.delayedCalls[_scope][event] = {};
         }
-        if (typeof this.delayedCalls[_scope][event][fname] === 'undefined') {
+        const redundant = typeof this.delayedCalls[_scope][event][fname] !== 'undefined'
+        if (!redundant) {
             this.delayedCalls[_scope][event][fname] = {sourceRefs: []};
         }
+        if (Context.config.logDelayedCalls && !redundant || Context.config.logRedundantDelayCalls) {
+            console.log(`  > [delayed call] ${redundant?'redundant ':''}register \x1B[38;5;208m${fname}\x1B[0m at ${Context.sourceTag} on \x1B[38;5;208m${scope}@${event}\x1B[0m`);
+        }
+
         this.delayedCalls[_scope][event][fname].sourceRefs.push(Context.sourceRef);
     }
     execExpr(s) {

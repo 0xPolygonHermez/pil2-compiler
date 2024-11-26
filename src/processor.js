@@ -70,7 +70,7 @@ module.exports = class Processor {
         this.globalScopeTypes = []; // 'witness', 'fixed', 'airgroupvalue', 'challenge', 'proofvalue', 'public'];
 
         this.scope.mark('proof');
-        this.delayedCalls = {};
+        this.deferredCalls = {};
         this.timers = {};
         this.memory = {};
 
@@ -1252,7 +1252,7 @@ module.exports = class Processor {
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
     }
     finalClosingAirGroups() {
-        this.callDelayedFunctions('airgroup', 'final');
+        this.callDeferredFunctions('airgroup', 'final');
         let airGroupIdsClosed = [];
 
         // use newAirGroups to detect if new airgroups appers in last loop, only
@@ -1333,7 +1333,7 @@ module.exports = class Processor {
         chrono.end('PROTO-AIRGROUP-OUT-END');
     }
     finalAirScope() {
-        this.callDelayedFunctions('air', 'final');
+        this.callDeferredFunctions('air', 'final');
     }
     clearAirScope(label = '') {
         this.references.clearType('fixed', label);
@@ -1345,31 +1345,35 @@ module.exports = class Processor {
         this.hints.clear();
     }
     finalAirGroupScope() {
-        this.callDelayedFunctions('airgroup', 'final');
+        this.callDeferredFunctions('airgroup', 'final');
     }
     finalProofScope() {
-        this.callDelayedFunctions('proof', 'final');
+        this.callDeferredFunctions('proof', 'final');
     }
 
-    getDelayedScope(scope) {
+    getDeferredScope(scope) {
         const airGroupId = Context.airGroupId === false || typeof Context.airGroupId === 'undefined' ? '':Context.airGroupId;
         return scope === 'airgroup' ? `airgroup#${airGroupId}` : scope;
     }
-    callDelayedFunctions(scope, event) {
-        const _scope = this.getDelayedScope(scope);
+    callDeferredFunctions(scope, event) {
+        const _scope = this.getDeferredScope(scope);
         let reentrant = false;
         while (true) {
-            const delayedCalls = this.delayedCalls[_scope] ? (this.delayedCalls[_scope][event] ?? false) : false;
-            if (Context.config.logDelayedCalls && (!reentrant || delayedCalls !== false)) {
-                console.log(`  > [delayed call] execute ${reentrant?'reentrant ':''}delayed calls \x1B[38;5;208m${scope}@${event}\x1B[0m  => [${delayedCalls ? Object.keys(delayedCalls).map(x => '\x1B[38;5;208m'+x+'\x1B[0m').join(','):''}]`);
+            let deferredCalls = this.deferredCalls[_scope] ? (this.deferredCalls[_scope][event] ?? false) : false;
+            if (deferredCalls !== false) {
+                deferredCalls = Object.entries(deferredCalls).map(([key, value]) => { return {...value, fname: key}}).sort((a, b) => Number(b.priority) - Number(a.priority));
             }
-            if (delayedCalls === false) {
+            if (Context.config.logDeferredCalls && (!reentrant || deferredCalls !== false)) {
+                console.log(`  > [deferred call] execute ${reentrant?'reentrant ':''}deferred calls \x1B[38;5;208m${scope}@${event}\x1B[0m  => [${deferredCalls ? Object.keys(deferredCalls).map(x => '\x1B[38;5;208m'+x+'\x1B[0m').join(','):''}]`);
+            }
+            if (deferredCalls === false) {
                 return false;
             }
-            delete this.delayedCalls[_scope][event];
-            for (const fname in delayedCalls) {
-                if (Context.config.logDelayedCalls) {
-                    console.log(`  > [delayed call] execute ${reentrant?'reentrant ':''}\x1B[38;5;208m${fname}\x1B[0m`);
+            delete this.deferredCalls[_scope][event];
+            for (const deferredCall of deferredCalls) {
+                const fname = deferredCall.fname;
+                if (Context.config.logDeferredCalls) {
+                    console.log(`  > [deferred call] execute ${reentrant?'reentrant ':''}\x1B[38;5;208m${fname}\x1B[0m`);
                 }
                 this.execCall({ op: 'call', function: {name: fname}, args: [] });
             }
@@ -1525,36 +1529,39 @@ module.exports = class Processor {
         // TODO: initialization
         // TODO: verification defined
     }
-    execDelayedFunctionCall(s) {
+    execDeferredFunctionCall(s) {
         const scope = s.scope;
         const fname = s.function.name;
         const event = s.event;
+        const priority = s.priority === false ? false : s.priority.evalAsInt();
         if (s.args.length > 0) {
-            throw new Error('delayed function call arguments are not yet supported');
+            throw new Error('deferred function call arguments are not yet supported');
         }
         if (event !== 'final') {
-            throw new Error(`delayed function call event ${event} no supported`);
+            throw new Error(`deferred function call event ${event} no supported`);
         }
         if (['proof', 'airgroup', 'air'].includes(scope) === false) {
-            throw new Error(`delayed function call scope ${scope} no supported`);
+            throw new Error(`deferred function call scope ${scope} no supported`);
         }
 
-        const _scope = this.getDelayedScope(scope);
-        if (typeof this.delayedCalls[_scope] === 'undefined') {
-            this.delayedCalls[_scope] = {};
+        const _scope = this.getDeferredScope(scope);
+        if (typeof this.deferredCalls[_scope] === 'undefined') {
+            this.deferredCalls[_scope] = {};
         }
-        if (typeof this.delayedCalls[_scope][event] === 'undefined') {
-            this.delayedCalls[_scope][event] = {};
+        if (typeof this.deferredCalls[_scope][event] === 'undefined') {
+            this.deferredCalls[_scope][event] = {};
         }
-        const redundant = typeof this.delayedCalls[_scope][event][fname] !== 'undefined'
+        const redundant = typeof this.deferredCalls[_scope][event][fname] !== 'undefined'
         if (!redundant) {
-            this.delayedCalls[_scope][event][fname] = {sourceRefs: []};
+            this.deferredCalls[_scope][event][fname] = {priority: false, sourceRefs: []};
         }
-        if (Context.config.logDelayedCalls && !redundant || Context.config.logRedundantDelayCalls) {
-            console.log(`  > [delayed call] ${redundant?'redundant ':''}register \x1B[38;5;208m${fname}\x1B[0m at ${Context.sourceTag} on \x1B[38;5;208m${scope}@${event}\x1B[0m`);
+        if (Context.config.logDeferredCalls && !redundant || Context.config.logRedundantDeferredCalls) {
+            console.log(`  > [deferred call] ${redundant?'redundant ':''}register \x1B[38;5;208m${fname}\x1B[0m at ${Context.sourceTag} ${priority === false?'':('(priority:'+priority+') ')}on \x1B[38;5;208m${scope}@${event}\x1B[0m`);
         }
-
-        this.delayedCalls[_scope][event][fname].sourceRefs.push(Context.sourceRef);
+        this.deferredCalls[_scope][event][fname].sourceRefs.push(Context.sourceRef);
+        if (priority !== false && this.deferredCalls[_scope][event][fname].priority < priority) {
+            this.deferredCalls[_scope][event][fname].priority = priority;
+        }
     }
     execExpr(s) {
         let options = {};

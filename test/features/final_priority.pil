@@ -1,0 +1,61 @@
+
+airtemplate A(int N = 2**8) {
+    on final air final_c0();
+    on final air final_b1();
+    on final air final_a2();
+}
+
+airtemplate B(int N = 2**8) {
+    on final air final_a2();
+    on final air final_b1();
+}
+
+airtemplate AP(int N = 2**8) {
+    on final(1) air final_a2();
+    on final(3) air final_c0();
+    on final(2) air final_b1();
+}
+
+
+airtemplate AP2(int N = 2**8) {
+    int a = 0;
+    on final(a+1) air final_a2();
+    on final(a+8) air final_c0();
+    on final(a+5) air final_b1();
+}
+
+
+int counter = 0;
+int delta = 1;
+
+function final_c0() {
+    assert_eq(counter, 0);
+    counter += delta;
+}
+
+function final_b1() {
+    assert_eq(counter, 1);
+    counter += delta;
+}
+function final_a2() {
+    assert_eq(counter, 2);
+    counter += delta;
+}
+
+
+airgroup A1 {
+    A();
+
+    delta = -1;
+    counter = 2;
+    B();
+
+    delta = 1;
+    counter = 0;
+    AP();
+
+    delta = 1;
+    counter = 0;
+    AP2();
+}
+

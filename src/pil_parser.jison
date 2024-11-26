@@ -583,7 +583,7 @@ statement_no_closed
     | expression '===' expression
         { $$ = { type: 'constraint', left: $1, right: $3 } }
 
-    | delayed_function_call
+    | deferred_function_call
         { $$ = $1 }
 
     | public_declaration
@@ -656,7 +656,7 @@ function_call
         { $$ = { type: 'call', function: $1, args: $3 } }
     ;
 
-delayed_function_event
+deferred_function_event
     : FINAL
       { $$ = $1 }
     ;
@@ -674,9 +674,12 @@ defined_scopes
     ;
 
 
-delayed_function_call
-    : ON delayed_function_event defined_scopes name_optional_index '(' multiple_expression_list ')'
-        { $$ = { type: 'delayed_function_call', event: $2, scope: $3, function: $4, args: $6 } }
+deferred_function_call
+    : ON deferred_function_event defined_scopes name_optional_index '(' multiple_expression_list ')'
+        { $$ = { type: 'deferred_function_call', event: $2, priority: false, scope: $3, function: $4, args: $6 } }
+
+    | ON deferred_function_event '(' expression ')' defined_scopes name_optional_index '(' multiple_expression_list ')'
+        { $$ = { type: 'deferred_function_call', event: $2, priority: $4, scope: $6, function: $7, args: $9 } }
     ;
 
 

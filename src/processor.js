@@ -1357,37 +1357,55 @@ module.exports = class Processor {
     }
     callDeferredFunctions(scope, event) {
         const _scope = this.getDeferredScope(scope);
-        let reentrant = false;
+        const reentrantEnabled = !Context.config.disableReentrantDeferredCalls;
+        let first = true;
         let processed = {};
+        let previousDeferredCalls = [];
+        let deferredCalls = false;
+        let executedSomething = false;
         do {
-            let deferredCalls = this.deferredCalls[_scope] ? (this.deferredCalls[_scope][event] ?? false) : false;
+            deferredCalls = this.deferredCalls[_scope] ? (this.deferredCalls[_scope][event] ?? false) : false;
             if (deferredCalls !== false) {
                 deferredCalls = Object.entries(deferredCalls).map(([key, value]) => { return {...value, fname: key}}).sort((a, b) => Number(b.priority) - Number(a.priority));
             }
-            if (Context.config.logDeferredCalls && (!reentrant || deferredCalls !== false)) {
+            if (first && deferredCalls && Context.config.logDeferredCalls) {
                 if (deferredCalls === false) console.log(`  > [deferred call] no deferred calls \x1B[38;5;208m${scope}@${event}\x1B[0m`);
-                else console.log(`  > [deferred call] execute ${reentrant?'reentrant ':''}deferred calls \x1B[38;5;208m${scope}@${event}\x1B[0m  => [${deferredCalls ? deferredCalls.map(x => '\x1B[38;5;208m'+x.fname+'\x1B[0m').join(','):''}]`);
+                else console.log(`  > [deferred call] execute ${first?'reentrant ':''}deferred calls \x1B[38;5;208m${scope}@${event}\x1B[0m  => [${deferredCalls ? deferredCalls.map(x => '\x1B[38;5;208m'+x.fname+(x.priority !== false ? '('+x.priority+')':'')+'\x1B[0m').join(','):''}]`);
             }
             if (deferredCalls === false) {
-                return false;
+                break;
             }
-            delete this.deferredCalls[_scope][event];
+
+            if (Context.config.logDeferredCalls) {
+                if (!first && previousDeferredCalls.length !== deferredCalls.length) {
+                    for (const deferredCall of deferredCalls) {
+                        if (previousDeferredCalls.includes(deferredCall.fname)) continue;
+                        console.log(`  > [deferred call] added a reentrant call \x1B[38;5;208m${deferredCall.fname+(deferredCall.priority !== false ? '('+deferredCall.priority+')':'')}\x1B[0m`);
+                    }
+                }
+                previousDeferredCalls = deferredCalls.map(x => x.fname);
+            }
+
+            executedSomething = false;
             for (const deferredCall of deferredCalls) {
                 const fname = deferredCall.fname;
+                const priority = deferredCall.priority ?? false;
                 if (processed[fname]) {
-                    if (Context.config.logDeferredCalls) {
-                        console.log(`  > [deferred call] ignore ${reentrant?'reentrant ':''}\x1B[38;5;208m${fname}\x1B[0m because it's executed previously`);
-                    }
                     continue;
                 }
+                executedSomething = true;
                 processed[fname] = true;
                 if (Context.config.logDeferredCalls) {
-                    console.log(`  > [deferred call] execute ${reentrant?'reentrant ':''}\x1B[38;5;208m${fname}\x1B[0m`);
+                    console.log(`  > [deferred call] execute \x1B[38;5;208m${fname+(priority !== false ? '('+priority+')':'')}\x1B[0m`);
                 }
                 this.execCall({ op: 'call', function: {name: fname}, args: [] });
+                if (reentrantEnabled) break;
             }
-            reentrant = true;
-        } while (!Context.config.disableReentrantDeferredCalls);
+            first = false;
+        } while (reentrantEnabled && executedSomething);
+        if (deferredCalls !== false) {
+            delete this.deferredCalls[_scope][event];
+        }
     }
     execWitnessColDeclaration(s) {
         this.declare(s, 'witness', false, true, {stage: s.stage ? Number(s.stage):0 });

@@ -1358,13 +1358,15 @@ module.exports = class Processor {
     callDeferredFunctions(scope, event) {
         const _scope = this.getDeferredScope(scope);
         let reentrant = false;
-        while (true) {
+        let processed = {};
+        do {
             let deferredCalls = this.deferredCalls[_scope] ? (this.deferredCalls[_scope][event] ?? false) : false;
             if (deferredCalls !== false) {
                 deferredCalls = Object.entries(deferredCalls).map(([key, value]) => { return {...value, fname: key}}).sort((a, b) => Number(b.priority) - Number(a.priority));
             }
             if (Context.config.logDeferredCalls && (!reentrant || deferredCalls !== false)) {
-                console.log(`  > [deferred call] execute ${reentrant?'reentrant ':''}deferred calls \x1B[38;5;208m${scope}@${event}\x1B[0m  => [${deferredCalls ? Object.keys(deferredCalls).map(x => '\x1B[38;5;208m'+x+'\x1B[0m').join(','):''}]`);
+                if (deferredCalls === false) console.log(`  > [deferred call] no deferred calls \x1B[38;5;208m${scope}@${event}\x1B[0m`);
+                else console.log(`  > [deferred call] execute ${reentrant?'reentrant ':''}deferred calls \x1B[38;5;208m${scope}@${event}\x1B[0m  => [${deferredCalls ? deferredCalls.map(x => '\x1B[38;5;208m'+x.fname+'\x1B[0m').join(','):''}]`);
             }
             if (deferredCalls === false) {
                 return false;
@@ -1372,13 +1374,20 @@ module.exports = class Processor {
             delete this.deferredCalls[_scope][event];
             for (const deferredCall of deferredCalls) {
                 const fname = deferredCall.fname;
+                if (processed[fname]) {
+                    if (Context.config.logDeferredCalls) {
+                        console.log(`  > [deferred call] ignore ${reentrant?'reentrant ':''}\x1B[38;5;208m${fname}\x1B[0m because it's executed previously`);
+                    }
+                    continue;
+                }
+                processed[fname] = true;
                 if (Context.config.logDeferredCalls) {
                     console.log(`  > [deferred call] execute ${reentrant?'reentrant ':''}\x1B[38;5;208m${fname}\x1B[0m`);
                 }
                 this.execCall({ op: 'call', function: {name: fname}, args: [] });
             }
             reentrant = true;
-        }
+        } while (!Context.config.disableReentrantDeferredCalls);
     }
     execWitnessColDeclaration(s) {
         this.declare(s, 'witness', false, true, {stage: s.stage ? Number(s.stage):0 });

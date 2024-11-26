@@ -23,6 +23,7 @@ const OPTIONS = {
     'log-fixed-resize': { describe: 'log all resizing of fixed' },
     'log-deferred-calls': { describe: 'log all deferred calls (finals)'},
     'log-redundant-deferred-calls': { describe: 'log redundant deferred calls (finals)'},
+    'disable-reentrant-deferred-calls': { describe: 'disable reentrant deferred calls (final)' },
     'no-proto-fixed-data': { describe: 'no store data of fixed inside pilout' },
     'output-constraints': { describe: 'output all air and global constraints generated' },
     'output-global-constraints': { describe: 'output all global constraints generated' },

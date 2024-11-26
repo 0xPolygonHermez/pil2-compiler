@@ -21,7 +21,7 @@ airtemplate AP2(int N = 2**8) {
     int a = 0;
     on final(a+1) air final_a2();
     on final(a+8) air final_c0();
-    on final(a+5) air final_b1();
+    on final(a+5) air final_b1_reentrant_c0();
 }
 
 
@@ -37,6 +37,15 @@ function final_b1() {
     assert_eq(counter, 1);
     counter += delta;
 }
+
+function final_b1_reentrant_c0() {
+    on final(10) air final_c0();
+    assert_eq(counter, 1);
+    counter += delta;
+}
+
+
+
 function final_a2() {
     assert_eq(counter, 2);
     counter += delta;

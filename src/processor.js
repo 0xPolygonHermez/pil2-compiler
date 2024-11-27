@@ -1586,7 +1586,8 @@ module.exports = class Processor {
             console.log(`  > [deferred call] ${redundant?'redundant ':''}register \x1B[38;5;208m${fname}\x1B[0m at ${Context.sourceTag} ${priority === false?'':('(priority:'+priority+') ')}on \x1B[38;5;208m${scope}@${event}\x1B[0m`);
         }
         this.deferredCalls[_scope][event][fname].sourceRefs.push(Context.sourceRef);
-        if (priority !== false && this.deferredCalls[_scope][event][fname].priority < priority) {
+        const currentPriority = this.deferredCalls[_scope][event][fname].priority;
+        if (priority !== false && (currentPriority === false || currentPriority < priority)) {
             this.deferredCalls[_scope][event][fname].priority = priority;
         }
     }

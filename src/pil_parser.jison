@@ -32,6 +32,7 @@ airgroup                                    { return 'AIR_GROUP' }
 airtemplate                                 { return 'AIR_TEMPLATE' }
 air                                         { return 'AIR' }
 proof                                       { return 'PROOF' }
+commit                                      { return 'COMMIT' }
 
 int                                         { return 'INT' }
 fe                                          { return 'FE' }
@@ -457,6 +458,9 @@ basic_type
     | COL WITNESS
         { $$ = { type: 'witness' } }
 
+    | COL IDENTIFIER
+        { $$ = { type: 'custom' } }
+
     | COL FIXED
         { $$ = { type: 'fixed' } }
 
@@ -558,6 +562,9 @@ declare_item
 
     | variable_declaration
         { $$ = $1 }
+
+    | commit_declaration
+        { $$ = $1 }
     ;
 
 statement_no_closed
@@ -576,7 +583,7 @@ statement_no_closed
     | expression '===' expression
         { $$ = { type: 'constraint', left: $1, right: $3 } }
 
-    | delayed_function_call
+    | deferred_function_call
         { $$ = $1 }
 
     | public_declaration
@@ -592,6 +599,9 @@ statement_no_closed
         { $$ = $1 }
 
     | air_value_declaration
+        { $$ = $1 }
+
+    | commit_declaration
         { $$ = $1 }
 
     | no_closed_container_definition
@@ -646,7 +656,7 @@ function_call
         { $$ = { type: 'call', function: $1, args: $3 } }
     ;
 
-delayed_function_event
+deferred_function_event
     : FINAL
       { $$ = $1 }
     ;
@@ -664,9 +674,12 @@ defined_scopes
     ;
 
 
-delayed_function_call
-    : ON delayed_function_event defined_scopes name_optional_index '(' multiple_expression_list ')'
-        { $$ = { type: 'delayed_function_call', event: $2, scope: $3, function: $4, args: $6 } }
+deferred_function_call
+    : ON deferred_function_event defined_scopes name_optional_index '(' multiple_expression_list ')'
+        { $$ = { type: 'deferred_function_call', event: $2, priority: false, scope: $3, function: $4, args: $6 } }
+
+    | ON deferred_function_event '(' expression ')' defined_scopes name_optional_index '(' multiple_expression_list ')'
+        { $$ = { type: 'deferred_function_call', event: $2, priority: $4, scope: $6, function: $7, args: $9 } }
     ;
 
 
@@ -985,6 +998,22 @@ stage_definition
 
     ;
 
+name_id_list
+    : name_id_list ',' name_id
+        { $$ = $1; $$.names.push($3) }
+
+    | name_id
+        { $$ = { names: [$1] } }
+    ;
+
+public_reference
+    : PUBLIC '(' name_id_list ')' %prec PUBLIC
+        { $$ = { public: $3, names:$3.names } }
+
+    | %prec NO_PUBLIC
+        { $$ = {} }
+    ;
+
 flexible_string
     : STRING
         { $$ = { type: 'string', value: $1 } }
@@ -1182,6 +1211,9 @@ col_declaration
     : COL WITNESS optional_stage_definition col_declaration_list
         { $$ = { type: 'witness_col_declaration', items: $4.items, stage: $3.stage ?? DEFAULT_COL_WITNESS_STAGE } }
 
+    | COL IDENTIFIER stage_definition col_declaration_list
+        { $$ = { type: 'custom_col_declaration', items: $4.items, stage: $3.stage ?? false, commit: $2 } }
+
     | COL FIXED col_declaration_list
         { $$ = { type: 'fixed_col_declaration', items: $3.items } }
 
@@ -1257,6 +1289,11 @@ air_group_value_properties
 
     | default_value_definition
         { $$ = $1; }
+    ;
+
+commit_declaration
+    : COMMIT stage_definition public_reference IDENTIFIER
+        { $$ = { type: 'commit_declaration', publics: $3.names, stage: $2.stage ?? false, name: $4 } }
     ;
 
 air_group_value_declaration

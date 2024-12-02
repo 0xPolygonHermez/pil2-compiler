@@ -688,8 +688,7 @@ class Expression extends ExpressionItem {
         }
         if (values[0].constructor.operators && typeof values[0].constructor.operators[method] === 'function') {
             // static call with all values (operands)
-            res = values[0][method](...values.slice(1));
-            console.log(res);
+            res = values[0].constructor.operators[method](...values);
             if (res !== null) return [true, res];
         }
         return [false, false];

@@ -295,7 +295,7 @@ class Expression extends ExpressionItem {
             assert.ok(bs.reduce((isExpression, b) => isExpression && b instanceof Expression, true));
         }
 
-        console.log(bs);
+        // console.log(bs);
         const anyEmptyB = bs.some((b) => b.stack.length === 0);
         const aIsEmpty = this.stack.length === 0;
 

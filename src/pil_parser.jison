@@ -1211,7 +1211,7 @@ col_declaration
     : COL WITNESS optional_stage_definition col_declaration_list
         { $$ = { type: 'witness_col_declaration', items: $4.items, stage: $3.stage ?? DEFAULT_COL_WITNESS_STAGE } }
 
-    | COL IDENTIFIER stage_definition col_declaration_list
+    | COL IDENTIFIER optional_stage_definition col_declaration_list
         { $$ = { type: 'custom_col_declaration', items: $4.items, stage: $3.stage ?? false, commit: $2 } }
 
     | COL FIXED col_declaration_list

@@ -147,13 +147,13 @@ module.exports = class References {
             // if absolute scope (proof, airgroup or air) and has more than 2 parts, means at least 3 parts,
             // the middle part was container.
             if (parts.length > 2) {
-                return {...res, scope: parts[0], name: parts.slice(-1), container: parts.slice(0, -1).join('.')};
+                return {isStatic: false, ...res, scope: parts[0], name: parts.slice(-1), container: parts.slice(0, -1).join('.')};
             }
             // if absolute, but only 2 or less parts, no container specified.
             return {...res, scope: parts[0], isStatic: true, name: parts.slice(1).join('.')};
         }
         // if no absolute scope, could be an alias if it has 2 parts.
-        return {...res, scope, name};
+        return {isStatic: false, ...res, scope, name};
     }
     normalizeType(type) {
         if (this.isReferencedType(type)) {
@@ -199,7 +199,9 @@ module.exports = class References {
 
         const scopeId = this.hasScope(type) ? Context.scope.declare(nameInfo.name, type, existingReference, false) : 0;
         if (existingReference !== false && this.isVisible(existingReference)) {
-            if  (existingReference.scopeId === scopeId || existingReference.scope === false || scopeId === false) {
+            if  (existingReference.scopeId === scopeId || scopeId === false) { // existingReference.scope === false
+                console.log(existingReference);
+                console.log([existingReference.scopeId,scopeId])
                 throw new Error(`At ${Context.sourceRef} is defined ${nameInfo.name}, but ${existingReference.name} as ${existingReference.type} was defined previously on ${existingReference.data.sourceRef}`)
             }
         }
@@ -213,7 +215,7 @@ module.exports = class References {
         }
 
         const nameInfo = this.decodeName(name);
-        // console.log(`DECLARE_REFERENCE ${name} ==> ${nameInfo.name} ${type} ${lengths.length ? '[' + lengths.join(',') + '] ': ''}scope:${nameInfo.scope} #${Context.scope.deep} ${initValue}[type: ${initValue instanceof Object ? initValue.constructor.name : typeof initValue}]`, options);
+        if (type === 'airgroupvalue') console.log(`DECLARE_REFERENCE ${name} ==> ${nameInfo.name} ${type} ${lengths.length ? '[' + lengths.join(',') + '] ': ''}scope:${nameInfo.scope} #${Context.scope.deep} ${initValue}[type: ${initValue instanceof Object ? initValue.constructor.name : typeof initValue}]`);
 
         let [array, size] = Reference.getArrayAndSize(lengths);
         if (Debug.active) console.log(name, lengths, array, size);

@@ -1130,7 +1130,7 @@ module.exports = class Processor {
         if (this.proto) {
             this.proto.setAirGroupValues(this.airGroupValues.getDataByAirGroupId(airGroupId),
                                          this.airGroupValues.getAggreationTypesByAirGroupId(airGroupId));
-            this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId, ['stage', 'relativeId']), 'airgroupvalue', {airGroupId});
+            // airGroupValues symbols was generated at end of proof data symbols
         }
         this.suspendCurrentAirGroup();
 

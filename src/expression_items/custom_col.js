@@ -8,6 +8,9 @@ module.exports = class CustomCol extends ProofItem {
         super(id);
         if (Debug.active) console.log('CONSTRUCTOR_CUSTOM_COL', id, this.id);
     }
+    get degree() {
+        return 0;
+    }
     getTag() {
         return 'customcol';
     }

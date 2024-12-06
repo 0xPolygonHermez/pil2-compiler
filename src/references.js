@@ -453,7 +453,10 @@ module.exports = class References {
                     reference = this.references[Context.airName+'.'+lname];
                 }
                 if (reference && reference.scopeId !== scopeId) {
-                    throw new Error(`Not match declaration scope and accessing scope (${containerName}) of ${name}`);
+                    const accessToAirArguments = explicitContainer === 'air' && (scopeId - reference.scopeId) === 1;
+                    if (!accessToAirArguments) {
+                        throw new Error(`Not match declaration scope and accessing scope (${explicitContainer}) of ${name}`);
+                    }
                 }
             }
             if (!reference && this.containers.isDefined(explicitContainer)) {

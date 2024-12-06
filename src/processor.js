@@ -7,6 +7,8 @@ const References = require("./references.js");
 const Indexable = require("./indexable.js");
 const Ids = require("./ids.js");
 const Constraints = require("./constraints.js");
+const Commit = require("./commit.js")
+const Commits = require("./commits.js");
 const AirGroup = require("./air_group.js");
 const AirGroups = require("./air_groups.js");
 const AirTemplate = require("./air_template.js");
@@ -23,6 +25,7 @@ const PackedExpressions = require("./packed_expressions.js");
 const ProtoOut = require("./proto_out.js");
 const FixedCols = require("./fixed_cols.js");
 const WitnessCols = require("./witness_cols.js");
+const CustomCols = require("./custom_cols.js");
 const AirValues = require("./air_values.js");
 const AirGroupValues = require("./air_group_values.js");
 const Iterator = require("./iterator.js");
@@ -96,6 +99,10 @@ module.exports = class Processor {
         ExpressionItem.setManager(ExpressionItems.WitnessCol, this.witness);
         this.references.register('witness', this.witness);
 
+        this.customCols = new CustomCols();
+        ExpressionItem.setManager(ExpressionItems.CustomCol, this.customCols);
+        this.references.register('customcol', this.customCols);
+
         this.publics = new Indexable('public', DefinitionItems.Public, ExpressionItems.Public);
         ExpressionItem.setManager(ExpressionItems.Public, this.publics);
         this.references.register('public', this.publics);
@@ -120,6 +127,7 @@ module.exports = class Processor {
         ExpressionItem.setManager(ExpressionItems.FunctionCall, this.functions);
         this.references.register('function', this.functions);
 
+        this.commits = new Commits();
         this.airGroups = new AirGroups();
         this.airTemplates = new AirTemplates();
 
@@ -200,7 +208,7 @@ module.exports = class Processor {
         this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('AIRGROUP', 'string', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('AIRGROUP_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
-        this.references.declare('AIR_ID', 'int', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('AIR_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
     }
     startExecution(statements) {
         const t1 = performance.now();
@@ -998,7 +1006,7 @@ module.exports = class Processor {
         this.context.push(namespace);
         this.scope.push();
         this.execute(s.statements, `NAMESPACE ${namespace}`);
-        this.scope.pop(['witness', 'fixed', 'im', 'airvalue']);
+        this.scope.pop(['witness', 'fixed', 'customcol', 'im', 'airvalue']);
         this.context.pop();
     }
     evalExpressionList(e) {
@@ -1154,6 +1162,7 @@ module.exports = class Processor {
     closeAir() {
         this.airStack.pop();
         if (this.proto) this.proto.popAir();
+        this.commits.clearAir();
         this.updateAir();
     }
     setBuiltInConstants(airGroup, air) {
@@ -1167,7 +1176,7 @@ module.exports = class Processor {
     setAirBuiltInConstants(air) {
         this.references.set('BITS', [], air.bits ?? 0);
         // TODO: alert to AIR_ID because really was undefined
-        this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? 0));
+        this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? -1));
     }
     executeAirTemplate(airTemplate, airTemplateFunc, callinfo, options = {}) {
         const name = options.alias ? options.alias : airTemplate.name;
@@ -1195,13 +1204,18 @@ module.exports = class Processor {
             Context.config.test.onAirEnd(this);
         }
         const witnessCols = this.witness.length;
-        const fixedCols = this.witness.length;
+        const fixedCols = this.fixeds.length;
+        const customCols = this.customCols.length
         const constraints = this.constraints.length;
         const N = this.rows;
         airGroup.airEnd(air.id);
         const ti2 = performance.now();
         console.log('  > Witness cols: ' + witnessCols);
         console.log('  > Fixed cols: ' + fixedCols);
+        if (customCols) {
+            const commitNames = this.customCols.getCommitNames().join(',');
+            console.log(`  > Custom cols (${commitNames}): ` + customCols);
+        }
         console.log('  > Constraints: ' + constraints);
         console.log('  > Execution time: ' + units.getHumanTime(ti2-ti1));
 
@@ -1220,7 +1234,7 @@ module.exports = class Processor {
 
         const t1 = performance.now();
         this.clearAirScope(air.name);
-        this.scope.popInstanceType(['witness', 'fixed', 'im', 'airvalue']);
+        this.scope.popInstanceType(['witness', 'fixed', 'customcol', 'im', 'airvalue']);
         // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
         this.closeAir(air);
@@ -1274,13 +1288,17 @@ module.exports = class Processor {
         this.proto.setWitnessCols(this.witness);
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-WITNESS-COLS');
 
+        this.proto.setCustomCols(this.customCols);
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-CUSTOM-COLS');
+
+
         this.proto.setAirGroupValues(this.airGroupValues.getDataByAirGroupId(this.airGroupId),
                                      this.airGroupValues.getAggreationTypesByAirGroupId(this.airGroupId));
 
         this.proto.setAirValues(this.airValues.values);
 
         // this.expressions.pack(packed, {instances: [air.fixeds, air.witness]});
-        this.expressions.pack(packed, {instances: [this.fixeds, this.witness]});
+        this.expressions.pack(packed, {instances: [this.fixeds, this.witness, this.customCols]});
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-EXPRESSIONS-PACK');
 
         this.proto.setConstraints(this.constraints, packed,
@@ -1288,6 +1306,7 @@ module.exports = class Processor {
                 labelsByType: {
                     witness: this.witness.labelRanges,
                     fixed: this.fixeds.labelRanges,
+                    customCols: this.customCols.labelRanges,
                     airgroup: (id, options) => this.airGroupValues.getRelativeLabel(airGroupId, id, options)
                 },
                 expressions: this.expressions
@@ -1297,6 +1316,7 @@ module.exports = class Processor {
         const info = {airId, airGroupId};
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
+        this.proto.setSymbolsFromLabels(this.customCols.labelRanges, 'customcol', info);
         if (airId == 0) {
             this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId, ['stage', 'relativeId']), 'airgroupvalue', {airGroupId});
         }
@@ -1318,6 +1338,7 @@ module.exports = class Processor {
     clearAirScope(label = '') {
         this.references.clearType('fixed', label);
         this.references.clearType('witness', label);
+        this.references.clearType('customcol', label);
         this.references.clearType('airvalue', label);
         this.references.clearScope('air');
         this.expressions.clear(label);
@@ -1347,7 +1368,18 @@ module.exports = class Processor {
         this.delayedCalls[_scope][event] = {};
     }
     execWitnessColDeclaration(s) {
-        this.colDeclaration(s, 'witness', false, true, {stage: s.stage ? Number(s.stage):0 });
+        this.declare(s, 'witness', false, true, {stage: s.stage ? Number(s.stage):0 });
+    }
+    execCustomColDeclaration(s) {
+        let commit = this.commits.get(s.commit);
+        if (!commit) {
+            throw new Error(`Creating a custom column with commit "${s.commit}", but this commit "${s.commit}" doesn't found`);
+        }
+        const stage = typeof s.stage === 'string' ? Number(s.stage): commit.defaultStage;
+        if (stage === false) {
+            throw new Error(`Custom column for commit "${s.commit}" haven't defaul stage, need be specified for each custom column`);
+        }
+        this.declare(s, 'customcol', false, true, {stage: stage, commit });
     }
     execFixedColDeclaration(s) {
         const global = s.global ?? false;
@@ -1401,12 +1433,41 @@ module.exports = class Processor {
         }
     }
     execPublicDeclaration(s) {
-        this.colDeclaration(s, 'public', true, false);
+        this.declare(s, 'public', true, false);
         // TODO: initialization
         // TODO: verification defined
     }
+    execCommitDeclaration(s) {
+        const name = s.name;
+        let commit = this.commits.get(name);
+        // TODO: two scope
+        if (commit) {
+            throw new Error(`commit ${name} already defined on ${commit.sourceRef}`);
+        }
+        const scopeType = this.scope.getInstanceType();
+        let publics = [];
+        for (const cpublic of s.publics ?? []) {
+            const ref = this.references.getReference(cpublic.name, false);
+            if (ref === false) {
+                throw new Error(`Not found reference ${cpublic.name} used on commit ${name}`);
+            }
+            if (ref.type !== 'public') {
+                throw new Error(`Referenced ${cpublic.name} used on commit ${name} is a ${ref.type} not a public`);
+            }
+            const indexes = cpublic.indexes ? this.decodeIndexes(cpublic.indexes) : [];
+            const value = ref.getItem(indexes);
+            if (value instanceof ExpressionItems.ArrayOf) {
+                publics.push.apply(publics, value.toOneArray());
+            } else {
+                publics.push(value);
+            }
+        }
+        const stage = typeof s.stage === 'string' ? Number(s.stage): false;
+        commit = new Commit(name, stage, publics, {sourceRef: Context.sourceTag, scope: scopeType});
+        this.commits.define(name, commit);
+    }
     execProofValueDeclaration(s) {
-        this.colDeclaration(s, 'proofvalue', true, false);
+        this.declare(s, 'proofvalue', true, false);
         // TODO: initialization
         // TODO: verification defined
     }
@@ -1451,7 +1512,7 @@ module.exports = class Processor {
         }
     }
     execChallengeDeclaration(s) {
-        this.colDeclaration(s, 'challenge', true, false, {stage: s.stage ? Number(s.stage):0});
+        this.declare(s, 'challenge', true, false, {stage: s.stage ? Number(s.stage):0});
         // TODO: initialization
         // TODO: verification defined
     }
@@ -1506,7 +1567,7 @@ module.exports = class Processor {
     decodeLengths(s) {
         return this.decodeIndexes(s.lengths);
     }
-    colDeclaration(s, type, ignoreInit, fullName = true, data = {}) {
+    declare(s, type, ignoreInit, fullName = true, data = {}) {
         for (const col of s.items) {
             const lengths = this.decodeLengths(col);
             let init = s.init;

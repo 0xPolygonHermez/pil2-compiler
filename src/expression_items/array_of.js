@@ -53,7 +53,13 @@ module.exports = class ArrayOf extends RuntimeItem {
     getLevelLength(indexes) {
         return this._array.getLevelLength(indexes);
     }
-    toArrays(indexes = []) {        
+    toOneArray(indexes = []) {
+        return this.#toArrays(indexes, false);
+    }
+    toArrays(indexes = []) {
+        return this.#toArrays(indexes, true);
+    }
+    #toArrays(indexes = [], multidim = true) {
         let level = indexes.length;
         if (level >= this._array.dim) {
             return this.getItem(indexes);
@@ -62,7 +68,9 @@ module.exports = class ArrayOf extends RuntimeItem {
         let res = [];
         for (let nextLevelIndex = 0; nextLevelIndex < nextLevelLen; ++nextLevelIndex) {
             const _indexes = [...indexes, nextLevelIndex];
-            res.push(this.toArrays(_indexes));
+            const dres = this.toArrays(_indexes);
+            if (multidim || Array.isArray(dres) === false) { res.push(dres); }
+            else { res.push.apply(res, dres); }
         }
         return res;
     }

@@ -40,8 +40,6 @@ module.exports = class Constraints {
     define(left, right, boundery, sourceRef) {
         assert.instanceOf(left, Expression);
         assert.instanceOf(right, Expression);
-        // left.dump('LEFT(simplied)');
-        // right.dump('RIGHT(simplied)');
         if (left.isRuntime()) {
             left.dump('LEFT  CONSTRAINT');
             throw new Error(`left constraint has runtime no resolved elements`);
@@ -57,15 +55,13 @@ module.exports = class Constraints {
         if (right.asIntDefault(false) !== 0n) {
             left.insert('sub', right);
         }
-        // const dumpId = Date.now();
-        // left.dump(`XXXXXXXXX-${dumpId}-1`)
-        // left.instance().dump(`XXXXXXXXX-${dumpId}-2`);
         left.simplify();
-        const exprId = this.getExpressions().insert(left);
-        // console.log(`DEFINE CONSTRAINT ${sourceRef}`);
-        return this.constraints.push({exprId, sourceRef, boundery}) - 1;
+        return this.defineExpressionAsConstraint(left, boundery, sourceRef);
     }
-
+    defineExpressionAsConstraint(e, boundery, sourceRef) {
+        const exprId = this.getExpressions().insert(e);
+        return this.constraints.push({exprId, sourceRef: sourceRef ?? Context.sourceTag, boundery: boundery ?? false}) - 1;
+    }
     *[Symbol.iterator]() {
         for (let index = 0; index < this.constraints.length; ++index) {
           yield this.constraints[index];

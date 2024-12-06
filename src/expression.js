@@ -219,6 +219,13 @@ class Expression extends ExpressionItem {
         }
         this.stack.push({op: false, operands: [this.assertExpressionItem(operand.clone())]});
     }
+    insertOperation(op, operands) {
+        if (this.stack.length) {
+            throw new Error(`insertOperation only could be used with empty stack`);
+        }
+        // this operation doesn't clone operands
+        this.stack.push({op, operands});
+    }
     isRuntime () {
         return this.stack.some(st => this.isRuntimeStackPos(st));
     }
@@ -288,6 +295,7 @@ class Expression extends ExpressionItem {
             assert.ok(bs.reduce((isExpression, b) => isExpression && b instanceof Expression, true));
         }
 
+        // console.log(bs);
         const anyEmptyB = bs.some((b) => b.stack.length === 0);
         const aIsEmpty = this.stack.length === 0;
 

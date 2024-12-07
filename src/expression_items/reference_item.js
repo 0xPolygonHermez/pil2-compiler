@@ -3,7 +3,7 @@ const Context = require('../context.js');
 const RowOffset = require('./row_offset.js');
 const ExpressionItem = require('./expression_item.js');
 const Debug = require('../debug.js');
-const util = require('util');   
+const util = require('util');
 module.exports = class ReferenceItem extends RuntimeItem {
     constructor (name, indexes = [], rowOffset) {
         super();
@@ -16,6 +16,9 @@ module.exports = class ReferenceItem extends RuntimeItem {
         }
         // TODO: next as expression
         this.rowOffset = RowOffset.factory(rowOffset);
+    }
+    get isReferencedType() {
+        return true;
     }
     set locator (value) {
         throw new Error(`setting locator on reference ${this.name} ${this.indexes.length}`);

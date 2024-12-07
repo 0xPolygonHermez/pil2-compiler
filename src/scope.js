@@ -38,7 +38,7 @@ module.exports = class Scope {
         return this.properties[this.deep][property] ?? defaultValue;
     }
     declare (name, type, ref, scope = false) {
-        // console.log(`[SCOPE] DECLARE ${name} scope:${scope} deep:${this.deep}`);
+        if (type === 'airgroupvalue') console.log(`[SCOPE] DECLARE ${name} scope:${scope} deep:${this.deep}`);
         if (scope === false) scope = this.deep;
         else if (typeof scope === 'string') {
             const lscope = this.labels[scope];

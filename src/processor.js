@@ -70,7 +70,7 @@ module.exports = class Processor {
         this.globalScopeTypes = []; // 'witness', 'fixed', 'airgroupvalue', 'challenge', 'proofvalue', 'public'];
 
         this.scope.mark('proof');
-        this.delayedCalls = {};
+        this.deferredCalls = {};
         this.timers = {};
         this.memory = {};
 
@@ -223,6 +223,7 @@ module.exports = class Processor {
         this.finalClosingAirGroups();
         this.finalProofScope();
         this.scope.popInstanceType();
+        this.testSummary();
         if (this.proto) {
             this.memoryUpdate();
             console.log(`\nGenerating pilout (protobuf) ${Context.config.outputFile} .....`)
@@ -243,6 +244,19 @@ module.exports = class Processor {
         console.log('  > Total proto time ('+(Math.round((this.totalProtoTime * 10000)/compilationTime)/100)+'%): ' + units.getHumanTime(this.totalProtoTime));
         console.log('  > Memory: ' + units.getHumanSize(this.memoryInfo.maxMemory));
         console.log('  > Total compilation: ' + units.getHumanTime(compilationTime));
+        return Context.tests.active ? Context.tests.fail === 0 : true;
+    }
+    testSummary() {
+        if (!Context.tests.active) return;
+        if (Context.tests.fail > 0) {
+            console.log(`> tests OK: ${Context.tests.ok}`);
+            console.log(`> tests FAIL: ${Context.tests.fail} => \x1B[31mSome tests fails!!\x1B[0m`);
+            Context.tests.msgs.forEach(msg => { const lines = msg.split('\n');
+                lines.forEach(line => console.log('  - '+line));
+            });
+        } else {
+            console.log(`> tests OK: ${Context.tests.ok} => \x1B[32mAll tests passed\x1B[0m`);
+        }
     }
     generateProtoOut()
     {
@@ -480,6 +494,13 @@ module.exports = class Processor {
             case 'dump': {
                 const value = this.references.get(params[1]).value;
                 value.dump('*************** PRAGMA '+Context.sourceRef+' ***************');
+                break;
+            }
+            case 'test': {
+                Context.tests.active = true;
+                Context.tests.fail = Context.tests.fail ?? 0;
+                Context.tests.ok = Context.tests.ok ?? 0;
+                Context.tests.msgs = Context.tests.msgs ?? [];
                 break;
             }
             default:
@@ -1124,10 +1145,35 @@ module.exports = class Processor {
     closeCurrentAirGroup() {
         // get airGroupId because during closing process this.airGroupId is set to false
         const airGroupId = this.airGroupId;
+        const summaryInfo = this.prepareAirGroupSummary(airGroupId);
         this.finalAirGroupScope();
         this.currentAirGroup.end();
+        if (this.proto) {
+            this.proto.setAirGroupValues(this.airGroupValues.getDataByAirGroupId(airGroupId),
+                                         this.airGroupValues.getAggreationTypesByAirGroupId(airGroupId));
+            // airGroupValues symbols was generated at end of proof data symbols
+        }
         this.suspendCurrentAirGroup();
+
         this.references.clearScope('airgroup');
+        this.showAirGroupSummary(summaryInfo);
+    }
+    prepareAirGroupSummary(airGroupId) {
+        return {name: this.currentAirGroup.name,
+                agvs: this.airGroupValues.getDataByAirGroupId(airGroupId).map(agv => { return {name: agv.label, aggregateType: agv.aggregateType, stage: agv.stage, default: agv.defaultValue}}),
+                airs: this.currentAirGroup.airs.map(air => { return {name: air.name, template: air.airTemplate.name, bits: air.bits}})};
+    }
+    showAirGroupSummary(info) {
+        const agvNameMaxWidth = info.agvs.reduce((max, agv) => agv.name.length > max ? agv.name.length : max, 0);
+        const airNameMaxWidth = info.airs.reduce((max, air) => air.name.length > max ? air.name.length : max, 0);
+        console.log(`\nAIRGROUP \x1B[38;5;208m${info.name}\x1B[0m summary\n  > AirGroupValues:`);
+        for (const agv of info.agvs) {
+            console.log(`    · \x1B[38;5;208m${agv.name.padEnd(agvNameMaxWidth)}\x1B[0m aggregate:\x1B[38;5;208m${agv.aggregateType.padEnd(4)}\x1B[0m stage:\x1B[38;5;208m${agv.stage}\x1B[0m default:\x1B[38;5;208m${agv.default === false ? '(none)':agv.default}\x1B[0m`);
+        }
+        console.log(`  > Airs:`);
+        for (const air of info.airs) {
+            console.log(`    · \x1B[38;5;208m${air.name.padEnd(airNameMaxWidth)}\x1B[0m rows:\x1B[38;5;208m2^${air.bits.toString().padEnd(2)}\x1B[0m template:\x1B[38;5;208m${air.template}\x1B[0m`);
+        }
     }
     /**
     * "suspend" current because this airgroup could be opened again
@@ -1184,7 +1230,8 @@ module.exports = class Processor {
         if (!airGroup) {
             throw new Exceptions.Runtime(`Instance airtemplate ${name} out of airgroup`);
         }
-        console.log(`\nAIR instance \x1B[38;5;208m${name}\x1B[0m in airgroup \x1B[38;5;208m${airGroup.name}\x1B[0m`);
+        const template = name === airTemplate.name ? '' : `(${airGroup.name})`
+        console.log(`\nAIR instance \x1B[38;5;208m${name}${template}\x1B[0m in airgroup \x1B[38;5;208m${airGroup.name}\x1B[0m`);
         const ti1 = performance.now();
         // airgroup was a function derivated class
         const mapinfo = this.prepareFunctionCall(airTemplateFunc, callinfo);
@@ -1210,7 +1257,7 @@ module.exports = class Processor {
         const N = this.rows;
         airGroup.airEnd(air.id);
         const ti2 = performance.now();
-        console.log('  > Witness cols: ' + witnessCols);
+        console.log('  > Witness cols: ' + witnessCols + ' from stage 1 (' + this.witness.countByStage(1).join() + ')');
         console.log('  > Fixed cols: ' + fixedCols);
         if (customCols) {
             const commitNames = this.customCols.getCommitNames().join(',');
@@ -1230,6 +1277,7 @@ module.exports = class Processor {
             console.log('  > Proto time: ' + units.getHumanTime(t2-t1));
         }
 
+        this.debugAirInfo();
         this.constraints = new Constraints();
 
         const t1 = performance.now();
@@ -1251,8 +1299,54 @@ module.exports = class Processor {
 
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
     }
+    debugAirInfo() {
+        let labels;
+        const debugWitness = Context.config.debugWitnessColsMatch ?? (Context.config.debugWitnessCols ?? false);
+        if (debugWitness !== false) {
+            if (typeof debugWitness === 'string') {
+                const re = new RegExp(debugWitness);
+                labels = this.witness.labelRanges.toArray().filter(x => re.test(x.label));
+            } else {
+                labels = this.witness.labelRanges.toArray();
+            }
+            for (const label of labels) {
+                const def = this.witness.getDefinition(label.from);
+                const extra = label.multiarray ? label.multiarray.toDebugString():'';
+                console.log(`    \x1B[38;5;142m[witness] ${label.label}${extra} stage:${def.stage} at:${def.sourceRef}\x1B[0m`);
+            }
+        }
+        const debugFixed = Context.config.debugFixedColsMatch ?? (Context.config.debugFixedCols ?? false);
+        if (debugFixed !== false) {
+            if (typeof debugFixed === 'string') {
+                const re = new RegExp(debugFixed);
+                labels = this.fixeds.labelRanges.toArray().filter(x => re.test(x.label));
+            } else {
+                labels = this.fixeds.labelRanges.toArray();
+            }
+            for (const label of labels) {
+                const def = this.fixeds.getDefinition(label.from);
+                const extra = label.multiarray ? label.multiarray.toDebugString():'';
+                console.log(`    \x1B[38;5;136m[fixed] ${label.label}${extra} at:${def.sourceRef}\x1B[0m`);
+            }
+        }
+
+        const debugConstraints = Context.config.debugConstraintsMatch ?? false;
+        if (debugConstraints !== false) {
+            let re;
+            if (typeof debugConstraints === 'string') {
+                re = new RegExp(debugConstraints);
+            } else {
+                re = {test: () => true};
+            }
+            for (const constraint of this.constraints.constraints) {
+                const text = this.constraints.getExpr(constraint.exprId).toString({hideClass: true});
+                if (!re.test(text)) continue;
+                console.log(`    \x1B[38;5;064m[constraint] ${text} at:${constraint.sourceRef}\x1B[0m`);
+            }
+        }
+    }
     finalClosingAirGroups() {
-        this.callDelayedFunctions('airgroup', 'final');
+        this.callDeferredFunctions('airgroup', 'final');
         let airGroupIdsClosed = [];
 
         // use newAirGroups to detect if new airgroups appers in last loop, only
@@ -1333,7 +1427,7 @@ module.exports = class Processor {
         chrono.end('PROTO-AIRGROUP-OUT-END');
     }
     finalAirScope() {
-        this.callDelayedFunctions('air', 'final');
+        this.callDeferredFunctions('air', 'final');
     }
     clearAirScope(label = '') {
         this.references.clearType('fixed', label);
@@ -1345,35 +1439,66 @@ module.exports = class Processor {
         this.hints.clear();
     }
     finalAirGroupScope() {
-        this.callDelayedFunctions('airgroup', 'final');
+        this.callDeferredFunctions('airgroup', 'final');
     }
     finalProofScope() {
-        this.callDelayedFunctions('proof', 'final');
+        this.callDeferredFunctions('proof', 'final');
     }
 
-    getDelayedScope(scope) {
+    getDeferredScope(scope) {
         const airGroupId = Context.airGroupId === false || typeof Context.airGroupId === 'undefined' ? '':Context.airGroupId;
         return scope === 'airgroup' ? `airgroup#${airGroupId}` : scope;
     }
-    callDelayedFunctions(scope, event) {
-        const _scope = this.getDelayedScope(scope);
-        let reentrant = false;
-        while (true) {
-            const delayedCalls = this.delayedCalls[_scope] ? (this.delayedCalls[_scope][event] ?? false) : false;
-            if (Context.config.logDelayedCalls && (!reentrant || delayedCalls !== false)) {
-                console.log(`  > [delayed call] execute ${reentrant?'reentrant ':''}delayed calls \x1B[38;5;208m${scope}@${event}\x1B[0m  => [${delayedCalls ? Object.keys(delayedCalls).map(x => '\x1B[38;5;208m'+x+'\x1B[0m').join(','):''}]`);
+    callDeferredFunctions(scope, event) {
+        const _scope = this.getDeferredScope(scope);
+        const reentrantEnabled = !Context.config.disableReentrantDeferredCalls;
+        let first = true;
+        let processed = {};
+        let previousDeferredCalls = [];
+        let deferredCalls = false;
+        let executedSomething = false;
+        do {
+            deferredCalls = this.deferredCalls[_scope] ? (this.deferredCalls[_scope][event] ?? false) : false;
+            if (deferredCalls !== false) {
+                deferredCalls = Object.entries(deferredCalls).map(([key, value]) => { return {...value, fname: key}}).sort((a, b) => Number(b.priority) - Number(a.priority));
             }
-            if (delayedCalls === false) {
-                return false;
+            if (first && deferredCalls && Context.config.logDeferredCalls) {
+                if (deferredCalls === false) console.log(`  > [deferred call] no deferred calls \x1B[38;5;208m${scope}@${event}\x1B[0m`);
+                else console.log(`  > [deferred call] execute ${first?'reentrant ':''}deferred calls \x1B[38;5;208m${scope}@${event}\x1B[0m  => [${deferredCalls ? deferredCalls.map(x => '\x1B[38;5;208m'+x.fname+(x.priority !== false ? '('+x.priority+')':'')+'\x1B[0m').join(','):''}]`);
             }
-            delete this.delayedCalls[_scope][event];
-            for (const fname in delayedCalls) {
-                if (Context.config.logDelayedCalls) {
-                    console.log(`  > [delayed call] execute ${reentrant?'reentrant ':''}\x1B[38;5;208m${fname}\x1B[0m`);
+            if (deferredCalls === false) {
+                break;
+            }
+
+            if (Context.config.logDeferredCalls) {
+                if (!first && previousDeferredCalls.length !== deferredCalls.length) {
+                    for (const deferredCall of deferredCalls) {
+                        if (previousDeferredCalls.includes(deferredCall.fname)) continue;
+                        console.log(`  > [deferred call] added a reentrant call \x1B[38;5;208m${deferredCall.fname+(deferredCall.priority !== false ? '('+deferredCall.priority+')':'')}\x1B[0m`);
+                    }
+                }
+                previousDeferredCalls = deferredCalls.map(x => x.fname);
+            }
+
+            executedSomething = false;
+            for (const deferredCall of deferredCalls) {
+                const fname = deferredCall.fname;
+                const priority = deferredCall.priority ?? false;
+                if (processed[fname]) {
+                    continue;
+                }
+                executedSomething = true;
+                processed[fname] = true;
+                if (Context.config.logDeferredCalls) {
+                    console.log(`  > [deferred call] execute \x1B[38;5;208m${fname+(priority !== false ? '('+priority+')':'')}\x1B[0m`);
                 }
                 this.execCall({ op: 'call', function: {name: fname}, args: [] });
+                if (reentrantEnabled) break;
             }
-            reentrant = true;
+            first = false;
+        } while (reentrantEnabled && executedSomething);
+        if (deferredCalls !== false) {
+            delete this.deferredCalls[_scope][event];
         }
     }
     execWitnessColDeclaration(s) {
@@ -1483,16 +1608,24 @@ module.exports = class Processor {
     execAirGroupValueDeclaration(s) {
         const name = s.items[0].name ?? '';
 
-        if (this.currentAirGroup === false) {
-            throw new Error(`airgroupvalue ${name} must be declared inside airtemplate`);
+        const scopeType = this.scope.getInstanceType();
+
+        if (scopeType !== 'air') {
+            throw new Error(`airgroupvalue ${name} must be declared inside air scope (current scope: ${scopeType})`);
+        }
+
+        if (s.aggregateType === false) {
+            throw new Error(`airgroupvalue ${name} without aggregation type, aggregation type is mandatory`);
         }
 
         // resolve compiler expression
         const stage = this.value2num(s.stage, 'stage');
 
+        const defaultValue = s.defaultValue ? this.value2num(s.defaultValue, 'defaultValue') : false;
+
         for (const value of s.items) {
             const lengths = this.decodeLengths(value);
-            const data = {aggregateType: s.aggregateType, airGroupId: this.airGroupId, sourceRef: this.sourceRef, stage};
+            const data = {aggregateType: s.aggregateType, airGroupId: this.airGroupId, sourceRef: this.sourceRef, stage, defaultValue};
             const res = this.currentAirGroup.declareAirGroupValue(value.name, lengths, data, this.currentAir.id);
         }
     }
@@ -1525,36 +1658,40 @@ module.exports = class Processor {
         // TODO: initialization
         // TODO: verification defined
     }
-    execDelayedFunctionCall(s) {
+    execDeferredFunctionCall(s) {
         const scope = s.scope;
         const fname = s.function.name;
         const event = s.event;
+        const priority = s.priority === false ? false : s.priority.evalAsInt();
         if (s.args.length > 0) {
-            throw new Error('delayed function call arguments are not yet supported');
+            throw new Error('deferred function call arguments are not yet supported');
         }
         if (event !== 'final') {
-            throw new Error(`delayed function call event ${event} no supported`);
+            throw new Error(`deferred function call event ${event} no supported`);
         }
         if (['proof', 'airgroup', 'air'].includes(scope) === false) {
-            throw new Error(`delayed function call scope ${scope} no supported`);
+            throw new Error(`deferred function call scope ${scope} no supported`);
         }
 
-        const _scope = this.getDelayedScope(scope);
-        if (typeof this.delayedCalls[_scope] === 'undefined') {
-            this.delayedCalls[_scope] = {};
+        const _scope = this.getDeferredScope(scope);
+        if (typeof this.deferredCalls[_scope] === 'undefined') {
+            this.deferredCalls[_scope] = {};
         }
-        if (typeof this.delayedCalls[_scope][event] === 'undefined') {
-            this.delayedCalls[_scope][event] = {};
+        if (typeof this.deferredCalls[_scope][event] === 'undefined') {
+            this.deferredCalls[_scope][event] = {};
         }
-        const redundant = typeof this.delayedCalls[_scope][event][fname] !== 'undefined'
+        const redundant = typeof this.deferredCalls[_scope][event][fname] !== 'undefined'
         if (!redundant) {
-            this.delayedCalls[_scope][event][fname] = {sourceRefs: []};
+            this.deferredCalls[_scope][event][fname] = {priority: false, sourceRefs: []};
         }
-        if (Context.config.logDelayedCalls && !redundant || Context.config.logRedundantDelayCalls) {
-            console.log(`  > [delayed call] ${redundant?'redundant ':''}register \x1B[38;5;208m${fname}\x1B[0m at ${Context.sourceTag} on \x1B[38;5;208m${scope}@${event}\x1B[0m`);
+        if (Context.config.logDeferredCalls && !redundant || Context.config.logRedundantDeferredCalls) {
+            console.log(`  > [deferred call] ${redundant?'redundant ':''}register \x1B[38;5;208m${fname}\x1B[0m at ${Context.sourceTag} ${priority === false?'':('(priority:'+priority+') ')}on \x1B[38;5;208m${scope}@${event}\x1B[0m`);
         }
-
-        this.delayedCalls[_scope][event][fname].sourceRefs.push(Context.sourceRef);
+        this.deferredCalls[_scope][event][fname].sourceRefs.push(Context.sourceRef);
+        const currentPriority = this.deferredCalls[_scope][event][fname].priority;
+        if (priority !== false && (currentPriority === false || currentPriority < priority)) {
+            this.deferredCalls[_scope][event][fname].priority = priority;
+        }
     }
     execExpr(s) {
         let options = {};
@@ -1608,12 +1745,24 @@ module.exports = class Processor {
     execCode(s) {
         return this.execute(s.statements,`CODE ${this.sourceRef}`);
     }
+    addAirGroupValueDefaultValueConstraint(airId, airGroupValue, defaultValue) {
+        if (airId === Context.airId) {
+            const item = airGroupValue.reference.getItem();
+            let expr = new Expression();
+            expr.insertOperation('sub', [item, new ExpressionItems.FeValue(defaultValue)]);
+            this.constraints.defineExpressionAsConstraint(expr);
+        } else if (this.proto) {
+            // adding directly to proto, becaused in this version all constraints of air was
+            // cleared after stored in proto.
+            this.proto.addAirGroupValueDefaultValueConstraint(airId, airGroupValue.data.airGroupId, airGroupValue.definition.relativeId, defaultValue);
+        }
+    }
     execConstraint(s) {
         const scopeType = this.scope.getInstanceType();
-        let id, expr, prefix = '';
 
         assert.instanceOf(s.left, Expression);
         assert.instanceOf(s.right, Expression);
+
         if (Debug.active) s.left.dump('LEFT-CONSTRAINT 1');
         // s.right.dump('RIGHT-CONSTRAINT 1');
         const left = s.left.instance();
@@ -1625,19 +1774,18 @@ module.exports = class Processor {
         if (Debug.active) _left.dump('LEFT-CONSTRAINT 3');
         if (Debug.active) _right.dump('RIGHT-CONSTRAINT 3');
         let global = (scopeType === 'proof');
-        if (scopeType === 'air') {
-            id = this.constraints.define(_left, _right,false,this.sourceRef);
-            expr = this.constraints.getExpr(id);
-        } else if (global) {
-            id = this.globalConstraints.define(_left, _right,false,this.sourceRef);
-            expr = this.globalConstraints.getExpr(id);
-            prefix = 'Global ';
-        } else {
+
+        if (!global && scopeType !== 'air') {
             throw new Error(`Constraint definition on invalid scope (${scopeType}) ${Context.sourceRef}`);
         }
+        const constraints = global ? this.globalConstraints : this.constraints;
+        const id = constraints.define(_left, _right,false,this.sourceRef);
+
         if (Context.config.outputConstraints || (Context.config.outputGlobalConstraints && scopeType === 'proof')) {
             const prompt = global ? '> ': '  > ';
             const color = global ? '\x1B[38;2;93;240;0m': '\x1B[38;2;192;255;2m';
+            const expr = constraints.getExpr(id);
+            const prefix = global ? 'Global ' : '';
             if (Context.config.bothConstraintsFormat || !Context.config.rawConstraintsFormat) {
                 console.log(`${prompt}${prefix}Constraint [${Context.proofLevel}] > ${color}${expr.toString({hideClass:true, hideLabel:false})} === 0\x1B[0m (${this.sourceRef})`);
             }

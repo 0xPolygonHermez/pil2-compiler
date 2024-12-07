@@ -583,7 +583,7 @@ statement_no_closed
     | expression '===' expression
         { $$ = { type: 'constraint', left: $1, right: $3 } }
 
-    | delayed_function_call
+    | deferred_function_call
         { $$ = $1 }
 
     | public_declaration
@@ -656,7 +656,7 @@ function_call
         { $$ = { type: 'call', function: $1, args: $3 } }
     ;
 
-delayed_function_event
+deferred_function_event
     : FINAL
       { $$ = $1 }
     ;
@@ -674,9 +674,12 @@ defined_scopes
     ;
 
 
-delayed_function_call
-    : ON delayed_function_event defined_scopes name_optional_index '(' multiple_expression_list ')'
-        { $$ = { type: 'delayed_function_call', event: $2, scope: $3, function: $4, args: $6 } }
+deferred_function_call
+    : ON deferred_function_event defined_scopes name_optional_index '(' multiple_expression_list ')'
+        { $$ = { type: 'deferred_function_call', event: $2, priority: false, scope: $3, function: $4, args: $6 } }
+
+    | ON deferred_function_event '(' expression ')' defined_scopes name_optional_index '(' multiple_expression_list ')'
+        { $$ = { type: 'deferred_function_call', event: $2, priority: $4, scope: $6, function: $7, args: $9 } }
     ;
 
 
@@ -980,12 +983,19 @@ include_directive
         { $$ = { type: 'require', private: false, public: true, file: ExpressionFactory.fromObject($2) } }
     ;
 
+optional_stage_definition
+    : stage_definition
+        { $$ = $1 }
+
+    | %prec NO_STAGE
+        { $$ = {} }
+    ;
+
+
 stage_definition
     : STAGE '(' NUMBER ')' %prec STAGE
         { $$ = { stage: $3 } }
 
-    | %prec NO_STAGE
-        { $$ = {} }
     ;
 
 name_id_list
@@ -1198,10 +1208,10 @@ col_declaration_list
 */
 
 col_declaration
-    : COL WITNESS stage_definition col_declaration_list
+    : COL WITNESS optional_stage_definition col_declaration_list
         { $$ = { type: 'witness_col_declaration', items: $4.items, stage: $3.stage ?? DEFAULT_COL_WITNESS_STAGE } }
 
-    | COL IDENTIFIER stage_definition col_declaration_list
+    | COL IDENTIFIER optional_stage_definition col_declaration_list
         { $$ = { type: 'custom_col_declaration', items: $4.items, stage: $3.stage ?? false, commit: $2 } }
 
     | COL FIXED col_declaration_list
@@ -1215,12 +1225,12 @@ col_declaration
     ;
 
 air_value_declaration
-    : AIR_VALUE stage_definition col_declaration_list
+    : AIR_VALUE optional_stage_definition col_declaration_list
         { $$ = { type: 'air_value_declaration', items: $3.items, stage: $2.stage ?? DEFAULT_AIR_VALUE_STAGE } }
     ;
 
 challenge_declaration
-    : CHALLENGE stage_definition col_declaration_list
+    : CHALLENGE optional_stage_definition col_declaration_list
         { $$ = { type: 'challenge_declaration', items: $3.items, stage: $2.stage ?? DEFAULT_CHALLENGE_STAGE } }
     ;
 
@@ -1245,14 +1255,50 @@ proof_value_declaration
         { $$ = { type: 'proof_value_declaration', items: $2.items } }
     ;
 
+default_value_definition
+    : DEFAULT '(' expression ')'
+        { $$ = { defaultValue: $3 }}
+    ;
+
+aggregate_type_definition
+    : AGGREGATE '(' IDENTIFIER ')'
+        { $$ = { aggregateType: $3 } }
+    ;
+
+air_group_value_properties
+    : air_group_value_properties stage_definition
+        { $$ = $1;
+          if (typeof $$.stage !== 'undefined') throw new Error('Duplicate stage definition');
+          $$.stage = $2.stage }
+
+    | air_group_value_properties default_value_definition
+        { $$ = $1;
+          if (typeof $$.defaultValue !== 'undefined') throw new Error('Duplicate default value definition');
+          $$.defaultValue = $2.defaultValue }
+
+    | air_group_value_properties aggregate_type_definition
+        { $$ = $1;
+          if (typeof $$.aggregateType !== 'undefined') throw new Error('Duplicate aggregate type definition');
+          $$.aggregateType = $2.aggregateType }
+
+    | aggregate_type_definition
+        { $$ = $1; }
+
+    | stage_definition
+        { $$ = $1; }
+
+    | default_value_definition
+        { $$ = $1; }
+    ;
+
 commit_declaration
     : COMMIT stage_definition public_reference IDENTIFIER
         { $$ = { type: 'commit_declaration', publics: $3.names, stage: $2.stage ?? false, name: $4 } }
     ;
 
 air_group_value_declaration
-    : AIR_GROUP_VALUE AGGREGATE '(' IDENTIFIER ')' stage_definition col_declaration_list
-        { $$ = { type: 'air_group_value_declaration', aggregateType: $4, stage: $6.stage ?? DEFAULT_AIR_GROUP_VALUE_STAGE, defaultValue: false, items: $7.items } }
+    : AIR_GROUP_VALUE air_group_value_properties col_declaration_list
+        { $$ = { stage: DEFAULT_AIR_GROUP_VALUE_STAGE, defaultValue: false, aggregateType: false, ...$2, type: 'air_group_value_declaration',  items: $3.items } }
     ;
 
 air_template_definition

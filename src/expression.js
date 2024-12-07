@@ -388,10 +388,6 @@ class Expression extends ExpressionItem {
     // in stackResults[pos][1] contains a results array of this stack position operands
     instance(options) {
         assert.ok(this.stack.length > 0);
-        if (Debug.active) {
-            console.log(Context.sourceRef);
-            this.dump("#############");
-        }
         let cloned = this.clone();
         options = {...options, instance: true}
         let stackResults = options.stackResults ?? cloned.evaluateOperands(options);
@@ -453,12 +449,7 @@ class Expression extends ExpressionItem {
     }
     evaluateFullStack(stackResults, options) {
         assert.ok(this.stack.length > 0);
-        const evaluateId = Expression.evaluatedGlobalId++; // Date.now();
-        if (Debug.active) {
-            this.dump(`evaluateFullStack #${evaluateId} BEGIN`);
-            console.log("\n", this.stackResultsToString(stackResults));
-        }
-        // console.log(util.inspect(stackResults, false, null, true));
+        const evaluateId = Expression.evaluatedGlobalId++;
         if (Debug.active) this.dump(`evaluateFullStack #${evaluateId} MIDDLE`);
         this.evaluateStackPos(stackResults, this.stack.length - 1, {...options, evaluateId});
         if (Debug.active) this.dump(`evaluateFullStack #${evaluateId} END`);
@@ -770,6 +761,28 @@ class Expression extends ExpressionItem {
         return results;
         // this method take one of results using indexes
     }
+    evaluateOperand(operand, options){
+        const _options = {...options, unroll: true};
+
+        let result = operand.eval(_options);
+        let updated = true;
+        while (result && updated) {
+            updated = false;
+            while (result && result.isReferencedType) {
+                result = result.eval();
+                updated = true;
+            }
+            while (result && result instanceof Expression && result.isAlone()) {
+                result = result.getAloneOperand();
+                updated = true;
+            }
+        }
+
+        if (typeof result === 'undefined') {
+            throw new Error(`Invalid result of operand ${operand}`);
+        }
+        return result;
+    }
     evaluateOperands(options) {
         // evaluation must be from left to right (l2r) operands, inside operand
         // also evaluation is l2r: prior, value, arguments (l2r), indexes (l2r)
@@ -795,27 +808,27 @@ class Expression extends ExpressionItem {
                     operandResults.push(null);
                     continue;
                 }
-                // console.log(`CALL OPERAND ${stpos}/${this.stack.length} ${operandIndex}/${st.operands.length} ${operand}`);
-
                 // optimization to get stackResults, to avoid calculate two times when
                 // insert into stack the expression (1)
-                const result = operand.eval(options);
-                // console.log(`RESULT #${stpos}/${operandIndex}`, operand, result);
-                if (typeof result === 'undefined') {
-                    console.log(operand);
-                    EXIT_HERE;
-                }
+                const result = this.evaluateOperand(operand, options);
                 operandResults.push(result);
+
                 if (options.instance && result !== null) {
                     if (Debug.active) this.dump(`AAAA.IN stpos:${stpos}`);
                     if (result instanceof Expression) {
+                        // result must not be an alone expression because in this case it has been simplied by content of
+                        // this expression (the alone operator)
+                        assert.equal(result.isAlone(), false);
+
                         // insert expression below current position
                         this.insertStack(result, stpos);
+
                         st.operands[operandIndex] = new ExpressionItems.StackItem(1);
 
                         // evaluate result, optimization (1), and after insert it
                         const stackResultToInsert = result.evaluateOperands(options);
                         stackResults.unshift(...stackResultToInsert);
+                        assert.equal(stackResultToInsert.length, result.stack.length);
 
                         // at this moment position was increased because some elements
                         // are added on below positions.
@@ -827,9 +840,6 @@ class Expression extends ExpressionItem {
                     }
                 }
             }
-        }
-        if (Debug.active) {
-            console.log("\n", this.stackResultsToString(stackResults));
         }
         return stackResults;
     }

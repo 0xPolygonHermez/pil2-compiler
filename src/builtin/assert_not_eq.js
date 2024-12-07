@@ -1,5 +1,8 @@
 const Function = require("../function.js");
+const Expression = require('../expression.js');
+const Context = require('../context.js');
 const IntValue = require('../expression_items/int_value.js');
+const assert = require('../assert.js');
 
 module.exports = class AssertNotEq extends Function {
     constructor (parent) {
@@ -9,10 +12,21 @@ module.exports = class AssertNotEq extends Function {
         if (s.args.length !== 2) {
             throw new Error('Invalid number of parameters');
         }
-        const arg0 = this.expressions.e2value(s.args[0]);
-        const arg1 = this.expressions.e2value(s.args[1]);
-        if (arg0 === arg1) {
-            throw new Error(`Assert fails (${arg0} !== ${arg1}) on ${this.parent.sourceRef}`);
+        assert.instanceOf(s.args[0], Expression);
+        assert.instanceOf(s.args[1], Expression);
+        const arg0 = s.args[0].eval();
+        const arg1 = s.args[1].eval();
+        if (arg0.equals(arg1)) {
+
+            const msg = (s.args[2] ? s.args[2].toString() + '\n' : '') + `Assert fails (${arg0} !== ${arg1}) on ${Context.sourceRef}`;
+            if (Context.tests.active) {
+                Context.tests.fail += 1;
+                Context.tests.msgs.push(msg);
+            } else {
+                throw new Error(msg);
+            }
+        } else if (Context.tests.active) {
+            Context.tests.ok += 1;
         }
         return 0n;
     }

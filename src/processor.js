@@ -223,6 +223,7 @@ module.exports = class Processor {
         this.finalClosingAirGroups();
         this.finalProofScope();
         this.scope.popInstanceType();
+        this.testSummary();
         if (this.proto) {
             this.memoryUpdate();
             console.log(`\nGenerating pilout (protobuf) ${Context.config.outputFile} .....`)
@@ -243,6 +244,19 @@ module.exports = class Processor {
         console.log('  > Total proto time ('+(Math.round((this.totalProtoTime * 10000)/compilationTime)/100)+'%): ' + units.getHumanTime(this.totalProtoTime));
         console.log('  > Memory: ' + units.getHumanSize(this.memoryInfo.maxMemory));
         console.log('  > Total compilation: ' + units.getHumanTime(compilationTime));
+        return Context.tests.active ? Context.tests.fail === 0 : true;
+    }
+    testSummary() {
+        if (!Context.tests.active) return;
+        if (Context.tests.fail > 0) {
+            console.log(`> tests OK: ${Context.tests.ok}`);
+            console.log(`> tests FAIL: ${Context.tests.fail} => \x1B[31mSome tests fails!!\x1B[0m`);
+            Context.tests.msgs.forEach(msg => { const lines = msg.split('\n');
+                lines.forEach(line => console.log('  - '+line));
+            });
+        } else {
+            console.log(`> tests OK: ${Context.tests.ok} => \x1B[32mAll tests passed\x1B[0m`);
+        }
     }
     generateProtoOut()
     {
@@ -480,6 +494,13 @@ module.exports = class Processor {
             case 'dump': {
                 const value = this.references.get(params[1]).value;
                 value.dump('*************** PRAGMA '+Context.sourceRef+' ***************');
+                break;
+            }
+            case 'test': {
+                Context.tests.active = true;
+                Context.tests.fail = Context.tests.fail ?? 0;
+                Context.tests.ok = Context.tests.ok ?? 0;
+                Context.tests.msgs = Context.tests.msgs ?? [];
                 break;
             }
             default:

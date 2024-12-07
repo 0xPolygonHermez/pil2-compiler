@@ -59,7 +59,7 @@ class Reference {
         return this.array ? this.array.getLocator(this.locator, indexes) : this.locator;
     }
     set (value, indexes = [], options = {}) {
-        if (Debug.active) console.stdebug(`set(${this.name}, [${indexes.join(',')}]`);
+        if (Debug.active) console.log(`set(${this.name}, [${indexes.join(',')}]`);
         assert.notStrictEqual(value, null); // to detect obsolete legacy uses
         // console.log(indexes.length, this.array.dim);
         if (!this.array || this.array.isFullIndexed(indexes) || this.array.isOverIndexed(indexes)) {

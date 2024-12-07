@@ -1,6 +1,7 @@
 const ProofItem = require("./proof_item.js");
 const IntValue = require('./int_value.js');
 const assert = require('../assert.js');
+const Context = require('../context.js');
 module.exports = class ExpressionReference extends ProofItem {
     constructor (id, instance, options = {}) {
         super(options);
@@ -13,6 +14,9 @@ module.exports = class ExpressionReference extends ProofItem {
             return value.degree;
         }
         return -1;
+    }
+    get isReferencedType() {
+        return true;
     }
     getTag() {
         return 'im';
@@ -50,4 +54,12 @@ module.exports = class ExpressionReference extends ProofItem {
         }
         return null;
     }
+    // toString(options = {}) {
+    //     console.log('ExpressionReference.toString', this.id, Context.sourceTag, options);
+    //     return this.instance.get(this.id).toString(options);
+    // }
+    // dump(options = {}) {
+    //     console.log('ExpressionReference.dump', this.id, Context.sourceTag, options);
+    //     return this.instance.get(this.id).dump(options);
+    // }
 }

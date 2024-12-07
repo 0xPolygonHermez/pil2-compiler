@@ -10,6 +10,7 @@ module.exports = class AirGroupValue extends ProofStageItem {
         this.sourceRef = data.sourceRef;
         this.label = data.label;
         this.relativeId = data.relativeId ?? false;
+        this.defaultValue = data.defaultValue ?? false;
     }
     clone() {
         return new AirGroupValue(this.id, { stage: this.stage,
@@ -17,6 +18,7 @@ module.exports = class AirGroupValue extends ProofStageItem {
                                             sourceRef: this.sourceRef,
                                             airGroupId: this.airGroupId,
                                             relativeId: this.relativeId,
+                                            defaultValue: this.defaultValue,
                                             label: (this.label && typeof this.label.clone === 'function') ? this.label.clone : this.label});
     }
 }

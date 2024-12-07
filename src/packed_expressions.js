@@ -2,7 +2,7 @@ const util = require('util');
 const assert = require('./assert.js');
 
 const OPERATOR_SYMBOLS = {mul: '*', add: '+', sub:'-', neg:'-'};
-const VALID_OBJ_TYPES = ['constant','challenge','airGroupValue','proofValue','publicValue','periodicCol','fixedCol','witnessCol','expression'];
+const VALID_OBJ_TYPES = ['constant','challenge','airGroupValue','proofValue','publicValue','periodicCol','fixedCol','witnessCol','customCol', 'expression'];
 module.exports = class PackedExpressions {
 
     constructor () {
@@ -77,6 +77,10 @@ module.exports = class PackedExpressions {
         assert.defined(colIdx);
         this.values.push({witnessCol: {colIdx, rowOffset, stage}});
     }
+    pushCustomCol (colIdx, rowOffset = 0, stage = 0) {
+        assert.defined(colIdx);
+        this.values.push({customCol: {colIdx, rowOffset, stage}});
+    }
     pushExpression (idx) {
         assert.defined(idx);
         this.values.push({expression: {idx}});
@@ -123,6 +127,9 @@ module.exports = class PackedExpressions {
 
             case 'witnessCol':
                 return this.rowOffsetToString(props.rowOffset, this.getLabel('witness', props.colIdx, options));
+
+            case 'customCol':
+                return this.rowOffsetToString(props.rowOffset, this.getLabel('customcol', props.colIdx, options));
 
             case 'publicValue':
                 return this.getLabel('public', props.idx, options);

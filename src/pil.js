@@ -21,6 +21,9 @@ const OPTIONS = {
     // TODO: log-hint (names), full log only of specified hints
     'log-hints': { describe: 'log all hints' },
     'log-fixed-resize': { describe: 'log all resizing of fixed' },
+    'log-deferred-calls': { describe: 'log all deferred calls (finals)'},
+    'log-redundant-deferred-calls': { describe: 'log redundant deferred calls (finals)'},
+    'disable-reentrant-deferred-calls': { describe: 'disable reentrant deferred calls (final)' },
     'no-proto-fixed-data': { describe: 'no store data of fixed inside pilout' },
     'output-constraints': { describe: 'output all air and global constraints generated' },
     'output-global-constraints': { describe: 'output all global constraints generated' },
@@ -161,11 +164,11 @@ async function run() {
             return [key, value];
         }));
 
-    const out = compile(F, fullFileName, null, config);
+    return compile(F, fullFileName, null, config);
 }
 
-run().then(()=> {
-    process.exitCode = 0;
+run().then(res => {
+    process.exitCode = res ? 0 : 1;
 }, (err) => {
     console.log(err.stack);
     if (err.pos) {

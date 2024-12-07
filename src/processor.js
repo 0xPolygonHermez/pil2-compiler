@@ -1257,7 +1257,7 @@ module.exports = class Processor {
         const N = this.rows;
         airGroup.airEnd(air.id);
         const ti2 = performance.now();
-        console.log('  > Witness cols: ' + witnessCols);
+        console.log('  > Witness cols: ' + witnessCols + ' from stage 1 (' + this.witness.countByStage(1).join() + ')');
         console.log('  > Fixed cols: ' + fixedCols);
         if (customCols) {
             const commitNames = this.customCols.getCommitNames().join(',');
@@ -1277,6 +1277,7 @@ module.exports = class Processor {
             console.log('  > Proto time: ' + units.getHumanTime(t2-t1));
         }
 
+        this.debugAirInfo();
         this.constraints = new Constraints();
 
         const t1 = performance.now();
@@ -1297,6 +1298,52 @@ module.exports = class Processor {
         console.log('  > Total time: ' + units.getHumanTime(t2-ti1));
 
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
+    }
+    debugAirInfo() {
+        let labels;
+        const debugWitness = Context.config.debugWitnessColsMatch ?? (Context.config.debugWitnessCols ?? false);
+        if (debugWitness !== false) {
+            if (typeof debugWitness === 'string') {
+                const re = new RegExp(debugWitness);
+                labels = this.witness.labelRanges.toArray().filter(x => re.test(x.label));
+            } else {
+                labels = this.witness.labelRanges.toArray();
+            }
+            for (const label of labels) {
+                const def = this.witness.getDefinition(label.from);
+                const extra = label.multiarray ? label.multiarray.toDebugString():'';
+                console.log(`    \x1B[38;5;142m[witness] ${label.label}${extra} stage:${def.stage} at:${def.sourceRef}\x1B[0m`);
+            }
+        }
+        const debugFixed = Context.config.debugFixedColsMatch ?? (Context.config.debugFixedCols ?? false);
+        if (debugFixed !== false) {
+            if (typeof debugFixed === 'string') {
+                const re = new RegExp(debugFixed);
+                labels = this.fixeds.labelRanges.toArray().filter(x => re.test(x.label));
+            } else {
+                labels = this.fixeds.labelRanges.toArray();
+            }
+            for (const label of labels) {
+                const def = this.fixeds.getDefinition(label.from);
+                const extra = label.multiarray ? label.multiarray.toDebugString():'';
+                console.log(`    \x1B[38;5;136m[fixed] ${label.label}${extra} at:${def.sourceRef}\x1B[0m`);
+            }
+        }
+
+        const debugConstraints = Context.config.debugConstraintsMatch ?? false;
+        if (debugConstraints !== false) {
+            let re;
+            if (typeof debugConstraints === 'string') {
+                re = new RegExp(debugConstraints);
+            } else {
+                re = {test: () => true};
+            }
+            for (const constraint of this.constraints.constraints) {
+                const text = this.constraints.getExpr(constraint.exprId).toString({hideClass: true});
+                if (!re.test(text)) continue;
+                console.log(`    \x1B[38;5;064m[constraint] ${text} at:${constraint.sourceRef}\x1B[0m`);
+            }
+        }
     }
     finalClosingAirGroups() {
         this.callDeferredFunctions('airgroup', 'final');

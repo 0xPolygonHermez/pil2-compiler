@@ -85,7 +85,7 @@ class Reference {
         const valueLen = isArray ? value.length : value.getLevelLength(vindexes);
 
         if (len !== valueLen) {
-            throw new Error(`Mismatch con array length (${len} vs ${valueLen}) on ${this.name}[${indexes.join('],[')}] level:${level} at ${Context.sourceRef}`);
+            throw new Error(`Mismatch con array length (${len} vs ${valueLen}) on ${this.name}[${indexes.join('][')}] level:${level} at ${Context.sourceRef}`);
         }
 
         for (let index = 0; index < len; ++index) {
@@ -224,7 +224,7 @@ class Reference {
         const [evaluatedIndexes, fromIndex, toIndex] = this.evaluateIndexes(indexes, options);
 
         if (evaluatedIndexes.length) {
-            label = label + '['+evaluatedIndexes.join('],[')+']';
+            label = label + '['+evaluatedIndexes.join('][')+']';
         }
         // if array is defined
         let res = false;

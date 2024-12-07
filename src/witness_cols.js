@@ -10,5 +10,13 @@ module.exports = class WitnessCols extends Indexable {
         let _options = options ?? {};
         return new WitnessCol(id, _options.stage ?? 1);
     }
-
+    countByStage(initialStage = 1) {
+        let stages = this.countByProperty('stage');
+        let maxStage = Object.keys(stages).reduce((maxStage, state) => Math.max(maxStage, state), initialStage);
+        let res = [];
+        for (let istage = initialStage; istage <= maxStage; ++istage) {
+            res.push(stages[istage] ?? 0);
+        }
+        return res;
+    }
 }

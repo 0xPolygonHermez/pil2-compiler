@@ -19,7 +19,7 @@ module.exports = class ArrayOf extends RuntimeItem {
         return true;
     }
     toString(options) {
-        return super.toString(options)+'['+this._array.lengths.join('],[')+`] D${this.dim}`;
+        return super.toString(options)+'['+this._array.lengths.join('][')+`] D${this.dim}`;
     }
     get dim() {
         return this._array.dim;

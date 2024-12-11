@@ -1,6 +1,8 @@
 const fs = require('fs');
 const protobuf = require('protobufjs');
 const util = require('util');
+const { createHash } = require('node:crypto');
+
 const argv = require("yargs")
     .usage("pilout_audit <pilout.file>")
     .argv;
@@ -63,6 +65,7 @@ class AirOut {
         this.fixUndefinedData();
 
         this.preprocessAirout();
+        this.checkFixed();
 
         this.printInfo();
         this.displaySymbols();
@@ -91,6 +94,45 @@ class AirOut {
                 air.airId = j;
 
                 air.symbols = this.getSymbolsByAirGroupIdAirId(airGroup.airGroupId, air.airId);
+
+                for(const subAirValue of subAirValues) {
+                    air.symbols.push( { ...subAirValue, airId: j });
+                }
+                air.hints = this.getHintsByAirGroupIdAirId(airGroup.airGroupId, air.airId);
+                air.numChallenges = this.numChallenges;
+                air.aggregationTypes = airGroup.airGroupvalues;
+            }
+        }
+    }
+
+    checkFixed() {
+        for(let i=0; i<this.airGroups.length; i++) {
+            const airGroup = this.airGroups[i];
+            airGroup.airGroupId = i;
+
+            const subAirValues = this.getSubAirValuesByAirGroupId(i);
+
+            for(let j=0; j<airGroup.airs.length; j++) {
+                const air = airGroup.airs[j];
+                air.airGroupId = i;
+                air.airId = j;
+
+                // air.symbols = this.getSymbolsByAirGroupIdAirId(airGroup.airGroupId, air.airId);
+                let data = new BigUint64Array(8); // 64 bytes = 512 bits block of sha
+                for (const fixedCol of air.fixedCols) {
+                    let index = 0;
+                    let sha256 = createHash('sha256');
+                    for (const value of fixedCol.values) {
+                        data[index] = this.buf2bint(value);
+                        index++;
+                        if (index === 8) {
+                            sha256.update(Buffer.from(data.buffer));
+                            index = 0;
+                        }
+                    }
+                    const digest = `0x${sha256.digest('hex')}`;
+                    console.log(`SHA256 airgroup:${i} air:${j}`, digest);
+                }
 
                 for(const subAirValue of subAirValues) {
                     air.symbols.push( { ...subAirValue, airId: j });
@@ -300,12 +342,12 @@ class AirOut {
             const name = hint.name;
             const airGroupId = hint.airGroupId ?? false;
             const airId = hint.airId ?? false;
+            console.log(`VERIFY HINT #${hintId} name:${name} airGroup:${airGroupId} air:${airId}`);
             const expressions = airGroupId === false && airId === false ? [] : this.airGroups[airGroupId].airs[airId].expressions;
             let referenced = new Array(expressions.length).fill(false);
             let ctx = {path: '', airGroupId, airId, expressions, referenced};
             for (let hintFieldId = 0; hintFieldId < hint.hintFields.length; ++hintFieldId) {
                 ctx.path = `[S:${airGroupId} A:${airId}] ${name} [${hintFieldId}]`;
-                // console.log(`VERIFY HINT FIELD ${ctx.path} airGroup:${airGroupId} air:${airId}`);
                 this.verifyHintField(ctx, hintFieldId, hint.hintFields[hintFieldId]);
             }
         }
@@ -357,10 +399,11 @@ class AirOut {
         let ctx = {path: `[airGroup:${airGroupId} air:${airId}]`, air: air.name, referenced, expressions, airGroupId, airId};
         console.log(`\x1B[1;36m##### AIR: ${air.name}  #####\x1B[0m`);
         for (let constraintId = 0; constraintId < constraints.length; ++constraintId) {
-            console.log(`--- constraint ${constraintId+1}/${constraints.length} ---`);
             const constraint = constraints[constraintId];
             const frame = Object.keys(constraint)[0];
-            const expressionId = constraint[frame].expressionIdx.idx;
+            const constraintData = constraint[frame];
+            const expressionId = constraintData.expressionIdx.idx;
+            console.log(`--- constraint ${constraintId+1}/${constraints.length} --- ${constraintData.debugLine}`);
             ctx.referenced[expressionId] = true;
             const res = this.expressionToString(ctx, expressionId, expressions[expressionId]);
             const degree = this.expressionDegree(ctx, expressionId, expressions[expressionId]);

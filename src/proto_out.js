@@ -488,7 +488,7 @@ module.exports = class ProtoOut {
         for (const [index, constraint] of constraints.keyValues()) {
             const packedExpressionId = constraints.getPackedExpressionId(constraint.exprId, packed);
             let payload = { expressionIdx: { idx: packedExpressionId },
-                            debugLine: '###'+constraints.getDebugInfo(index, packed) };
+                            debugLine: constraints.getDebugInfo(index, packed) };
             this.pilOut.constraints.push(payload);
         }
     }

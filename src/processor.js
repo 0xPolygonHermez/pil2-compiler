@@ -1779,7 +1779,7 @@ module.exports = class Processor {
             throw new Error(`Constraint definition on invalid scope (${scopeType}) ${Context.sourceRef}`);
         }
         const constraints = global ? this.globalConstraints : this.constraints;
-        const id = constraints.define(_left, _right,false,this.sourceRef);
+        const id = constraints.define(_left, _right,false,this.sourceTag);
 
         if (Context.config.outputConstraints || (Context.config.outputGlobalConstraints && scopeType === 'proof')) {
             const prompt = global ? '> ': '  > ';

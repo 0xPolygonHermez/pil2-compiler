@@ -209,6 +209,7 @@ module.exports = class Processor {
         this.references.declare('AIRGROUP', 'string', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('AIRGROUP_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
         this.references.declare('AIR_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
+        this.references.declare('AIR', 'string', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.StringValue(''));
     }
     startExecution(statements) {
         const t1 = performance.now();
@@ -1223,6 +1224,7 @@ module.exports = class Processor {
         this.references.set('BITS', [], air.bits ?? 0);
         // TODO: alert to AIR_ID because really was undefined
         this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? -1));
+        this.references.set('AIR', [], new ExpressionItems.StringValue(air.name ?? ''));
     }
     executeAirTemplate(airTemplate, airTemplateFunc, callinfo, options = {}) {
         const name = options.alias ? options.alias : airTemplate.name;

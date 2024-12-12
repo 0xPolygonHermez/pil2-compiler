@@ -1,0 +1,26 @@
+assert_eq(AIR, "");
+
+airtemplate A(int N = 2**8, const string air_name) {
+    assert_eq(AIR, air_name);
+    println(`my AIR name is "${AIR}"`);
+}
+
+assert_eq(AIR, "");
+
+airgroup A1 {
+    assert_eq(AIR, "");
+    A(air_name: "A");
+    assert_eq(AIR, "");
+}
+
+assert_eq(AIRGROUP_ID, -1);
+assert_eq(AIR_ID, -1);
+
+
+airgroup A2 {
+    assert_eq(AIR, "");
+    A(air_name: "AonA2") alias AonA2;
+    assert_eq(AIR, "");
+}
+
+assert_eq(AIR, "");

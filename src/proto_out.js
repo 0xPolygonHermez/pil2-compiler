@@ -265,14 +265,14 @@ module.exports = class ProtoOut {
                 return {type: REF_TYPE_AIR_VALUE, id, airId, airGroupId, stage};
             }
             case 'proofvalue':
-                const [protoId, stage] = this.proofValueId2ProtoId[id];
+                const [stage, protoId] = this.proofValueId2ProtoId[id];
                 return {type: REF_TYPE_PROOF_VALUE, id: protoId, stage};
 
             case 'public':
                 return {type: REF_TYPE_PUBLIC_VALUE, id};
 
             case 'challenge': {
-                const [protoId, stage] = this.challengeId2ProtoId[id];
+                const [stage, protoId] = this.challengeId2ProtoId[id];
                 const res = {type: REF_TYPE_CHALLENGE, id: protoId, stage};
                 return res;
             }
@@ -298,7 +298,7 @@ module.exports = class ProtoOut {
             }
             assert.ok(stage > 0);
             countByStage[stage-1] = (countByStage[stage-1] ?? 0) + 1;
-            id2proto[id] = [protoId, stage];
+            id2proto[id] = [stage, protoId];
             ++protoId;
         }
         return [Array.from(countByStage, x => x ?? 0), id2proto];
@@ -459,6 +459,18 @@ module.exports = class ProtoOut {
                     }
                     ope.witnessCol.colIdx = protoId;
                     ope.witnessCol.stage = stage;
+                }
+                break;
+            case 'proofValue': {
+                    // translate index of proofval because proofvals must be order by stage and
+                    // it implies change index number.
+                    const [stage, protoId] = this.proofValueId2ProtoId[ope.proofValue.idx] ?? [false, false];
+                    console.log('#### PROOFVALUE', stage, protoId, ope);
+                    if (protoId === false) {
+                        throw new Error(`Translate: Found invalid proofValueIdx ${ope.proofValue.idx}`);
+                    }
+                    ope.proofValue.idx = protoId;
+                    ope.proofValue.stage = stage;
                 }
                 break;
             case 'customCol': {

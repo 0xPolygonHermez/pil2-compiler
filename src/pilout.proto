@@ -193,7 +193,8 @@ message Operand {
     }
 
     message ProofValue {
-        uint32 idx = 1;
+        uint32 stage = 1;
+        uint32 idx = 2;
     }
 
     message AirGroupValue {

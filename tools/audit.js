@@ -60,7 +60,6 @@ class AirOut {
         const AirOut = protobuf.loadSync(airoutProto).lookupType("PilOut");
 
         const decoded = AirOut.decode(airoutEncoded);
-        console.log(decoded);
         Object.assign(this, AirOut.toObject(decoded));
         this.fixUndefinedData();
 
@@ -117,21 +116,24 @@ class AirOut {
                 air.airGroupId = i;
                 air.airId = j;
 
+                if (air.fixedCols) {
                 // air.symbols = this.getSymbolsByAirGroupIdAirId(airGroup.airGroupId, air.airId);
-                let data = new BigUint64Array(8); // 64 bytes = 512 bits block of sha
-                for (const fixedCol of air.fixedCols) {
-                    let index = 0;
-                    let sha256 = createHash('sha256');
-                    for (const value of fixedCol.values) {
-                        data[index] = this.buf2bint(value);
-                        index++;
-                        if (index === 8) {
-                            sha256.update(Buffer.from(data.buffer));
-                            index = 0;
+                    let data = new BigUint64Array(8); // 64 bytes = 512 bits block of sha
+                    for (const fixedCol of air.fixedCols) {
+                        if (!fixedCol.values) continue;
+                        let index = 0;
+                        let sha256 = createHash('sha256');
+                        for (const value of fixedCol.values) {
+                            data[index] = this.buf2bint(value);
+                            index++;
+                            if (index === 8) {
+                                sha256.update(Buffer.from(data.buffer));
+                                index = 0;
+                            }
                         }
+                        const digest = `0x${sha256.digest('hex')}`;
+                        console.log(`SHA256 airgroup:${i} air:${j}`, digest);
                     }
-                    const digest = `0x${sha256.digest('hex')}`;
-                    console.log(`SHA256 airgroup:${i} air:${j}`, digest);
                 }
 
                 for(const subAirValue of subAirValues) {
@@ -664,7 +666,7 @@ class AirOut {
             case 'challenge':
                 return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.CHALLENGE);
             case 'proofValue':
-                return this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.PROOF_VALUE);
+                return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.PROOF_VALUE);
             case 'airGroupValue':
                 return this.getSymbol({airGroupId: data.airGroupId, ...ctx}, data.idx, false, SYMBOL_TYPES.AIR_GROUP_VALUE);
             case 'airValue':

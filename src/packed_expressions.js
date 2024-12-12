@@ -57,9 +57,9 @@ module.exports = class PackedExpressions {
         assert.defined(idx);
         this.values.push({airValue: {idx}});
     }
-    pushProofValue (idx) {
+    pushProofValue (idx, stage = 1) {
         assert.defined(idx);
-        this.values.push({proofValue: {idx}});
+        this.values.push({proofValue: {stage, idx}});
     }
     pushPublicValue (idx) {
         assert.defined(idx);

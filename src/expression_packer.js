@@ -102,7 +102,7 @@ module.exports = class ExpressionPacker {
 
         } else if (ope instanceof ExpressionItems.ProofValue) {
             // container.pushProofValue(id)
-            this.container.pushProofValue(id);
+            this.container.pushProofValue(id, def.stage);
 
         } else if (ope instanceof ExpressionItems.AirGroupValue) {
             const def = Context.references.getDefinitionByItem(ope);

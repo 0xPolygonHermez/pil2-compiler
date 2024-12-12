@@ -48,6 +48,8 @@ module.exports = class ProtoOut {
         this.witnessId2ProtoId = [];
         this.fixedId2ProtoId = [];
         this.customId2ProtoId = [];
+        this.proofValueId2ProtoId = [];
+        this.challengeId2ProtoId = [];
         this.options = options;
         this.bigIntType = options.bigIntType ?? 'Buffer';
         this.toBaseField = this.mapBigIntType();
@@ -123,7 +125,7 @@ module.exports = class ProtoOut {
             blowupFactor: 3,
             airGroups: [],
             numChallenges: [],
-            numProofValues: 0,
+            numProofValues: [],
             numPublicValues: 0,
             publicTables: [],
             expressions: [],
@@ -263,13 +265,14 @@ module.exports = class ProtoOut {
                 return {type: REF_TYPE_AIR_VALUE, id, airId, airGroupId, stage};
             }
             case 'proofvalue':
-                return {type: REF_TYPE_PROOF_VALUE, id};
+                const [protoId, stage] = this.proofValueId2ProtoId[id];
+                return {type: REF_TYPE_PROOF_VALUE, id: protoId, stage};
 
             case 'public':
                 return {type: REF_TYPE_PUBLIC_VALUE, id};
 
             case 'challenge': {
-                const [protoId, stage] = this.challengeId2Proto[id];
+                const [protoId, stage] = this.challengeId2ProtoId[id];
                 const res = {type: REF_TYPE_CHALLENGE, id: protoId, stage};
                 return res;
             }
@@ -281,8 +284,27 @@ module.exports = class ProtoOut {
     setPublics(publics) {
         this.pilOut.numPublicValues = publics.length;
     }
+    getNumAndId2ProtoByStage(values) {
+        const _values = values.getPropertyValues(['id', 'stage']);
+        const valuesSortedByStageAndId = _values.sort((a,b) => (a[1] > b[1] || (a[1] == b[1] && a[0] > b[0])) ? 1 : -1);
+        let previousStage = false;
+        let protoId;
+        let countByStage = [];
+        let id2proto = [];
+        for (const [id, stage] of valuesSortedByStageAndId) {
+            if (previousStage !== stage) {
+                previousStage = stage;
+                protoId = 0;
+            }
+            assert.ok(stage > 0);
+            countByStage[stage-1] = (countByStage[stage-1] ?? 0) + 1;
+            id2proto[id] = [protoId, stage];
+            ++protoId;
+        }
+        return [Array.from(countByStage, x => x ?? 0), id2proto];
+    }
     setProofValues(proofvalues) {
-        this.pilOut.numProofValues = proofvalues.length;
+        [this.pilOut.numProofValues, this.proofValueId2ProtoId] = this.getNumAndId2ProtoByStage(proofvalues);
     }
     setFixedCols(fixedCols) {
         this.setConstantCols(fixedCols, this.currentAir.numRows, false);
@@ -291,23 +313,7 @@ module.exports = class ProtoOut {
         this.setConstantCols(periodicCols, this.currentAir.numRows, true);
     }
     setChallenges(challenges) {
-        const values = challenges.getPropertyValues(['id', 'stage']);
-        const valuesSortedByStageAndId = values.sort((a,b) => (a[1] > b[1] || (a[1] == b[1] && a[0] > b[0])) ? 1 : -1);
-        let previousStage = false;
-        let protoId;
-        let countByStage = [];
-        this.challengeId2Proto = [];
-        for (const [id, stage] of valuesSortedByStageAndId) {
-            if (previousStage !== stage) {
-                previousStage = stage;
-                protoId = 0;
-            }
-            assert.ok(stage > 0);
-            countByStage[stage-1] = (countByStage[stage-1] ?? 0) + 1;
-            this.challengeId2Proto[id] = [protoId, stage];
-            ++protoId;
-        }
-        this.pilOut.numChallenges = Array.from(countByStage, x => x ?? 0);
+        [this.pilOut.numChallenges, this.challengeId2ProtoId] = this.getNumAndId2ProtoByStage(challenges);
     }
     setConstantCols(cols, rows, periodic) {
         const property = periodic ? 'periodicCols':'fixedCols';

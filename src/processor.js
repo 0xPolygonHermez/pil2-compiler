@@ -1601,9 +1601,7 @@ module.exports = class Processor {
         this.commits.define(name, commit);
     }
     execProofValueDeclaration(s) {
-        this.declare(s, 'proofvalue', true, false);
-        // TODO: initialization
-        // TODO: verification defined
+        this.declare(s, 'proofvalue', true, false, {stage: Number(s.stage)});
     }
     execAirGroupValueDeclaration(s) {
         const name = s.items[0].name ?? '';

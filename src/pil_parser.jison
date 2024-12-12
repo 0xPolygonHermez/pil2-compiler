@@ -164,6 +164,7 @@ return                                      { return 'RETURN' }
 %{
 const DEFAULT_COL_WITNESS_STAGE = 1;
 const DEFAULT_CHALLENGE_STAGE = 2;
+const DEFAULT_PROOF_VALUE_STAGE = 1;
 const DEFAULT_AIR_VALUE_STAGE = 1;
 const DEFAULT_AIR_GROUP_VALUE_STAGE = 2;
 
@@ -1251,8 +1252,8 @@ public_table_declaration
     ;
 
 proof_value_declaration
-    : PROOF_VALUE col_declaration_list
-        { $$ = { type: 'proof_value_declaration', items: $2.items } }
+    : PROOF_VALUE optional_stage_definition col_declaration_list
+        { $$ = { type: 'proof_value_declaration', items: $3.items, stage: $2.stage ?? DEFAULT_AIR_VALUE_STAGE } }
     ;
 
 default_value_definition

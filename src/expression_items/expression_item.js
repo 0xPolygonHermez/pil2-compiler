@@ -177,7 +177,7 @@ class ExpressionItem {
     isClone(options) {
         return options.unroll || options.clone;
     }
-    eval(options) {
+    eval(options = {}) {
         let results = {};
         if (options.instance && this.rowOffset) {
             this.rowOffset = this.rowOffset.cloneInstance();

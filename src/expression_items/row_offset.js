@@ -1,8 +1,9 @@
 
 const assert = require('../assert.js');
+const Context = require('../context.js');
 class RowOffset {
     static Zero;
-    constructor (index, prior = false) {
+    constructor (index = 0, prior = false) {
         assert.typeOf(index.prior, 'undefined');
         this.index = (typeof index === 'object' && typeof index.clone === 'function') ? index.clone() : index;
         assert.typeOf(prior, 'boolean');
@@ -40,18 +41,39 @@ class RowOffset {
     isZero() {
         return this.value == 0;
     }
-    clone() {
-        return this.cloneInstance();
-    }
-    cloneInstance () {
+    clone(options = {}) {
         return new RowOffset(this.index, this.prior);
+    }
+    cloneInstance (options = {}) {
+        const clone = new RowOffset();
+        clone.setAsInt(this.getValue());
+        return clone;
     }
     getStrings() {
         const value = this.value;
-        if (!value) return ['',''];
-        const res = [this.prior ? `${value < -1 ? -value : ''}'`: '', this.prior ? '' : `'${value > 1 ? value : ''}`];
-        // console.log(['ROWOFFSET.GETSTRINGS', res]);
+        if (!value) {
+            return ['',''];
+        }
+        const res = [value < 0 ? `${value < -1 ? -value : ''}'`: '', value > 0 ? `'${value > 1 ? value : ''}`:''];
+        // const res = [this.prior ? `${value < -1 ? -value : ''}'`: '', this.prior ? '' : `'${value > 1 ? value : ''}`];
         return res;
+    }
+    setAsInt(value) {
+        if (value >= 0) {
+            this.index = value;
+            this.prior = false;
+        }
+        else if (value < 0) {
+            this.index = -value;
+            this.prior = true;
+        }
+    }
+    add(rowOffset) {
+        if (rowOffset instanceof RowOffset) {
+            this.setAsInt(this.getValue() + rowOffset.getValue());
+        } else {
+            this.setAsInt(this.getValue() + rowOffset);
+        }
     }
 }
 

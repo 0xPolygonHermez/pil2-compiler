@@ -6,6 +6,7 @@ module.exports = class WitnessCol extends ProofItem {
     constructor (id) {
         assert.defined(id);
         super(id);
+        this.rowOffsetApply = true;
         if (Debug.active) console.log('CONSTRUCTOR_WITNESS', id, this.id);
     }
     get degree() {

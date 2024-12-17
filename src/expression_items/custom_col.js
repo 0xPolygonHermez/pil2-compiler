@@ -6,6 +6,7 @@ module.exports = class CustomCol extends ProofItem {
     constructor (id) {
         assert.defined(id);
         super(id);
+        this.rowOffsetApply = true;
         if (Debug.active) console.log('CONSTRUCTOR_CUSTOM_COL', id, this.id);
     }
     get degree() {

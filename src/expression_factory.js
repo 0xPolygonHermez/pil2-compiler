@@ -24,7 +24,7 @@ module.exports = class ExpressionFactory {
             throw e; // new Error();
         }
     }
-    static _fromObject(obj, options = {}) {        
+    static _fromObject(obj, options = {}) {
         if (obj instanceof Expression) {
             // console.log('#########', Object.keys(obj).includes('type'));
             return obj;
@@ -112,11 +112,6 @@ module.exports = class ExpressionFactory {
         return res;
     }
     static _fromReference(obj) {
-        // if (obj.rowOffset) {
-        //     console.log('ROWOFFSET.FROMREFERENCE');
-        //     console.log(obj.rowOffset);
-        // }
-        // console.log(obj);
         let res = new ReferenceItem(obj.name, obj.indexes ?? [], obj.rowOffset);
         delete obj.name;
         delete obj.indexes;
@@ -178,7 +173,7 @@ module.exports = class ExpressionFactory {
     }
     static _fromRangeIndex(obj) {
         const from = obj.from ?? false;
-        const to = obj.to ?? false;        
+        const to = obj.to ?? false;
         delete obj.from;
         delete obj.to;
         return new RangeIndex(from, to);

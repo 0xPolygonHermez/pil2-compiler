@@ -2,6 +2,7 @@ const RuntimeItem = require("./runtime_item.js");
 const Context = require('../context.js');
 const RowOffset = require('./row_offset.js');
 const ExpressionItem = require('./expression_item.js');
+const ExpressionReference = require('./expression_reference.js');
 const Debug = require('../debug.js');
 const util = require('util');
 module.exports = class ReferenceItem extends RuntimeItem {
@@ -37,23 +38,20 @@ module.exports = class ReferenceItem extends RuntimeItem {
         return `${pre}${this.name}${this.indexes.length > 0 ? '['+_indexes.join('][')+']':''}${post}`;
     }
     cloneInstance() {
-        // console.log(JSON.stringify(this, (key, value) => typeof value === 'bigint' ? value.toString() : value));
         let cloned = new ReferenceItem(this.name, this.indexes, this.rowOffset);
-        // console.log(JSON.stringify(this, (key, value) => typeof value === 'bigint' ? value.toString() : value));
-        // console.log(JSON.stringify(cloned, (key, value) => typeof value === 'bigint' ? value.toString() : value));
         return cloned;
     }
     evalInside(options = {}) {
+        return this.evalInsideExtra().result;
+    }
+
+    evalInsideExtra(options = {}) {
         if (Debug.active) {
             console.log(['EVALINSIDE '+this.name, options]);
             console.log(this.rowOffset);
             console.log(this);
-            if (this.rowOffset.value) {
-                console.log('ROWOFFSET.EVALINSIDE');
-            }
         }
         const item = Context.references.getItem(this.name, this.indexes);
-        // console.log('EVAL ITEM INSIDE '+this.name + ' ' + item.constructor.name);
         if (item.isEmpty()) {
             throw new Error(`accessing to ${item.label} before his initialization at ${Context.sourceRef}`);
         }
@@ -66,6 +64,6 @@ module.exports = class ReferenceItem extends RuntimeItem {
             console.log(item);
             console.log(item.eval());
         }
-        return item.eval(options);
+        return {result: item.eval(options), isExpression: item.isExpression || item instanceof ExpressionReference};
     }
 }

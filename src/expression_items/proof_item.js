@@ -1,11 +1,13 @@
 const ExpressionItem = require("./expression_item.js");
 const IntValue = require('./int_value.js');
+const RowOffset = require('./row_offset.js');
 
 module.exports = class ProofItem extends ExpressionItem {
     static createWithId = true;
     constructor (id) {
         super();
         this.id = id;
+        this.rowOffsetApply = false;
     }
     getId() {
         return this.id;
@@ -48,6 +50,18 @@ module.exports = class ProofItem extends ExpressionItem {
     }
     operatorEq(b) {
         return new IntValue(this.id === b.id ? 1:0);
+    }
+    applyNext(rowOffset, options = {}) {
+        if (this.rowOffsetApply && rowOffset) {
+            if (this.rowOffset) {
+                this.rowOffset.add(rowOffset);
+            } else if (typeof rowOffset === 'number') {
+                this.rowOffset = new RowOffset(Math.abs(rowOffset), rowOffset < 0);
+            } else {
+                this.rowOffset = rowOffset;
+            }
+        }
+        return this;
     }
 }
 

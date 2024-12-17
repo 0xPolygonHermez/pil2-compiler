@@ -1811,7 +1811,6 @@ module.exports = class Processor {
             if (initialization) {
                 const init = s.multiple ? s.init.getItem([index]) : s.init;
                 if (init instanceof ExpressionItems.ExpressionList) {
-                    if (Context.sourceTag === 'gl_groups_small.pil:9') debugger;
                     initValue = init.eval();
                 } else {
                     if (Debug.active) console.log(name, s.vtype, Context.sourceRef);

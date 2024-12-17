@@ -5,6 +5,7 @@ const Context = require('../context.js');
 module.exports = class FixedCol extends ProofItem {
     constructor (id) {
         super(id);
+        this.rowOffsetApply = true;
     }
     get degree() {
         return 1;

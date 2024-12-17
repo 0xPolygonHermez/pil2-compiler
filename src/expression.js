@@ -118,7 +118,8 @@ class Expression extends ExpressionItem {
     }
 
     applyNext(value) {
-        this.stack.map(stack => stack.operands.map(operand => this.assertExpressionItem(operand.applyNext(value))));
+        this.stack.map(stack => stack.operands.map(operand => assert.returnInstanceOf(operand.applyNext(value), 'ExpressionItem')));
+        return this;
     }
 
     insertStack(expressionToInsert, stackIndex) {

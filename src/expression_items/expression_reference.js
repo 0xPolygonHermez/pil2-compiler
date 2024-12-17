@@ -54,12 +54,4 @@ module.exports = class ExpressionReference extends ProofItem {
         }
         return null;
     }
-    // toString(options = {}) {
-    //     console.log('ExpressionReference.toString', this.id, Context.sourceTag, options);
-    //     return this.instance.get(this.id).toString(options);
-    // }
-    // dump(options = {}) {
-    //     console.log('ExpressionReference.dump', this.id, Context.sourceTag, options);
-    //     return this.instance.get(this.id).dump(options);
-    // }
 }

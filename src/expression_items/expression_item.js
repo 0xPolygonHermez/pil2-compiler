@@ -55,9 +55,11 @@
 */
 const Exceptions = require('../exceptions.js');
 const Debug = require('../debug.js');
+const { result } = require('lodash');
+const assert = require('../assert.js');
 class ExpressionItem {
     static _classToManager = {};
-
+    #rowOffset;
     constructor(options = {}) {
         this.options = options;
         this.indexes = false;
@@ -134,13 +136,13 @@ class ExpressionItem {
         }
     }
     get rowOffset() {
-        return this._rowOffset;
+        return this.#rowOffset;
     }
     set rowOffset(value) {
         if (Debug.active) {
             if (!value.isZero()) console.log(['ROWOFFSET.SET', value]);
         }
-        this._rowOffset = value;
+        this.#rowOffset = value;
     }
     clone() {
         let cloned = this.cloneInstance();
@@ -172,13 +174,27 @@ class ExpressionItem {
         const value = this.rowOffset.getValue(options);
         return value;
     }
-    eval(options) {
+    isClone(options) {
+        return options.unroll || options.clone;
+    }
+    eval(options = {}) {
         let results = {};
-        const _options = options ? {...options, results} : {results};
-        results.prior = this.evalPrior(options);
-        results.inside = this.evalInside({...options, asItem: true});
-        results.next = this.evalNext(options);
-        return results.final ? results.final : results.inside;
+        if (options.instance && this.rowOffset) {
+            this.rowOffset = this.rowOffset.cloneInstance();
+        }
+        const prior = this.evalPrior(options);
+        const inside = this.evalInsideExtra({...options, asItem: true});
+        const next = this.evalNext(options);
+        const rowOffset = (next ? next : 0) + (prior ? prior : 0);
+        if (rowOffset === 0 || !inside.isExpression) {
+            return inside.result;
+        }
+        assert.ok(this.isClone(options));
+        if (typeof inside.result.applyNext !== 'function') {
+            console.log(inside.result);
+            throw new Error(`applyNext not defined for class ${inside.result.constructor.name}`);
+        }
+        return inside.result.applyNext(rowOffset, options);
     }
     evalAsItem(options) {
         return this.clone();
@@ -206,6 +222,12 @@ class ExpressionItem {
     }
     getAloneOperand() {
         return this;
+    }
+    applyNext(rowOffset) {
+        return this;
+    }
+    evalInsideExtra(options = {}) {
+        return {result: this.evalInside(options)};
     }
 }
 

@@ -364,7 +364,8 @@ class AirOut {
                 break;
             case 'operand':
                 ctx.path = `${_ctxpath}${name}`;
-                this.verifyExpressionOperand(ctx, data);
+                const res = this.verifyExpressionOperand(ctx, data);
+                console.log(`HINTFIELD ${name} ${cls} ####\n${res}`);
                 break;
             case 'hintFieldArray': {
                 for (let hintFieldIndex = 0; hintFieldIndex < data.hintFields.length; ++hintFieldIndex) {
@@ -499,11 +500,13 @@ class AirOut {
                     ctx.referenced[idx] = true;
                     this.verifyExpression(ctx, idx, ctx.expressions[idx]);
                     ctx.referenced[idx] = false;
+                    return this.expressionToString(ctx, idx, ctx.expressions[idx]);
                 }
                 break;
             default:
                 throw new Error(`invalid cls:${cls}`);
         }
+        return '';
     }
 
     expressionToString(ctx, id, expression) {
@@ -644,11 +647,13 @@ class AirOut {
     }
     operandToString(ctx, id, operand, parentOperation = false) {
         let res = this._operandToString(ctx, id, operand, parentOperation);
-        if (operand.rowOffset) {
-            if (operand.rowOffset > 0) {
-                res = `${res}'${operand.rowOffset == 1 ? '':operand.rowOffset}`;
+        const cls = Object.keys(operand)[0];
+        const rowOffset = operand[cls].rowOffset ?? false;
+        if (rowOffset) {
+            if (rowOffset > 0) {
+                res = `${res}'${rowOffset == 1 ? '':rowOffset}`;
             } else {
-                res = `${operand.rowOffset == -1 ? '':-operand.rowOffset}'${res}` ;
+                res = `${rowOffset == -1 ? '':-rowOffset}'${res}` ;
             }
         }
         return res;

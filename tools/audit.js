@@ -120,6 +120,7 @@ class AirOut {
                 // air.symbols = this.getSymbolsByAirGroupIdAirId(airGroup.airGroupId, air.airId);
                 let data = new BigUint64Array(8); // 64 bytes = 512 bits block of sha
                 for (const fixedCol of air.fixedCols) {
+		    if (!fixedCol.values) continue;
                     let index = 0;
                     let sha256 = createHash('sha256');
                     for (const value of fixedCol.values) {

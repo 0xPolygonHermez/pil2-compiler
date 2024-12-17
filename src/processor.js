@@ -26,6 +26,8 @@ const ProtoOut = require("./proto_out.js");
 const FixedCols = require("./fixed_cols.js");
 const WitnessCols = require("./witness_cols.js");
 const CustomCols = require("./custom_cols.js");
+const ProofValues = require("./proof_values.js");
+const Challenges = require("./challenges.js");
 const AirValues = require("./air_values.js");
 const AirGroupValues = require("./air_group_values.js");
 const Iterator = require("./iterator.js");
@@ -107,11 +109,11 @@ module.exports = class Processor {
         ExpressionItem.setManager(ExpressionItems.Public, this.publics);
         this.references.register('public', this.publics);
 
-        this.challenges = new Indexable('challenge', DefinitionItems.Challenge, ExpressionItems.Challenge);
+        this.challenges = new Challenges();
         ExpressionItem.setManager(ExpressionItems.Challenge, this.challenges);
         this.references.register('challenge', this.challenges);
 
-        this.proofValues = new Indexable('proofvalue', DefinitionItems.ProofValue, ExpressionItems.ProofValue);
+        this.proofValues = new ProofValues();
         ExpressionItem.setManager(ExpressionItems.ProofValue, this.proofValues);
         this.references.register('proofvalue', this.proofValues);
 

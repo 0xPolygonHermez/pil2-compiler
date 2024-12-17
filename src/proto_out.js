@@ -48,8 +48,6 @@ module.exports = class ProtoOut {
         this.witnessId2ProtoId = [];
         this.fixedId2ProtoId = [];
         this.customId2ProtoId = [];
-        this.proofValueId2ProtoId = [];
-        this.challengeId2ProtoId = [];
         this.options = options;
         this.bigIntType = options.bigIntType ?? 'Buffer';
         this.toBaseField = this.mapBigIntType();
@@ -265,15 +263,17 @@ module.exports = class ProtoOut {
                 return {type: REF_TYPE_AIR_VALUE, id, airId, airGroupId, stage};
             }
             case 'proofvalue':
-                const [stage, protoId] = this.proofValueId2ProtoId[id];
-                return {type: REF_TYPE_PROOF_VALUE, id: protoId, stage};
+                const stage = assert.returnTypeOf(ref.stage, 'number');
+                const relativeId = assert.returnTypeOf(ref.relativeId, 'number');
+                return {type: REF_TYPE_PROOF_VALUE, id: relativeId, stage};
 
             case 'public':
                 return {type: REF_TYPE_PUBLIC_VALUE, id};
 
             case 'challenge': {
-                const [stage, protoId] = this.challengeId2ProtoId[id];
-                const res = {type: REF_TYPE_CHALLENGE, id: protoId, stage};
+                const stage = assert.returnTypeOf(ref.stage, 'number');
+                const relativeId = assert.returnTypeOf(ref.relativeId, 'number');
+                const res = {type: REF_TYPE_CHALLENGE, id: relativeId, stage};
                 return res;
             }
 
@@ -284,27 +284,18 @@ module.exports = class ProtoOut {
     setPublics(publics) {
         this.pilOut.numPublicValues = publics.length;
     }
-    getNumAndId2ProtoByStage(values) {
+    getNumByStage(values) {
         const _values = values.getPropertyValues(['id', 'stage']);
         const valuesSortedByStageAndId = _values.sort((a,b) => (a[1] > b[1] || (a[1] == b[1] && a[0] > b[0])) ? 1 : -1);
-        let previousStage = false;
-        let protoId;
         let countByStage = [];
-        let id2proto = [];
         for (const [id, stage] of valuesSortedByStageAndId) {
-            if (previousStage !== stage) {
-                previousStage = stage;
-                protoId = 0;
-            }
             assert.ok(stage > 0);
             countByStage[stage-1] = (countByStage[stage-1] ?? 0) + 1;
-            id2proto[id] = [stage, protoId];
-            ++protoId;
         }
-        return [Array.from(countByStage, x => x ?? 0), id2proto];
+        return Array.from(countByStage, x => x ?? 0);
     }
     setProofValues(proofvalues) {
-        [this.pilOut.numProofValues, this.proofValueId2ProtoId] = this.getNumAndId2ProtoByStage(proofvalues);
+        this.pilOut.numProofValues = this.getNumByStage(proofvalues);
     }
     setFixedCols(fixedCols) {
         this.setConstantCols(fixedCols, this.currentAir.numRows, false);
@@ -313,7 +304,7 @@ module.exports = class ProtoOut {
         this.setConstantCols(periodicCols, this.currentAir.numRows, true);
     }
     setChallenges(challenges) {
-        [this.pilOut.numChallenges, this.challengeId2ProtoId] = this.getNumAndId2ProtoByStage(challenges);
+        this.pilOut.numChallenges = this.getNumByStage(challenges);
     }
     setConstantCols(cols, rows, periodic) {
         const property = periodic ? 'periodicCols':'fixedCols';
@@ -461,18 +452,8 @@ module.exports = class ProtoOut {
                     ope.witnessCol.stage = stage;
                 }
                 break;
-            case 'proofValue': {
-                    // translate index of proofval because proofvals must be order by stage and
-                    // it implies change index number.
-                    const [stage, protoId] = this.proofValueId2ProtoId[ope.proofValue.idx] ?? [false, false];
-                    console.log('#### PROOFVALUE', stage, protoId, ope);
-                    if (protoId === false) {
-                        throw new Error(`Translate: Found invalid proofValueIdx ${ope.proofValue.idx}`);
-                    }
-                    ope.proofValue.idx = protoId;
-                    ope.proofValue.stage = stage;
-                }
-                break;
+            // case 'proofValue': idx is relativeId when pushed in packer.
+            // case 'challenge': idx is relativeId when pushed in packer.
             case 'customCol': {
                     const [stage, protoId, commitId] = this.customId2ProtoId[ope.customCol.colIdx] ?? [false, false];
                     // console.log(`TRANSLATE customCol colIdx:${ope.customCol.colIdx}=>${protoId} rowOffset:${ope.customCol.rowOffset} stage:${ope.customCol.stage}=>${stage}`);

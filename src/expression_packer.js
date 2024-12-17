@@ -93,16 +93,13 @@ module.exports = class ExpressionPacker {
             this.container.pushCustomCol(id, ope.getRowOffset(), def.stage);
 
         } else if (ope instanceof ExpressionItems.Public) {
-            // container.pushPublicValue(id)
             this.container.pushPublicValue(id);
 
         } else if (ope instanceof ExpressionItems.Challenge) {
-            // container.pushChallenge(id, stage ?? 1);
-            this.container.pushChallenge(id, def.stage);
+            this.container.pushChallenge(def.relativeId, def.stage);
 
         } else if (ope instanceof ExpressionItems.ProofValue) {
-            // container.pushProofValue(id)
-            this.container.pushProofValue(id, def.stage);
+            this.container.pushProofValue(def.relativeId, def.stage);
 
         } else if (ope instanceof ExpressionItems.AirGroupValue) {
             const def = Context.references.getDefinitionByItem(ope);

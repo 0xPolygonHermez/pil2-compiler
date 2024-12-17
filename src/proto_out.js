@@ -214,7 +214,7 @@ module.exports = class ProtoOut {
         for(const [name, ref] of symbols) {
             try {
                 const arrayInfo = ref.array ? ref.array : {dim: 0, lengths: []};
-                const sym2proto = this.symbolType2Proto(ref.type, ref.locator, {...ref, data});
+                const sym2proto = this.symbolType2Proto(ref.type, ref.locator, {...ref, data: {...ref.data, ...data}});
                 let payout = {
                     name,
                     dim: arrayInfo.dim,
@@ -263,18 +263,19 @@ module.exports = class ProtoOut {
                 return {type: REF_TYPE_AIR_VALUE, id, airId, airGroupId, stage};
             }
             case 'proofvalue':
-                const stage = assert.returnTypeOf(ref.stage, 'number');
-                const relativeId = assert.returnTypeOf(ref.relativeId, 'number');
+                const def = ref.instance.getDefinition(id);
+                const stage = assert.returnTypeOf(def.stage, 'number');
+                const relativeId = assert.returnTypeOf(def.relativeId, 'number');
                 return {type: REF_TYPE_PROOF_VALUE, id: relativeId, stage};
 
             case 'public':
                 return {type: REF_TYPE_PUBLIC_VALUE, id};
 
             case 'challenge': {
-                const stage = assert.returnTypeOf(ref.stage, 'number');
-                const relativeId = assert.returnTypeOf(ref.relativeId, 'number');
-                const res = {type: REF_TYPE_CHALLENGE, id: relativeId, stage};
-                return res;
+                const def = ref.instance.getDefinition(id);
+                const stage = assert.returnTypeOf(def.stage, 'number');
+                const relativeId = assert.returnTypeOf(def.relativeId, 'number');
+                return {type: REF_TYPE_CHALLENGE, id: relativeId, stage};
             }
 
         }

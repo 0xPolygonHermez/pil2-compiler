@@ -93,12 +93,6 @@ airtemplate A (int N = 2**8) {
     'a === 0;
     a'2 === 0;
     2'a === 0;
-//    col witness a,b,c,d;
-//
-//    expr e = a + 'b + c' * 2 * d'2;
-//    println(string(e * 4));
-//    println(string(e' * 4));
-//    println(string('e * 4));
 }
 
 airgroup A1 {

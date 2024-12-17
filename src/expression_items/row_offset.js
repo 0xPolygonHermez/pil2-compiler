@@ -54,9 +54,7 @@ class RowOffset {
         if (!value) {
             return ['',''];
         }
-        const res = [value < 0 ? `${value < -1 ? -value : ''}'`: '', value > 0 ? `'${value > 1 ? value : ''}`:''];
-        // const res = [this.prior ? `${value < -1 ? -value : ''}'`: '', this.prior ? '' : `'${value > 1 ? value : ''}`];
-        return res;
+        return [value < 0 ? `${value < -1 ? -value : ''}'`: '', value > 0 ? `'${value > 1 ? value : ''}`:''];
     }
     setAsInt(value) {
         if (value >= 0) {

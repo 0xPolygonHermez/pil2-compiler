@@ -21,12 +21,20 @@ const OPTIONS = {
     // TODO: log-hint (names), full log only of specified hints
     'log-hints': { describe: 'log all hints' },
     'log-fixed-resize': { describe: 'log all resizing of fixed' },
+    'log-deferred-calls': { describe: 'log all deferred calls (finals)'},
+    'log-redundant-deferred-calls': { describe: 'log redundant deferred calls (finals)'},
+    'disable-reentrant-deferred-calls': { describe: 'disable reentrant deferred calls (final)' },
     'no-proto-fixed-data': { describe: 'no store data of fixed inside pilout' },
     'output-constraints': { describe: 'output all air and global constraints generated' },
     'output-global-constraints': { describe: 'output all global constraints generated' },
     'raw-constraints-format': { describe: 'if output constraints are enabled only in raw format' },
     'both-constraints-format': { describe: 'if output constraints are enabled show named and raw format' },
-    'ignore-unknown-pragmas': { describe: 'ignore unknown pragmas' }
+    'ignore-unknown-pragmas': { describe: 'ignore unknown pragmas' },
+    'debug-fixed-cols': { describe: 'debug fixed columns' },
+    'debug-witness-cols': { describe: 'debug witness columns' },
+    'debug-fixed-cols-match': { describe: 'debug fixed columns match with pattern' },
+    'debug-witness-cols-match': { describe: 'debug witness columns match with pattern' },
+    'debug-constraints-match': { describe: 'debug constraints match with pattern' }
     // TODO: option to force witness name as snake_case and air, airtemplate, airgroup in CamelCase
 }
 
@@ -156,11 +164,11 @@ async function run() {
             return [key, value];
         }));
 
-    const out = compile(F, fullFileName, null, config);
+    return compile(F, fullFileName, null, config);
 }
 
-run().then(()=> {
-    process.exitCode = 0;
+run().then(res => {
+    process.exitCode = res ? 0 : 1;
 }, (err) => {
     console.log(err.stack);
     if (err.pos) {

@@ -1,6 +1,8 @@
 const fs = require('fs');
 const protobuf = require('protobufjs');
 const util = require('util');
+const { createHash } = require('node:crypto');
+
 const argv = require("yargs")
     .usage("pilout_audit <pilout.file>")
     .argv;
@@ -21,6 +23,7 @@ const SYMBOL_TYPES = {
     PUBLIC_TABLE: 7,
     CHALLENGE: 8,
     AIR_VALUE: 9,
+    CUSTOM_COL: 10,
 };
 
 const HINT_FIELD_TYPES = {
@@ -61,6 +64,7 @@ class AirOut {
         this.fixUndefinedData();
 
         this.preprocessAirout();
+        this.checkFixed();
 
         this.printInfo();
         this.displaySymbols();
@@ -100,6 +104,46 @@ class AirOut {
         }
     }
 
+    checkFixed() {
+        for(let i=0; i<this.airGroups.length; i++) {
+            const airGroup = this.airGroups[i];
+            airGroup.airGroupId = i;
+
+            const subAirValues = this.getSubAirValuesByAirGroupId(i);
+
+            for(let j=0; j<airGroup.airs.length; j++) {
+                const air = airGroup.airs[j];
+                air.airGroupId = i;
+                air.airId = j;
+
+                // air.symbols = this.getSymbolsByAirGroupIdAirId(airGroup.airGroupId, air.airId);
+                let data = new BigUint64Array(8); // 64 bytes = 512 bits block of sha
+                for (const fixedCol of air.fixedCols) {
+		    if (!fixedCol.values) continue;
+                    let index = 0;
+                    let sha256 = createHash('sha256');
+                    for (const value of fixedCol.values) {
+                        data[index] = this.buf2bint(value);
+                        index++;
+                        if (index === 8) {
+                            sha256.update(Buffer.from(data.buffer));
+                            index = 0;
+                        }
+                    }
+                    const digest = `0x${sha256.digest('hex')}`;
+                    console.log(`SHA256 airgroup:${i} air:${j}`, digest);
+                }
+
+                for(const subAirValue of subAirValues) {
+                    air.symbols.push( { ...subAirValue, airId: j });
+                }
+                air.hints = this.getHintsByAirGroupIdAirId(airGroup.airGroupId, air.airId);
+                air.numChallenges = this.numChallenges;
+                air.aggregationTypes = airGroup.airGroupvalues;
+            }
+        }
+    }
+
     printInfo() {
         log.info("[audit]", `··· AirOut Info`);
         log.info("[audit]", `    Name: ${this.name}`);
@@ -126,7 +170,8 @@ class AirOut {
     printAirInfo(air) {
         log.info("[audit]", `       + Air '${air.name}'`);
         log.info("[audit]", `         NumRows:     ${air.numRows}`);
-        log.info("[audit]", `         Stages:      ${air.stageWidths.length}`);
+        if (air.stageWidths) log.info("[audit]", `         Stages:      ${air.stageWidths.length}`);
+        if (air.customCommits) log.info("[audit]", `         Custom Commits:      ${air.customCommits.length}`);
         if (air.expressions) log.info("[audit]", `         Expressions: ${air.expressions.length}`);
         if (air.constraints) log.info("[audit]", `         Constraints: ${air.constraints.length}`);
     }
@@ -150,6 +195,7 @@ class AirOut {
             case SYMBOL_TYPES.PUBLIC_TABLE: return 'PUBLIC_TABLE';
             case SYMBOL_TYPES.CHALLENGE: return 'CHALLENGE';
             case SYMBOL_TYPES.AIR_VALUE: return 'AIR_VALUE';
+            case SYMBOL_TYPES.CUSTOM_COL: return 'CUSTOM_COL';
         }
         return `(${type})`;
     }
@@ -288,6 +334,7 @@ class AirOut {
                 this.verifyAirConstraints(airGroupId, airId);
             }
         }
+        this.verifyGlobalConstraints();
     }
     verifyHints() {
         for (let hintId = 0; hintId < this.hints.length; ++hintId) {
@@ -295,12 +342,12 @@ class AirOut {
             const name = hint.name;
             const airGroupId = hint.airGroupId ?? false;
             const airId = hint.airId ?? false;
+            console.log(`VERIFY HINT #${hintId} name:${name} airGroup:${airGroupId} air:${airId}`);
             const expressions = airGroupId === false && airId === false ? [] : this.airGroups[airGroupId].airs[airId].expressions;
             let referenced = new Array(expressions.length).fill(false);
             let ctx = {path: '', airGroupId, airId, expressions, referenced};
             for (let hintFieldId = 0; hintFieldId < hint.hintFields.length; ++hintFieldId) {
                 ctx.path = `[S:${airGroupId} A:${airId}] ${name} [${hintFieldId}]`;
-                // console.log(`VERIFY HINT FIELD ${ctx.path} airGroup:${airGroupId} air:${airId}`);
                 this.verifyHintField(ctx, hintFieldId, hint.hintFields[hintFieldId]);
             }
         }
@@ -315,7 +362,8 @@ class AirOut {
                 break;
             case 'operand':
                 ctx.path = `${_ctxpath}${name}`;
-                this.verifyExpressionOperand(ctx, data);
+                const res = this.verifyExpressionOperand(ctx, data);
+                console.log(`HINTFIELD ${name} ${cls} ####\n${res}`);
                 break;
             case 'hintFieldArray': {
                 for (let hintFieldIndex = 0; hintFieldIndex < data.hintFields.length; ++hintFieldIndex) {
@@ -352,10 +400,30 @@ class AirOut {
         let ctx = {path: `[airGroup:${airGroupId} air:${airId}]`, air: air.name, referenced, expressions, airGroupId, airId};
         console.log(`\x1B[1;36m##### AIR: ${air.name}  #####\x1B[0m`);
         for (let constraintId = 0; constraintId < constraints.length; ++constraintId) {
-            console.log(`--- constraint ${constraintId+1}/${constraints.length} ---`);
             const constraint = constraints[constraintId];
             const frame = Object.keys(constraint)[0];
-            const expressionId = constraint[frame].expressionIdx.idx;
+            const constraintData = constraint[frame];
+            const expressionId = constraintData.expressionIdx.idx;
+            console.log(`--- constraint ${constraintId+1}/${constraints.length} --- ${constraintData.debugLine}`);
+            ctx.referenced[expressionId] = true;
+            const res = this.expressionToString(ctx, expressionId, expressions[expressionId]);
+            const degree = this.expressionDegree(ctx, expressionId, expressions[expressionId]);
+            console.log(`CONSTRAINT.${constraintId} [${degree > 3 ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
+            ctx.referenced[expressionId] = false;
+        }
+    }
+    verifyGlobalConstraints() {
+        const expressions = this.expressions ?? [];
+        const constraints = this.constraints ?? [];
+        const expressionsCount = expressions.length;
+        // TODO: detect circular dependencies
+        let referenced = new Array(expressionsCount).fill(false);
+        let ctx = {path: `[global]`, referenced, expressions};
+        console.log(`\x1B[1;36m##### GLOBAL  #####\x1B[0m`);
+        for (let constraintId = 0; constraintId < constraints.length; ++constraintId) {
+            console.log(`--- constraint ${constraintId+1}/${constraints.length} ---`);
+            const constraint = constraints[constraintId];
+            const expressionId = constraint.expressionIdx.idx;
             ctx.referenced[expressionId] = true;
             const res = this.expressionToString(ctx, expressionId, expressions[expressionId]);
             const degree = this.expressionDegree(ctx, expressionId, expressions[expressionId]);
@@ -414,8 +482,8 @@ class AirOut {
             case 'witnessCol':
                 // TODO: verify witnessCol
                 break;
-            case 'fixedCol':
-                // TODO: verify fixedCol
+            case 'customCol':
+                // TODO: verify customCol
                 break;
             case 'expression': {
                     const idx = data.idx;
@@ -430,11 +498,13 @@ class AirOut {
                     ctx.referenced[idx] = true;
                     this.verifyExpression(ctx, idx, ctx.expressions[idx]);
                     ctx.referenced[idx] = false;
+                    return this.expressionToString(ctx, idx, ctx.expressions[idx]);
                 }
                 break;
             default:
                 throw new Error(`invalid cls:${cls}`);
         }
+        return '';
     }
 
     expressionToString(ctx, id, expression) {
@@ -501,7 +571,7 @@ class AirOut {
         let text;
         try {
             text = name.padEnd(40) + '|' + symbol.id.toString().padStart(5) + '|' + this.getSymbolType(symbol.type).padEnd(20) + '|' + (symbol.stage ?? '').toString().padStart(5) +
-                    '|' + (symbol.airGroupId ?? '').toString().padStart(5) + '|' + (symbol.airId ?? '').toString().padStart(4) + '|' + symbol.debugLine;
+                    '|' + (symbol.airGroupId ?? '').toString().padStart(5) + '|' + (symbol.airId ?? '').toString().padStart(4) + '|' + (symbol.commitId ?? '').toString().padStart(6)+ '|' + symbol.debugLine;
         } catch(e) {
             console.log(symbol);
             throw e;
@@ -510,25 +580,28 @@ class AirOut {
 
     }
     displaySymbols() {
-        console.log('\n\x1B[44mname                                    |   id|type                |stage|group| air|debug                                                                   \x1B[0m');
+        console.log('\n\x1B[44mname                                    |   id|type                |stage|group| air|commit|debug                                                                   \x1B[0m');
         for (let index = 0; index < this.symbols.length; ++index) {
             this.displaySymbol(this.symbols[index]);
         }
     }
-    getSymbol(ctx, id, stage, type, defaultResult) {
+    getSymbol(ctx, id, stage, type, commitId, defaultResult) {
         // TODO: row_offset
         if (typeof type === 'undefined') {
             console.log(id, stage, type);
             EXIT_HERE;
         }
         let res = defaultResult;
+        const _commitId = commitId ?? false;
+        const _stage = stage ?? false;
         for (let index = 0; index < this.symbols.length; ++index) {
             let symbol = this.symbols[index];
             if (symbol.type !== type) continue;
             if (typeof symbol.airGroupId !== 'undefined' && symbol.airGroupId !== ctx.airGroupId) continue;
             if (typeof symbol.airId !== 'undefined' && symbol.airId !== ctx.airId) continue;
             // stage is optional
-            if (typeof symbol.stage !== 'undefined' && typeof stage !== 'undefined' && symbol.stage !== stage) continue;
+            if (typeof symbol.stage !== 'undefined' && _stage !== false && symbol.stage !== stage) continue;
+            if (typeof symbol.commitId !== 'undefined' && _commitId !== false && symbol.commitId !== commitId) continue;
             if (symbol.dim) {
                 if (id < symbol.id) continue;
                 this.initOffsets(symbol);
@@ -572,11 +645,13 @@ class AirOut {
     }
     operandToString(ctx, id, operand, parentOperation = false) {
         let res = this._operandToString(ctx, id, operand, parentOperation);
-        if (operand.rowOffset) {
-            if (operand.rowOffset > 0) {
-                res = `${res}'${operand.rowOffset == 1 ? '':operand.rowOffset}`;
+        const cls = Object.keys(operand)[0];
+        const rowOffset = operand[cls].rowOffset ?? false;
+        if (rowOffset) {
+            if (rowOffset > 0) {
+                res = `${res}'${rowOffset == 1 ? '':rowOffset}`;
             } else {
-                res = `${operand.rowOffset == -1 ? '':-operand.rowOffset}'${res}` ;
+                res = `${rowOffset == -1 ? '':-rowOffset}'${res}` ;
             }
         }
         return res;
@@ -596,7 +671,7 @@ class AirOut {
             case 'proofValue':
                 return this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.PROOF_VALUE);
             case 'airGroupValue':
-                return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.AIR_GROUP_VALUE);
+                return this.getSymbol({airGroupId: data.airGroupId, ...ctx}, data.idx, false, SYMBOL_TYPES.AIR_GROUP_VALUE);
             case 'airValue':
                 return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.AIR_VALUE);
             case 'publicValue':
@@ -605,11 +680,13 @@ class AirOut {
                 return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.PERIODIC_COL);
             case 'witnessCol':
                 return this.getSymbol(ctx, data.colIdx, data.stage, SYMBOL_TYPES.WITNESS_COL);
+            case 'customCol':
+                return this.getSymbol(ctx, data.colIdx, data.stage, SYMBOL_TYPES.CUSTOM_COL, data.commitId);
             case 'fixedCol':
                 return this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.FIXED_COL);
             case 'expression': {
                     const idx = data.idx;
-                    const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false);
+                    const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false, false);
                     if (intermediate !==  false) {
                         return '@@@'+intermediate;
                     }
@@ -691,10 +768,11 @@ class AirOut {
             case 'periodicCol':
             case 'witnessCol':
             case 'fixedCol':
+            case 'customCol':
                 return 1;
             case 'expression': {
                     const idx = data.idx;
-                    const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false);
+                    const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false, false);
                     if (ctx.referenced[idx]) {
                         console.log(cls, idx, data);
                         throw new Error(`${ctx.path} circular reference idx:${idx}`);

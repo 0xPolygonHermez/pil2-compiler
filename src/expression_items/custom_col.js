@@ -2,20 +2,20 @@ const assert = require('../assert.js');
 const ProofItem = require("./proof_item.js");
 const Context = require('../context.js');
 const Debug = require('../debug.js');
-module.exports = class WitnessCol extends ProofItem {
+module.exports = class CustomCol extends ProofItem {
     constructor (id) {
         assert.defined(id);
         super(id);
         this.rowOffsetApply = true;
-        if (Debug.active) console.log('CONSTRUCTOR_WITNESS', id, this.id);
+        if (Debug.active) console.log('CONSTRUCTOR_CUSTOM_COL', id, this.id);
     }
     get degree() {
-        return 1;
+        return 0;
     }
     getTag() {
-        return 'witness';
+        return 'customcol';
     }
     cloneInstance() {
-        return new WitnessCol(this.id);
+        return new CustomCol(this.id);
     }
 }

@@ -1,5 +1,3 @@
-// import {Expressions} from './expressions.js';
-
 const path = require("path");
 const fs = require("fs");
 const pil_parser = require("./pil_parser.js");
@@ -55,22 +53,11 @@ class Compiler {
             }
         }
         let sts = this.parseSource(fileName, true);
-        this.processor.startExecution(sts);
+        const result = this.processor.startExecution(sts);
         if (config.processorTest) {
             return this.processor;
         }
-//        console.log(res);
-/*
-        console.log('\x1b[1;35m==== CONSTANTS ====');
-        this.constants.dump();
-        console.log('\x1b[0m');
-        this.checkNotFoundNamespaces();
-        this.checkUndefinedPols();
-        this.simplifyAll();
-        // this.checkUnusedExpressions();
-        this.checkExpressionsDegree();
-        this.reduceExpressions();
-        return this.contextToJson();*/
+        return result;
     }
     instanceParser(src, fullFileName) {
         this.srcLines = src.split(/(?:\r\n|\n|\r)/);

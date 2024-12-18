@@ -16,8 +16,15 @@ module.exports = class AssertEq extends Function {
         const arg0 = s.args[0].eval();
         const arg1 = s.args[1].eval();
         if (!arg0.equals(arg1)) {
-            const msg = s.args[2] ? s.args[2].toString() + '\n' : '';
-            throw new Error(msg + `Assert fails (${arg0} === ${arg1}) on ${Context.sourceRef}`);
+            const msg = (s.args[2] ? s.args[2].toString() + '\n' : '') + `Assert fails (${arg0} === ${arg1}) on ${Context.sourceRef}`;
+            if (Context.tests.active) {
+                Context.tests.fail += 1;
+                Context.tests.msgs.push(msg);
+            } else {
+                throw new Error(msg);
+            }
+        } else if (Context.tests.active) {
+            Context.tests.ok += 1;
         }
         return 0n;
     }

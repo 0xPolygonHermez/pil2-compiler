@@ -1,6 +1,7 @@
 const ProofItem = require("./proof_item.js");
 const IntValue = require('./int_value.js');
 const assert = require('../assert.js');
+const Context = require('../context.js');
 module.exports = class ExpressionReference extends ProofItem {
     constructor (id, instance, options = {}) {
         super(options);
@@ -13,6 +14,9 @@ module.exports = class ExpressionReference extends ProofItem {
             return value.degree;
         }
         return -1;
+    }
+    get isReferencedType() {
+        return true;
     }
     getTag() {
         return 'im';

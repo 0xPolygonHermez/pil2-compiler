@@ -1,9 +1,16 @@
 const assert = require('./assert.js');
+
+const _noContextInstance = {
+    _processor: {
+        sourceRef: ''
+    }
+};
+
 module.exports = class Context {
-    static _instance = null;
+    static _instance = _noContextInstance;
 
     constructor (Fr, processor, config = {}) {
-        assert.equal(Context._instance, null);
+        assert.equal(Context._instance, _noContextInstance);
         Context._instance = this;
         this.Fr = Fr;
         this._processor = processor;
@@ -11,6 +18,7 @@ module.exports = class Context {
         this.namespaceStack = [];
         this.config = {debug: {}, test: {}, ...config};
         this.uses = [];
+        this.tests = {};
         this.seqCodeType = config.seqCodeType ?? 'fast';
         this._airGroupName = false;
         if (typeof this.config.test.onContextInit === 'function') {
@@ -50,6 +58,9 @@ module.exports = class Context {
     }
     static get config() {
         return this._instance.config;
+    }
+    static get tests() {
+        return this._instance.tests;
     }
     static get airGroupName() {
         return this._instance._airGroupName;

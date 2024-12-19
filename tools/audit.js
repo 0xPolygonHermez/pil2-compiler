@@ -382,8 +382,8 @@ class AirOut {
         const _ctxpath = ctx.path;
         switch (cls) {
             case 'stringValue':
-                break;        console.log(['argv', argv]);
-
+                break;
+            case 'operand':
                 ctx.path = `${_ctxpath}${name}`;
                 const res = this.verifyExpressionOperand(ctx, data);
                 console.log(`HINTFIELD ${name} ${cls} ####\n${res}`);

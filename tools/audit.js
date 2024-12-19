@@ -317,10 +317,6 @@ class AirOut {
         return this.getSymbolsByStage(airGroupId, airId, stageId, SYMBOL_TYPES.WITNESS_COL);
     }
 
-    getSymbolsByTyp(airGroupId, airId) {
-        return this.getSymbolsByStage(airGroupId, airId, false, SYMBOL_TYPES.FIXED_COL);
-    }
-
     getSymbolByName(name) {
         if(this.symbols === undefined) return undefined;
 

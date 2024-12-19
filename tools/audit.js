@@ -118,7 +118,6 @@ class AirOut {
 
                 // air.symbols = this.getSymbolsByAirGroupIdAirId(airGroup.airGroupId, air.airId);
                 let data = new BigUint64Array(8); // 64 bytes = 512 bits block of sha
-                console.log(air.fixedCols);
                 for (const fixedCol of air.fixedCols ?? []) {
 		            if (!fixedCol.values) continue;
                     let index = 0;
@@ -132,7 +131,6 @@ class AirOut {
                         }
                     }
                     const digest = `0x${sha256.digest('hex')}`;
-                    console.log(`SHA256 airgroup:${i} air:${j}`, digest);
                 }
 
                 for(const subAirValue of subAirValues) {
@@ -343,7 +341,6 @@ class AirOut {
             const name = hint.name;
             const airGroupId = hint.airGroupId ?? false;
             const airId = hint.airId ?? false;
-            console.log(`VERIFY HINT #${hintId} name:${name} airGroup:${airGroupId} air:${airId}`);
             const expressions = airGroupId === false && airId === false ? [] : this.airGroups[airGroupId].airs[airId].expressions;
             let referenced = new Array(expressions.length).fill(false);
             let ctx = {path: '', airGroupId, airId, expressions, referenced};
@@ -364,7 +361,6 @@ class AirOut {
             case 'operand':
                 ctx.path = `${_ctxpath}${name}`;
                 const res = this.verifyExpressionOperand(ctx, data);
-                console.log(`HINTFIELD ${name} ${cls} ####\n${res}`);
                 break;
             case 'hintFieldArray': {
                 for (let hintFieldIndex = 0; hintFieldIndex < data.hintFields.length; ++hintFieldIndex) {

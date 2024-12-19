@@ -1,8 +1,10 @@
 const Indexable = require("./indexable.js");
 const AirGroupValueItem = require("./expression_items/air_group_value.js");
 const AirGroupValueDefinition = require("./definition_items/air_group_value.js");
+const assert = require('./assert.js');
 module.exports = class AirGroupValues extends Indexable {
 
+    static onceLabels = [];
     constructor () {
         super('airgroupvalue', AirGroupValueDefinition, AirGroupValueItem)
     }
@@ -11,6 +13,21 @@ module.exports = class AirGroupValues extends Indexable {
         const value = this.values.find(x => x.relativeId == id && x.airGroupId == airGroupId);
 
         return value ? value.label : `airgroupvalue(${airGroupId},${id})`;
+    }
+    clearOnceLabels(airGroupId) {
+        AirGroupValues.onceLabels[airGroupId] = [];
+    }
+    getOnceLabelsByAirGroupId(airGroupId, id, options) {
+        const labels = this.getLabelsByAirGroupId(airGroupId, id ,options);
+        const res = [];
+        console.log(['onceLabels', AirGroupValues.onceLabels]);
+        for (const label of labels) {
+            assert.typeOf(label.from, 'number');
+            if (AirGroupValues.onceLabels[airGroupId].includes(label.from)) continue;
+            AirGroupValues.onceLabels[airGroupId].push(label.from);
+            res.push(label);
+        }
+        return res;
     }
     getLabelsByAirGroupId(airGroupId, dataFields = []) {
         let labels = [];

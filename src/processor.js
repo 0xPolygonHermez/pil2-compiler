@@ -1412,8 +1412,9 @@ module.exports = class Processor {
         this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
         this.proto.setSymbolsFromLabels(this.customCols.labelRanges, 'customcol', info);
         if (airId == 0) {
-            this.proto.setSymbolsFromLabels(this.airGroupValues.getLabelsByAirGroupId(airGroupId, ['stage', 'relativeId']), 'airgroupvalue', {airGroupId});
+            this.airGroupValues.clearOnceLabels(airGroupId);
         }
+        this.proto.setSymbolsFromLabels(this.airGroupValues.getOnceLabelsByAirGroupId(airGroupId, ['stage', 'relativeId']), 'airgroupvalue', {airGroupId});
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS');
 
         this.proto.setSymbolsFromLabels(this.airValues.getLabels(['stage']), 'airvalue', info);

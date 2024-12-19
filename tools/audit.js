@@ -5,6 +5,7 @@ const { createHash } = require('node:crypto');
 
 const argv = require("yargs")
     .usage("pilout_audit <pilout.file>")
+    .option('H', { alias: 'hash', describe: 'Hash Fixed Columns' })
     .argv;
 
 const AGGREGATION_TYPES = {
@@ -38,7 +39,8 @@ const log = {
         };
 
 class AirOut {
-    constructor(airoutFilename) {
+    constructor() {
+        const airoutFilename = argv._[0];
         this.color = {
             parentesis: '\x1b[36m',
             array: '\x1b[1;36m',
@@ -47,6 +49,9 @@ class AirOut {
             intermediate: '\x1b[35m',
             off: '\x1b[0m'
         }
+        this.fixedHash = {};
+        this.config = {};
+        this.config.hashFixed = argv.hash ?? false;
         // this.color = {
         //     parentesis: '',
         //     operation: '',
@@ -104,6 +109,35 @@ class AirOut {
         }
     }
 
+    hashFixed(air) {
+        // air.symbols = this.getSymbolsByAirGroupIdAirId(airGroup.airGroupId, air.airId);
+        let data = new BigUint64Array(8); // 64 bytes = 512 bits block of sha
+        const ctx = {
+                airId: air.airId,
+                airGroupId: air.airGroupId,
+            };
+        for (let id = 0; id < air.fixedCols.length; id++) {
+            const fixedCol = air.fixedCols[id];
+            const symbol = this.getSymbol(ctx, id, false, SYMBOL_TYPES.FIXED_COL, false, false);
+            if (!fixedCol.values) {
+                console.log(`[audit]    Fixed ${symbol} without data`);
+                continue;
+            }
+            console.log(`[audit]    Fixed ${symbol} calculating hash ....`);
+            let index = 0;
+            let sha256 = createHash('sha256');
+            for (const value of fixedCol.values) {
+                data[index] = this.buf2bint(value);
+                index++;
+                if (index === 8) {
+                    sha256.update(Buffer.from(data.buffer));
+                    index = 0;
+                }
+            }
+            this.fixedHash[symbol] = `0x${sha256.digest('hex')}`;
+        }
+    }
+
     checkFixed() {
         for(let i=0; i<this.airGroups.length; i++) {
             const airGroup = this.airGroups[i];
@@ -116,23 +150,8 @@ class AirOut {
                 air.airGroupId = i;
                 air.airId = j;
 
-                // air.symbols = this.getSymbolsByAirGroupIdAirId(airGroup.airGroupId, air.airId);
-                let data = new BigUint64Array(8); // 64 bytes = 512 bits block of sha
-                console.log(air.fixedCols);
-                for (const fixedCol of air.fixedCols ?? []) {
-		            if (!fixedCol.values) continue;
-                    let index = 0;
-                    let sha256 = createHash('sha256');
-                    for (const value of fixedCol.values) {
-                        data[index] = this.buf2bint(value);
-                        index++;
-                        if (index === 8) {
-                            sha256.update(Buffer.from(data.buffer));
-                            index = 0;
-                        }
-                    }
-                    const digest = `0x${sha256.digest('hex')}`;
-                    console.log(`SHA256 airgroup:${i} air:${j}`, digest);
+                if (this.config.hashFixed && air.fixedCols) {
+                    this.hashFixed(air);
                 }
 
                 for(const subAirValue of subAirValues) {
@@ -343,7 +362,6 @@ class AirOut {
             const name = hint.name;
             const airGroupId = hint.airGroupId ?? false;
             const airId = hint.airId ?? false;
-            console.log(`VERIFY HINT #${hintId} name:${name} airGroup:${airGroupId} air:${airId}`);
             const expressions = airGroupId === false && airId === false ? [] : this.airGroups[airGroupId].airs[airId].expressions;
             let referenced = new Array(expressions.length).fill(false);
             let ctx = {path: '', airGroupId, airId, expressions, referenced};
@@ -572,7 +590,7 @@ class AirOut {
         let text;
         try {
             text = name.padEnd(40) + '|' + symbol.id.toString().padStart(5) + '|' + this.getSymbolType(symbol.type).padEnd(20) + '|' + (symbol.stage ?? '').toString().padStart(5) +
-                    '|' + (symbol.airGroupId ?? '').toString().padStart(5) + '|' + (symbol.airId ?? '').toString().padStart(4) + '|' + (symbol.commitId ?? '').toString().padStart(6)+ '|' + symbol.debugLine;
+                    '|' + (symbol.airGroupId ?? '').toString().padStart(5) + '|' + (symbol.airId ?? '').toString().padStart(4) + '|' + (symbol.commitId ?? '').toString().padStart(6)+ '|' + (symbol.type === SYMBOL_TYPES.FIXED_COL ? (this.fixedHash[name] ?? '' )+' ':'') + symbol.debugLine;
         } catch(e) {
             console.log(symbol);
             throw e;
@@ -797,4 +815,4 @@ module.exports = {
     HINT_FIELD_TYPES,
 };
 
-const airOut = new AirOut(argv._[0]);
+const airOut = new AirOut();

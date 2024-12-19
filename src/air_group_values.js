@@ -20,7 +20,6 @@ module.exports = class AirGroupValues extends Indexable {
     getOnceLabelsByAirGroupId(airGroupId, id, options) {
         const labels = this.getLabelsByAirGroupId(airGroupId, id ,options);
         const res = [];
-        console.log(['onceLabels', AirGroupValues.onceLabels]);
         for (const label of labels) {
             assert.typeOf(label.from, 'number');
             if (AirGroupValues.onceLabels[airGroupId].includes(label.from)) continue;

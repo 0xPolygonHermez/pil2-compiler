@@ -815,4 +815,4 @@ module.exports = {
     HINT_FIELD_TYPES,
 };
 
-const airOut = new AirOut(argv._[0]);
+const airOut = new AirOut();

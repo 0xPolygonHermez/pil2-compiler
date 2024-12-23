@@ -87,12 +87,11 @@ module.exports = class Constraints {
     getDebugInfo(index, packed, options) {
         const constraint = this.constraints[index];
         try {
-            const peid = this.getPackedExpressionId(constraint.exprId, packed, options);
-            let info = `${constraint.sourceRef}`
             if (!packed) {
-                return info;
+                return constraint.sourceRef;
             }
-            return info + ' '  + packed.exprToString(peid, {...options, labels: this.getExpressions(), hideClass: true});
+            const peid = this.getPackedExpressionId(constraint.exprId, packed, options);
+            return constraint.sourceRef + ' '  + packed.exprToString(peid, {...options, labels: this.getExpressions(), hideClass: true});
         } catch (e) {
             throw new Error(`ERROR generation debug info for constraint ${constraint.sourceRef}: ${e.message}`)
         }

@@ -472,6 +472,10 @@ module.exports = class Processor {
                 this.pragmas.nextFixed.temporal = true;
                 break;
             }
+            case 'fixed_external': {
+                this.pragmas.nextFixed.external = true;
+                break;
+            }
             case 'debugger':
                 debugger;
                 break;
@@ -1543,7 +1547,10 @@ module.exports = class Processor {
                 data.temporal = true;
                 this.pragmas.nextFixed.temporal = false;
             }
-
+            if (this.pragmas.nextFixed.external) {
+                data.external = true;
+                this.pragmas.nextFixed.external = false;
+            }
             this.declareFullReference(colname, 'fixed', lengths, data, seq);
         }
     }

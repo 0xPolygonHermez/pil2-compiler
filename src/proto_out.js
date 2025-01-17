@@ -321,7 +321,7 @@ module.exports = class ProtoOut {
             if (!Context.config.noProtoFixedData) {
                 if (Context.config.compressFixedCols && col.isCompressed) {
                     values = this.setCompressedConstantsCols(col);
-                } else {
+                } else if (!col.external) {
                     const _rows = periodic ? col.rows : rows;
                     console.log(`  > Proto setting ${periodic?'periodic':'fixed'} col ${col.id} ${_rows} ....`);
                     values = this.setRegularConstantsCols(col, _rows);

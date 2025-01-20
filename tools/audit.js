@@ -362,6 +362,7 @@ class AirOut {
             const name = hint.name;
             const airGroupId = hint.airGroupId ?? false;
             const airId = hint.airId ?? false;
+            console.log(`VERIFY HINT #${hintId} name:${name} airGroup:${airGroupId} air:${airId}`);
             const expressions = airGroupId === false && airId === false ? [] : this.airGroups[airGroupId].airs[airId].expressions;
             let referenced = new Array(expressions.length).fill(false);
             let ctx = {path: '', airGroupId, airId, expressions, referenced};
@@ -688,7 +689,7 @@ class AirOut {
             case 'challenge':
                 return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.CHALLENGE);
             case 'proofValue':
-                return this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.PROOF_VALUE);
+                return this.getSymbol(ctx, data.idx, data.stage, SYMBOL_TYPES.PROOF_VALUE);
             case 'airGroupValue':
                 return this.getSymbol({airGroupId: data.airGroupId, ...ctx}, data.idx, false, SYMBOL_TYPES.AIR_GROUP_VALUE);
             case 'airValue':

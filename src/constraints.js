@@ -85,6 +85,15 @@ module.exports = class Constraints {
         }
     }
     getDebugInfo(index, packed, options) {
-        return this.constraints[index].sourceRef;
+        const constraint = this.constraints[index];
+        try {
+            if (!packed) {
+                return constraint.sourceRef;
+            }
+            const peid = this.getPackedExpressionId(constraint.exprId, packed, options);
+            return constraint.sourceRef + ' '  + packed.exprToString(peid, {...options, labels: this.getExpressions(), hideClass: true});
+        } catch (e) {
+            throw new Error(`ERROR generation debug info for constraint ${constraint.sourceRef}: ${e.message}`)
+        }
     }
 }

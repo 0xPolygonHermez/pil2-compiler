@@ -827,9 +827,10 @@ class Expression extends ExpressionItem {
                         st.operands[operandIndex] = new ExpressionItems.StackItem(1);
 
                         // evaluate result, optimization (1), and after insert it
-                        const stackResultToInsert = result.evaluateOperands(options);
-                        stackResults.unshift(...stackResultToInsert);
-                        assert.equal(stackResultToInsert.length, result.stack.length);
+                        let stackResultToInsert = result.evaluateOperands(options);
+                        // stackResults.unshift(...stackResultToInsert);
+                        stackResults = stackResultToInsert.concat(stackResults);
+                        // assert.equal(stackResultToInsert.length, result.stack.length);
 
                         // at this moment position was increased because some elements
                         // are added on below positions.

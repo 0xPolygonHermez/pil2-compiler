@@ -4,6 +4,8 @@ const assert = require('../assert.js');
 const { FeValue } = require("../expression_items.js");
 
 module.exports = class SequenceBase {
+    static cacheGeomN = {};
+
     constructor (parent, label, options = {}) {
         this.parent = parent;
         this.get = options.get;
@@ -177,12 +179,9 @@ module.exports = class SequenceBase {
     geomCount(fromValue, toValue, ratio) {
         let count = 1;
         let value = fromValue;
-        console.log({fromValue, toValue, ratio, count, value});
         if (this.useFieldElement()) {
-            console.log({value, toValue});
             while (value < toValue) {
                 value = Context.Fr.e(value * ratio);
-                console.log({value, toValue, count});
                 ++count;
             }
         } else {

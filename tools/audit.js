@@ -363,7 +363,7 @@ class AirOut {
             const airGroupId = hint.airGroupId ?? false;
             const airId = hint.airId ?? false;
             console.log(`VERIFY HINT #${hintId} name:${name} airGroup:${airGroupId} air:${airId}`);
-            const expressions = airGroupId === false && airId === false ? [] : this.airGroups[airGroupId].airs[airId].expressions;
+            const expressions = airGroupId === false && airId === false ? this.expressions : this.airGroups[airGroupId].airs[airId].expressions;
             let referenced = new Array(expressions.length).fill(false);
             let ctx = {path: '', airGroupId, airId, expressions, referenced};
             for (let hintFieldId = 0; hintFieldId < hint.hintFields.length; ++hintFieldId) {
@@ -508,6 +508,7 @@ class AirOut {
             case 'expression': {
                     const idx = data.idx;
                     if (idx >= ctx.expressions.length) {
+                        console.log("len",ctx.expressions.length);
                         throw new Error(`${ctx.path} invalid expression idx:${idx}`);
                         // console.log(`ERROR !!! ${ctx.path} invalid expression idx:${idx} [max:${ctx.expressions.length - 1}]`);
                         // break;

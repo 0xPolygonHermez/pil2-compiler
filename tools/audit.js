@@ -362,7 +362,6 @@ class AirOut {
             const name = hint.name;
             const airGroupId = hint.airGroupId ?? false;
             const airId = hint.airId ?? false;
-            console.log(`VERIFY HINT #${hintId} name:${name} airGroup:${airGroupId} air:${airId}`);
             const expressions = airGroupId === false && airId === false ? this.expressions : this.airGroups[airGroupId].airs[airId].expressions;
             let referenced = new Array(expressions.length).fill(false);
             let ctx = {path: '', airGroupId, airId, expressions, referenced};
@@ -383,7 +382,6 @@ class AirOut {
             case 'operand':
                 ctx.path = `${_ctxpath}${name}`;
                 const res = this.verifyExpressionOperand(ctx, data);
-                console.log(`HINTFIELD ${name} ${cls} ####\n${res}`);
                 break;
             case 'hintFieldArray': {
                 for (let hintFieldIndex = 0; hintFieldIndex < data.hintFields.length; ++hintFieldIndex) {

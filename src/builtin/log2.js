@@ -15,12 +15,12 @@ module.exports = class Log2 extends Function {
             throw new Error(`Invalid type of argument for log2 function. Expected integer but got ${item.getTag()}`);
         }
 
-        if (item.value === 0n) return {result: 1n};
+        if (item.value === 0n) return {result: 0n};
 
         if (item.value < 0n) item.value = -item.value;
 
         let result = 0n;
-        while (item.value > 0n) {
+        while (item.value > 1n) {
             item.value >>= 1n;
             result++;
         }

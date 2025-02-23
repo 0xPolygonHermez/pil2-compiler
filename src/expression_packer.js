@@ -111,10 +111,13 @@ module.exports = class ExpressionPacker {
         } else if (ope instanceof ExpressionItems.ExpressionReference) {
             const defvalue = Context.references.getDefinitionByItem(ope).getValue();
             if (defvalue.isExpression) {
+                if (this.container.pushExpressionReference(id)) {
+                    return;
+                }
                 const packer = new ExpressionPacker(this.container, def.getValue());
                 const res = packer.pack(options);
                 if (typeof res === 'number') {
-                    this.container.pushExpression(res);
+                    this.container.saveAndPushExpressionReference(id, ope.label, res);
                 } else {
                     this.container.push(res);
                 }

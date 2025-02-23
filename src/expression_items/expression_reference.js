@@ -7,6 +7,7 @@ module.exports = class ExpressionReference extends ProofItem {
         super(options);
         this.id = id;
         this.instance = instance;
+        this.const = true;
     }
     get degree() {
         const value = this.instance.get(this.id).getValue();
@@ -36,10 +37,6 @@ module.exports = class ExpressionReference extends ProofItem {
         const value = this.instance.get(this.id).getValue();
         if (value.isBaseType) return value;
 
-        // if not clone
-        if (options && options.unroll) {
-            return value.clone();
-        }
         return this.clone();
     }
     evalInside(options) {

@@ -8,6 +8,8 @@ module.exports = class PackedExpressions {
     constructor () {
         this.expressions = [];
         this.values = [];
+        this.references = [];
+        this.expressionLabels = [];
     }
     insert(expr) {
         return this.expressions.push(expr) - 1;
@@ -85,11 +87,26 @@ module.exports = class PackedExpressions {
         assert.defined(idx);
         this.values.push({expression: {idx}});
     }
+    pushExpressionReference (id) {
+        if (typeof this.references[id] === 'undefined') {
+            return false;
+        }
+        this.pushExpression(this.references[id]);
+        return true;
+    }
+    saveAndPushExpressionReference(id, label, res) {
+        this.references[id] = res;
+        this.expressionLabels[res] = label;
+        this.pushExpression(res);
+    }
     dump() {
         console.log(util.inspect(this.expressions, false, null, true /* enable colors */));
     }
     exprToString(id, options) {
         assert.typeOf(id, 'number');
+        if (typeof this.expressionLabels[id] !== 'undefined') {
+            return this.expressionLabels[id];
+        }
         const expr = this.expressions[id];
         if (!expr) {
             console.log(expr);

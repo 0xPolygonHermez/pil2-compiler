@@ -13,12 +13,15 @@ airtemplate AirB(int N = 2**16) {
 */
 airtemplate AirSum(int N = 2**16) {
     col witness a,b;
+    col fixed K = [1,2,3]...;
     airgroupval aggregate(sum) default(0) agvSum;
     agvSum - a*b - 1 === 0;
 }
 
 airtemplate AirProd(int N = 2**16) {
     col witness a,b;
+    col fixed K1 = [0,1,2,3]...;
+    col fixed K2 = [1,2,3]...;
     airgroupval aggregate(prod) default(1) agvProd;
     agvProd - a*b - 2 === 0;
 }

@@ -123,7 +123,7 @@ module.exports = class ProtoOut {
             blowupFactor: 3,
             airGroups: [],
             numChallenges: [],
-            numProofValues: 0,
+            numProofValues: [],
             numPublicValues: 0,
             publicTables: [],
             expressions: [],
@@ -214,7 +214,7 @@ module.exports = class ProtoOut {
         for(const [name, ref] of symbols) {
             try {
                 const arrayInfo = ref.array ? ref.array : {dim: 0, lengths: []};
-                const sym2proto = this.symbolType2Proto(ref.type, ref.locator, {...ref, data});
+                const sym2proto = this.symbolType2Proto(ref.type, ref.locator, {...ref, data: {...ref.data, ...data}});
                 let payout = {
                     name,
                     dim: arrayInfo.dim,
@@ -263,15 +263,19 @@ module.exports = class ProtoOut {
                 return {type: REF_TYPE_AIR_VALUE, id, airId, airGroupId, stage};
             }
             case 'proofvalue':
-                return {type: REF_TYPE_PROOF_VALUE, id};
+                const def = ref.instance.getDefinition(id);
+                const stage = assert.returnTypeOf(def.stage, 'number');
+                const relativeId = assert.returnTypeOf(def.relativeId, 'number');
+                return {type: REF_TYPE_PROOF_VALUE, id: relativeId, stage};
 
             case 'public':
                 return {type: REF_TYPE_PUBLIC_VALUE, id};
 
             case 'challenge': {
-                const [protoId, stage] = this.challengeId2Proto[id];
-                const res = {type: REF_TYPE_CHALLENGE, id: protoId, stage};
-                return res;
+                const def = ref.instance.getDefinition(id);
+                const stage = assert.returnTypeOf(def.stage, 'number');
+                const relativeId = assert.returnTypeOf(def.relativeId, 'number');
+                return {type: REF_TYPE_CHALLENGE, id: relativeId, stage};
             }
 
         }
@@ -281,8 +285,18 @@ module.exports = class ProtoOut {
     setPublics(publics) {
         this.pilOut.numPublicValues = publics.length;
     }
+    getNumByStage(values) {
+        const _values = values.getPropertyValues(['id', 'stage']);
+        const valuesSortedByStageAndId = _values.sort((a,b) => (a[1] > b[1] || (a[1] == b[1] && a[0] > b[0])) ? 1 : -1);
+        let countByStage = [];
+        for (const [id, stage] of valuesSortedByStageAndId) {
+            assert.ok(stage > 0);
+            countByStage[stage-1] = (countByStage[stage-1] ?? 0) + 1;
+        }
+        return Array.from(countByStage, x => x ?? 0);
+    }
     setProofValues(proofvalues) {
-        this.pilOut.numProofValues = proofvalues.length;
+        this.pilOut.numProofValues = this.getNumByStage(proofvalues);
     }
     setFixedCols(fixedCols) {
         this.setConstantCols(fixedCols, this.currentAir.numRows, false);
@@ -291,23 +305,7 @@ module.exports = class ProtoOut {
         this.setConstantCols(periodicCols, this.currentAir.numRows, true);
     }
     setChallenges(challenges) {
-        const values = challenges.getPropertyValues(['id', 'stage']);
-        const valuesSortedByStageAndId = values.sort((a,b) => (a[1] > b[1] || (a[1] == b[1] && a[0] > b[0])) ? 1 : -1);
-        let previousStage = false;
-        let protoId;
-        let countByStage = [];
-        this.challengeId2Proto = [];
-        for (const [id, stage] of valuesSortedByStageAndId) {
-            if (previousStage !== stage) {
-                previousStage = stage;
-                protoId = 0;
-            }
-            assert.ok(stage > 0);
-            countByStage[stage-1] = (countByStage[stage-1] ?? 0) + 1;
-            this.challengeId2Proto[id] = [protoId, stage];
-            ++protoId;
-        }
-        this.pilOut.numChallenges = Array.from(countByStage, x => x ?? 0);
+        this.pilOut.numChallenges = this.getNumByStage(challenges);
     }
     setConstantCols(cols, rows, periodic) {
         const property = periodic ? 'periodicCols':'fixedCols';
@@ -323,7 +321,7 @@ module.exports = class ProtoOut {
             if (!Context.config.noProtoFixedData) {
                 if (Context.config.compressFixedCols && col.isCompressed) {
                     values = this.setCompressedConstantsCols(col);
-                } else {
+                } else if (!col.external) {
                     const _rows = periodic ? col.rows : rows;
                     console.log(`  > Proto setting ${periodic?'periodic':'fixed'} col ${col.id} ${_rows} ....`);
                     values = this.setRegularConstantsCols(col, _rows);
@@ -455,6 +453,8 @@ module.exports = class ProtoOut {
                     ope.witnessCol.stage = stage;
                 }
                 break;
+            // case 'proofValue': idx is relativeId when pushed in packer.
+            // case 'challenge': idx is relativeId when pushed in packer.
             case 'customCol': {
                     const [stage, protoId, commitId] = this.customId2ProtoId[ope.customCol.colIdx] ?? [false, false];
                     // console.log(`TRANSLATE customCol colIdx:${ope.customCol.colIdx}=>${protoId} rowOffset:${ope.customCol.rowOffset} stage:${ope.customCol.stage}=>${stage}`);

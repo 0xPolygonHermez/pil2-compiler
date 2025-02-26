@@ -1,6 +1,7 @@
 const ProofItem = require("./proof_item.js");
 const FixedRow = require('./fixed_row.js');
 const Context = require('../context.js');
+const IntValue = require("./int_value.js");
 // const Sequence = require("../sequence.js");
 module.exports = class FixedCol extends ProofItem {
     constructor (id) {
@@ -37,5 +38,8 @@ module.exports = class FixedCol extends ProofItem {
     cloneUpdate(source) {
         super.cloneUpdate(source);
         this.definition = source.definition;
+    }
+    operatorEqAirValue() {
+        return new IntValue(0);
     }
 }

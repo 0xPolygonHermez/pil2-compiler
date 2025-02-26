@@ -15,6 +15,7 @@ module.exports = class FixedCol extends ProofItem {
         this.maxValue = 0;
         this.bytes = data.bytes ?? false;
         this.temporal = data.temporal ?? false;
+        this.external = data.external ?? false;
         this.size = 0;
         this.maxRow = -1;
         this.fullFilled = false;

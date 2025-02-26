@@ -5,10 +5,10 @@ module.exports = class Challenges extends Indexable {
     constructor () {
         super('challenge', ChallengeDefinition, ChallengeItem);
     }
-    getEmptyValue(id, options) {
-        const airGroupId = options.airGroupId;
-        const relativeId = this.values.reduce((res, spv) => spv.airGroupId === airGroupId ? res + 1 : res, 0);
-        let definition = super.getEmptyValue(id, {relativeId, ...options});
+    getEmptyValue(id, data = {}) {
+        const stage = data.stage ?? 2;
+        const relativeId = this.values.reduce((rid, val) => val.stage === stage ? rid + 1 : rid, 0);
+        let definition = super.getEmptyValue(id, {relativeId, ...data});
         return definition;
     }
 }

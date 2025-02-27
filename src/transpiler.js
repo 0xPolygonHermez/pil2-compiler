@@ -2,7 +2,6 @@ const ExpressionItems = require('./expression_items.js');
 const Expression = require('./expression.js');
 const Context = require('./context.js');
 const utils = require('./utils.js');
-const { util } = require('chai');
 const vm = require('node:vm');
 const Performance = require('perf_hooks').performance;
 const beautify = require('js-beautify').js;

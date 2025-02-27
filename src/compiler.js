@@ -159,7 +159,6 @@ class Compiler {
         }
         else {
             let includePaths = options.paths || [];
-
             let directIncludePathIndex;
             const cwd = this.cwd ? this.cwd : process.cwd();
 

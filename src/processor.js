@@ -1079,7 +1079,7 @@ module.exports = class Processor {
             this.error(s, `airtemplate not defined correctly`);
         }
 
-        const instance = new AirTemplate(name, s.statements);
+        const instance = new AirTemplate(name, s.statements, this.getLastInclude());
         this.airTemplates.define(name, instance, `airgroup ${name} has been defined previously on ${Context.sourceRef}`);
 
         const id = this.references.declare(name, 'function', [], {sourceRef: Context.sourceRef});
@@ -1087,6 +1087,7 @@ module.exports = class Processor {
         this.references.set(name, [], func);
     }
     execAirTemplateBlock(s) {
+        // TODO: support change include path
         const name = s.name ?? false;
         if (name === false) {
             this.error(s, `airtemplate not defined correctly`);
@@ -1257,7 +1258,10 @@ module.exports = class Processor {
         this.scope.pushInstanceType('air');
         airGroup.airStart(air.id);
         this.memoryUpdate();
+        const bdir = airTemplate.getBaseDir();
+        this.pushInclude(bdir);
         let res = airTemplate.exec(air.name ,callinfo);
+        this.popInclude();
         this.memoryUpdate();
         this.finalAirScope();
         if (typeof Context.config.test === 'object' && typeof Context.config.test.onAirEnd === 'function') {

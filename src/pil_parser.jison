@@ -225,7 +225,8 @@ function implicit_scope(statements) {
 
 all_top_level_blocks
     : statement_list EOF
-        { $$ = $1.statements; return $$; }
+        { $$ = $1; return $$; }
+    | EOF { $$ = {statements: []}; return $$ }
     ;
 
 

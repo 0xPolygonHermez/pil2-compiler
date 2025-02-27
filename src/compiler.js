@@ -52,8 +52,8 @@ class Compiler {
                 this.namespaces[name] = 0;
             }
         }
-        let sts = this.parseSource(fileName, true);
-        const result = this.processor.startExecution(sts);
+        let program = this.parseSource(fileName, true);
+        const result = this.processor.startExecution(program);
         if (config.processorTest) {
             return this.processor;
         }
@@ -100,7 +100,7 @@ class Compiler {
                 libraries.push({type: 'include', file: include, debug:'', contents: this.loadInclude({file: include})});
             }
         }
-        const [_src, fileDir, fullFileName, relativeFileName] = this.loadSource(fileName, isMain);
+        const [_src, fileDir, fullFileName, relativeFileName] = this.loadSource(fileName, isMain, options);
 
         const preSrc = options.preSrc ?? '';
         const postSrc = options.postSrc ?? '';
@@ -108,27 +108,24 @@ class Compiler {
         this.relativeFileName = relativeFileName;
         this.fileDir = fileDir;
 
-
         const parser = this.instanceParser(src, fullFileName);
         let sts;
         try {
             sts = parser.parse(src);
-            for (let i=0; i<sts.length; i++) {
-                if (sts[i].type !== 'include' && sts[i].type !== 'require') continue;
-                sts[i].contents = this.loadInclude(sts[i].file.asString(), {once: sts[i].type === 'require'});
-            }
             for (const library of libraries.slice().reverse()) {
-                sts.unshift(library);
+                sts.statements.unshift(library);
             }
         } catch (e) {
             console.log('ERROR ON '+Context.processor.sourceRef);
             throw e;
         }
+        sts.fileDir = fileDir;
+        sts.fullFileName = fullFileName;
         return sts;
     }
     parseExpression(expression) {
         const parser = this.instanceParser(expression, "template expression");
-        return parser.parse(expression);
+        return parser.parse(expression).statements;
     }
     loadInclude(filename, options = {}) {
         const includeFile = filename
@@ -140,21 +137,18 @@ class Compiler {
                 return false;
             }
         }
-        if (!options.once) {
-            console.trace(options);
-        }
         console.log(`  > ${options.once?'require':'include'} file \x1B[38;5;208m${fullFileNameI}\x1B[0m`);
 
         this.includedFiles[fullFileNameI] = true;
         const previous = [this.cwd, this.relativeFileName, this.fileDir];
 
         this.cwd = this.fileDir;
-        const sts = this.parseSource(fullFileNameI, false, options);
+        const program = this.parseSource(fullFileNameI, false, options);
 
         [this.cwd, this.relativeFileName, this.fileDir] = previous;
-        return sts;
+        return program;
     }
-    loadSource(fileName, isMain) {
+    loadSource(fileName, isMain, options = {}) {
         let fullFileName, fileDir, src;
         let relativeFileName = '';
         let includePathIndex = 0;
@@ -164,18 +158,19 @@ class Compiler {
             src = fileName;
         }
         else {
-            let includePaths = [...this.includePaths];
-
+            let includePaths = options.paths || [];
             let directIncludePathIndex;
             const cwd = this.cwd ? this.cwd : process.cwd();
 
             if (this.config.includePathFirst) {
+                includePaths = includePaths.concat(this.includePaths);
                 directIncludePathIndex = includePaths.length;
                 includePaths.push(cwd);
             }
             else {
-                directIncludePathIndex = 0;
-                includePaths.unshift(cwd);
+                directIncludePathIndex = includePaths.length;
+                includePaths.push(cwd);
+                includePaths = includePaths.concat(this.includePaths);
             }
             do {
                 fullFileName = path.resolve(includePaths[includePathIndex], fileName);
@@ -200,9 +195,7 @@ class Compiler {
                     }
                 }
             }
-            // console.log(`LOADING FILE ${fullFileName} .............`)
             src = fs.readFileSync(fullFileName, "utf8") + "\n";
-            // console.log('END LOADING ...');
         }
         return [src, fileDir, fullFileName, relativeFileName];
     }

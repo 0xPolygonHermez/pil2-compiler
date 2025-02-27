@@ -1,4 +1,5 @@
 const Performance = require('perf_hooks').performance;
+const path = require("path");
 const Scope = require("./scope.js");
 const Expressions = require("./expressions.js");
 const Expression = require("./expression.js");
@@ -75,6 +76,7 @@ module.exports = class Processor {
         this.deferredCalls = {};
         this.timers = {};
         this.memory = {};
+        this.includeStack = [];
 
         this.lastAirGroupId = -1;
         this.lastAirId = -1;
@@ -212,8 +214,9 @@ module.exports = class Processor {
         this.references.declare('AIRGROUP_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
         this.references.declare('AIR_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
     }
-    startExecution(statements) {
+    startExecution(program) {
         const t1 = performance.now();
+        const statements = program.statements;
 
         this.sourceRef = '(start-execution)';
 
@@ -968,34 +971,38 @@ module.exports = class Processor {
         console.log(s);
         throw new Error(msg);
     }
-    execInclude(s) {
-        if (!s.contents) {
+    executeIncludeRequire(s, isInclude = true) {
+        const requireId = s.file.asString();
+        let res = true;
+        if (!s.contents && (isInclude  || !this.loadedRequire[requireId])) {
             // to support dynamic includes, add some internal statements need to compile inside airgroup
             // but after take compiled statements. TODO: analyze use current airgroup name
-            const sts = this.compiler.loadInclude(s.file.asString(), {preSrc: 'airtemplate __(int N=2**2) {\n', postSrc: '\n};\n'});
+            const lastPath = this.getLastInclude();
+            const paths = lastPath ? [lastPath]:[];
+            const sts = this.compiler.loadInclude(s.file.asString(), {paths, preSrc: 'airtemplate __(int N=2**2) {\n', postSrc: '\n};\n'});
             if (sts === false) {
-                throw new Error(`ERROR loading include ${s.file.asString()}`);
+                throw new Error(`ERROR loading ${isInclude ? 'include':'require'} ${s.file.asString()}`);
             }
-            s.contents = sts[0].statements;
+            // take only statements inside preSrc/postSrc
+            sts.statements = sts.statements[0].statements;
+            s.contents = sts;
         }
-        return this.execute(s.contents);
+        if (isInclude || !this.loadedRequire[requireId]) {
+            this.loadedRequire[requireId] = true;
+            if (s.contents !== true) {
+                this.pushInclude(s.contents.fileDir);
+                const res = this.execute(s.contents.statements);
+                this.popInclude();
+                return res;
+            }
+        }
+        return true;
+    }
+    execInclude(s) {
+        return this.executeIncludeRequire(s, true);
     }
     execRequire(s) {
-        const requireId = s.file.asString();
-        if (!s.contents && !this.loadedRequire[requireId]) {
-            // TODO: check if sense use dynamic requires
-            const sts = this.compiler.loadInclude(requireId, {preSrc: 'airtemplate __(int N=2**2) {\n', postSrc: '\n};\n'});
-            if (sts === false) {
-                return;
-            }
-            s.contents = sts[0].statements;
-        }
-
-        // require is "executed" once to avoid redefinitions
-        if (!this.loadedRequire[requireId]) {
-            this.loadedRequire[requireId] = true;
-            return this.execute(s.contents);
-        }
+        return this.executeIncludeRequire(s, false);
     }
     execFunctionDefinition(s) {
         if (Debug.active) console.log('FUNCTION '+s.name);
@@ -1072,7 +1079,7 @@ module.exports = class Processor {
             this.error(s, `airtemplate not defined correctly`);
         }
 
-        const instance = new AirTemplate(name, s.statements);
+        const instance = new AirTemplate(name, s.statements, this.getLastInclude());
         this.airTemplates.define(name, instance, `airgroup ${name} has been defined previously on ${Context.sourceRef}`);
 
         const id = this.references.declare(name, 'function', [], {sourceRef: Context.sourceRef});
@@ -1080,6 +1087,7 @@ module.exports = class Processor {
         this.references.set(name, [], func);
     }
     execAirTemplateBlock(s) {
+        // TODO: support change include path
         const name = s.name ?? false;
         if (name === false) {
             this.error(s, `airtemplate not defined correctly`);
@@ -1250,7 +1258,10 @@ module.exports = class Processor {
         this.scope.pushInstanceType('air');
         airGroup.airStart(air.id);
         this.memoryUpdate();
+        const bdir = airTemplate.getBaseDir();
+        this.pushInclude(bdir);
         let res = airTemplate.exec(air.name ,callinfo);
+        this.popInclude();
         this.memoryUpdate();
         this.finalAirScope();
         if (typeof Context.config.test === 'object' && typeof Context.config.test.onAirEnd === 'function') {
@@ -1912,4 +1923,14 @@ module.exports = class Processor {
     e2value(e, s, title) {
         return e.evalAsValue();
     }
+    pushInclude(dirname) {
+        this.includeStack.push(dirname);
+    }
+    popInclude() {
+        this.includeStack.pop();
+    }
+    getLastInclude() {
+        return this.includeStack[this.includeStack.length - 1] ?? false;
+    }
+
 }

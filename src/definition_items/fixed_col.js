@@ -16,6 +16,7 @@ module.exports = class FixedCol extends ProofItem {
         this.bytes = data.bytes ?? false;
         this.temporal = data.temporal ?? false;
         this.external = data.external ?? false;
+        this.label = data.label ?? false;
         this.size = 0;
         this.maxRow = -1;
         this.fullFilled = false;
@@ -176,6 +177,7 @@ module.exports = class FixedCol extends ProofItem {
         cloned.rows = this.rows;
         cloned.values = [...this.values];
         cloned.fullFilled = this.fullFilled;
+        cloned.label = this.label;
         if (this.sequence) {
             cloned.sequence = this.sequence.clone();
         }

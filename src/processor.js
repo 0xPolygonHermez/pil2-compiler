@@ -1806,22 +1806,25 @@ module.exports = class Processor {
         if (Debug.active) _right.dump('RIGHT-CONSTRAINT 3');
         let global = (scopeType === 'proof');
 
+        const sourceTag = s.debug ?? Context.sourceRef;
         if (!global && scopeType !== 'air') {
-            throw new Error(`Constraint definition on invalid scope (${scopeType}) ${Context.sourceRef}`);
+            throw new Error(`Constraint definition on invalid scope (${scopeType}) ${sourceTag}`);
         }
         const constraints = global ? this.globalConstraints : this.constraints;
-        const id = constraints.define(_left, _right,false,this.sourceTag);
+        const constraintId = constraints.getLastConstraintId();
+        const id = constraints.define(_left, _right,false, sourceTag);
 
         if (Context.config.outputConstraints || (Context.config.outputGlobalConstraints && scopeType === 'proof')) {
             const prompt = global ? '> ': '  > ';
             const color = global ? '\x1B[38;2;93;240;0m': '\x1B[38;2;192;255;2m';
             const expr = constraints.getExpr(id);
             const prefix = global ? 'Global ' : '';
+            // draw constraint +1 to match with verify constraints message
             if (Context.config.bothConstraintsFormat || !Context.config.rawConstraintsFormat) {
-                console.log(`${prompt}${prefix}Constraint [${Context.proofLevel}] > ${color}${expr.toString({hideClass:true, hideLabel:false})} === 0\x1B[0m (${this.sourceRef})`);
+                console.log(`${prompt}${prefix}Constraint #${constraintId+1} [${Context.proofLevel}] > ${color}${expr.toString({hideClass:true, hideLabel:false})} === 0\x1B[0m (${sourceTag})`);
             }
             if (Context.config.bothConstraintsFormat || Context.config.rawConstraintsFormat) {
-                console.log(`${prompt}${prefix}Constraint [${Context.proofLevel}] (RAW) > ${color}${expr.toString({hideClass:true, hideLabel:true})} === 0\x1B[0m (${this.sourceRef})`);
+                console.log(`${prompt}${prefix}Constraint #${constraintId+1} [${Context.proofLevel}] (RAW) > ${color}${expr.toString({hideClass:true, hideLabel:true})} === 0\x1B[0m (${sourceTag})`);
             }
         }
     }

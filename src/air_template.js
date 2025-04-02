@@ -4,8 +4,9 @@ const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js"
 const ExpressionItems = require('./expression_items.js');
 const assert = require('./assert.js');
 module.exports = class AirTemplate {
-    constructor (name, statements, baseDir) {
+    constructor (name, statements, methods, baseDir) {
         this.name = name;
+        this.methods = methods;
         this.blocks = [statements];
         this.instances = [];
         this.baseDir = baseDir;

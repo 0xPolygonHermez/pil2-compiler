@@ -1007,9 +1007,13 @@ module.exports = class Processor {
     execFunctionDefinition(s) {
         if (Debug.active) console.log('FUNCTION '+s.name);
         const name = Context.air ? `${Context.air.name}.${s.name}`: s.name;
+        this.defineFunction(name, s);
+    }
+    defineFunction(name, s) {
         const id = this.references.declare(name, 'function', [], {sourceRef: Context.sourceRef});
         let func = new Function(id, {...s, name, creationScope: Context.scope.deep});
         this.references.set(func.name, [], func);
+        return func;
     }
     getExprNumber(expr, s, title) {
         if (Debug.active) {
@@ -1079,7 +1083,8 @@ module.exports = class Processor {
             this.error(s, `airtemplate not defined correctly`);
         }
 
-        const instance = new AirTemplate(name, s.statements, this.getLastInclude());
+        const methods = this.extractAirTemplateMethods(s.statements).map(m => this.defineFunction(`${name}.${m.name}`, m));
+        const instance = new AirTemplate(name, s.statements, methods, this.getLastInclude());
         this.airTemplates.define(name, instance, `airgroup ${name} has been defined previously on ${Context.sourceRef}`);
 
         const id = this.references.declare(name, 'function', [], {sourceRef: Context.sourceRef});
@@ -1254,6 +1259,10 @@ module.exports = class Processor {
         const air = this.createAir(this.currentAirGroup, airTemplate, {...options, name});
         this.currentAir = air;
 
+        const hasAlias = name != airTemplate.name;
+        if (hasAlias) {
+            this.context.push(airTemplate.name);
+        }
         this.context.push(name);
         this.scope.pushInstanceType('air');
         airGroup.airStart(air.id);
@@ -1302,6 +1311,9 @@ module.exports = class Processor {
         this.scope.popInstanceType(['witness', 'fixed', 'customcol', 'im', 'airvalue']);
         // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
+        if (hasAlias) {
+            this.context.pop();
+        }
         this.closeAir(air);
 
         // closing airgroup but no closing final
@@ -1932,5 +1944,16 @@ module.exports = class Processor {
     getLastInclude() {
         return this.includeStack[this.includeStack.length - 1] ?? false;
     }
-
+    extractAirTemplateMethods(statements) {
+        let methods = [];
+        let index = 0;
+        while (index < statements.length) {
+            if (statements[index].type === 'function_definition') {
+                methods.push(statements.splice(index, 1)[0]);
+            } else {
+                index++;
+            }
+        }
+        return methods;
+    }
 }

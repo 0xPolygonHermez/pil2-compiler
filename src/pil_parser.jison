@@ -71,6 +71,7 @@ return                                      { return 'RETURN' }
 
 \"[^"]*\"                                   { yytext = yytext.slice(1,-1); return 'STRING'; }
 \`[^`]*\`                                   { yytext = yytext.slice(1,-1); return 'TEMPLATE_STRING'; }
+// [a-zA-Z_]([a-zA-Z$_0-9]|\`[^`]*\`)*         { return 'IDENTIFIER'; }
 [a-zA-Z_][a-zA-Z$_0-9]*                     { return 'IDENTIFIER'; }
 \@[a-zA-Z_][a-zA-Z$_0-9]*                   { yytext = yytext.slice(1); return 'HINT'; }
 \$[0-9][0-9]*                               { yytext = yytext.slice(1); return 'POSITIONAL_PARAM'; }
@@ -175,26 +176,7 @@ const ExpressionFactory = require('../src/expression_factory.js');
 function showcode(title, info) {
     console.log(title+` ${info.last_line}:${info.last_column}`);
 }
-/*
-function runtime_expr(value) {
-    let res = new Expression();
-    if (value.type) {
-        delete value.type;
-    }
-    res.setRuntime(value);
-    return res;
-}
 
-function insert_expr(e, op, ...values) {
-    // let res = e;
-    // e.expr = new Expression();
-    // console.log(e);
-    // console.log(op);
-    // console.log(values);
-    e.insert.apply(e, [op, ...values]);
-    return e;
-}*/
-//         console.log(`STATE ${state} ${(this.terminals_[symbol] || symbol)}`);
 function implicit_scope(statements) {
     if (Array.isArray(statements)) {
         if (statements.length > 1) {
@@ -368,14 +350,14 @@ statement_closed
     ;
 
 function
-    : FUNCTION IDENTIFIER
-        { $$ = {private: false, public: true, name: $2} }
+    : FUNCTION name_reference
+        { $$ = {private: false, public: true, name: $2.name} }
 
-    | PRIVATE FUNCTION IDENTIFIER
-        { $$ = {private: true, public: false, name: $3} }
+    | PRIVATE FUNCTION name_reference
+        { $$ = {private: true, public: false, name: $3.name} }
 
-    | PUBLIC FUNCTION IDENTIFIER
-        { $$ = {private: false, public: true, name: $3} }
+    | PUBLIC FUNCTION name_reference
+        { $$ = {private: false, public: true, name: $3.name} }
     ;
 
 function_definition

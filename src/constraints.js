@@ -58,6 +58,9 @@ module.exports = class Constraints {
         left.simplify();
         return this.defineExpressionAsConstraint(left, boundery, sourceRef);
     }
+    getLastConstraintId() {
+        return this.constraints.length - 1;
+    }
     defineExpressionAsConstraint(e, boundery, sourceRef) {
         const exprId = this.getExpressions().insert(e);
         return this.constraints.push({exprId, sourceRef: sourceRef ?? Context.sourceTag, boundery: boundery ?? false}) - 1;

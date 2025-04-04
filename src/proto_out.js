@@ -315,6 +315,9 @@ module.exports = class ProtoOut {
         for (const col of cols) {
             const colIsPeriodic = col.isPeriodic() && col.rows < rows;
             if (colIsPeriodic !== periodic) continue;
+            if (colIsPeriodic && !Context.config.enablePeriodicCols) {
+                throw new Error(`Periodic cols not enabled, but ${col.label} defined at ${Context.sourceRef} has size of ${col.rows} but air has ${rows}`);
+            }
             if (col.temporal) continue; // ignore temporal columns, only use to help to create other fixed columns
             this.fixedId2ProtoId[col.id] = [colType, airCols.length];
             let values = [];

@@ -506,10 +506,7 @@ class AirOut {
             case 'expression': {
                     const idx = data.idx;
                     if (idx >= ctx.expressions.length) {
-                        console.log("len",ctx.expressions.length);
                         throw new Error(`${ctx.path} invalid expression idx:${idx}`);
-                        // console.log(`ERROR !!! ${ctx.path} invalid expression idx:${idx} [max:${ctx.expressions.length - 1}]`);
-                        // break;
                     }
                     if (ctx.referenced[idx]) {
                         throw new Error(`${ctx.path} circular reference idx:${idx}`);

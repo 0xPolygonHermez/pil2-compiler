@@ -49,7 +49,7 @@ class MultiArray {
                 _lengths[0] = to - from + 1;
                 offset += from 
             }
-            console.log(this.lengths, dim, _lengths, offset, from, to);
+            // console.log(this.lengths, dim, _lengths, offset, from, to);
         }
         const cloned = new MultiArray(_lengths, {
             baseOffset: this.baseOffset + offset + locatorOffset,

@@ -26,12 +26,18 @@ module.exports = class SequenceSizeOf extends SequenceBase {
         const size = this.insideExecute(e.value);
         return this.parent.setPaddingSize(size);
     }
+    countFromTo(fromValue, toValue) {
+        let res = toValue > fromValue ? toValue - fromValue: toValue - fromValue;
+        res = res < 0n ? -res : res;
+        return res + 1n;
+    }
     rangeSeq(e) {
         // TODO review if negative, fe?
         const [fromValue, toValue, times] = this.getRangeSeqInfo(e);
         this.updateLimitsValue(fromValue);
         this.updateLimitsValue(toValue);
-        return this.toNumber(toValue > fromValue ? toValue - fromValue + 1n : toValue - fromValue + 1n) *  times;
+        let res = this.toNumber(this.countFromTo(fromValue, toValue)) *  times;
+        return res;
     }
     arithSeq(e) {
         const [t1, t2, tn, times] = this.getTermSeqInfo(e);

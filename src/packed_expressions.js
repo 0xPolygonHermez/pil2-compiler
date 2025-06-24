@@ -38,7 +38,7 @@ module.exports = class PackedExpressions {
     }
     neg() {
         const [value] = this.pop(1, 'neg');
-        return this.insert({sub: {value}});
+        return this.insert({neg: {value}});
     }
     push(obj) {
         if (assert.isEnabled) assert.ok(VALID_OBJ_TYPES.includes(Object.keys(obj)[0]));

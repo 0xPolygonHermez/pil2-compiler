@@ -4,10 +4,15 @@ const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js"
 const ExpressionItems = require('./expression_items.js');
 const assert = require('./assert.js');
 module.exports = class AirTemplate {
-    constructor (name, statements) {
+    constructor (name, statements, methods, baseDir) {
         this.name = name;
+        this.methods = methods;
         this.blocks = [statements];
         this.instances = [];
+        this.baseDir = baseDir;
+    }
+    getBaseDir() {
+        return this.baseDir;
     }
     addBlock(statements) {
         this.statements = [...this.statements, ...statements];
@@ -28,5 +33,5 @@ module.exports = class AirTemplate {
             }
         }
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue(0) : res;
-    }   
+    }
 }

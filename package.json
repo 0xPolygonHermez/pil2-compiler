@@ -4,7 +4,8 @@
   "description": "PIL2 compiler",
   "main": "index.js",
   "bin": {
-    "pil2com": "src/pil.js"
+    "pil2com": "./src/pil.js",
+    "audit": "./tools/audit.js"
   },
   "scripts": {
     "test": "mkdir -p tmp; mocha",

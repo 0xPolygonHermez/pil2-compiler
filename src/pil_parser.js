@@ -1132,26 +1132,7 @@ const ExpressionFactory = require('../src/expression_factory.js');
 function showcode(title, info) {
     console.log(title+` ${info.last_line}:${info.last_column}`);
 }
-/*
-function runtime_expr(value) {
-    let res = new Expression();
-    if (value.type) {
-        delete value.type;
-    }
-    res.setRuntime(value);
-    return res;
-}
 
-function insert_expr(e, op, ...values) {
-    // let res = e;
-    // e.expr = new Expression();
-    // console.log(e);
-    // console.log(op);
-    // console.log(values);
-    e.insert.apply(e, [op, ...values]);
-    return e;
-}*/
-//         console.log(`STATE ${state} ${(this.terminals_[symbol] || symbol)}`);
 function implicit_scope(statements) {
     if (Array.isArray(statements)) {
         if (statements.length > 1) {
@@ -1620,102 +1601,100 @@ case 57: yy_.yytext = yy_.yytext.slice(1,-1); return 138;
 break;
 case 58: return 12; 
 break;
-case 59: return 12; 
+case 59: yy_.yytext = yy_.yytext.slice(1); return 30; 
 break;
-case 60: yy_.yytext = yy_.yytext.slice(1); return 30; 
+case 60: yy_.yytext = yy_.yytext.slice(1); return 179; 
 break;
-case 61: yy_.yytext = yy_.yytext.slice(1); return 179; 
+case 61: return 178; 
 break;
-case 62: return 178; 
+case 62: return 127; 
 break;
-case 63: return 127; 
+case 63: return 128; 
 break;
-case 64: return 128; 
+case 64: return 121; 
 break;
-case 65: return 121; 
+case 65: return 122; 
 break;
-case 66: return 122; 
+case 66: return 123; 
 break;
-case 67: return 123; 
+case 67: return 172; 
 break;
-case 68: return 172; 
+case 68: return 173; 
 break;
-case 69: return 173; 
+case 69: return 174; 
 break;
-case 70: return 174; 
+case 70: return "'"; 
 break;
-case 71: return "'"; 
+case 71: return "?"; 
 break;
-case 72: return "?"; 
+case 72: return "%"; 
 break;
-case 73: return "%"; 
+case 73: return "\\\\"; 
 break;
-case 74: return "\\\\"; 
+case 74: return "/"; 
 break;
-case 75: return "/"; 
+case 75: return 24; 
 break;
-case 76: return 24; 
+case 76: return 51; 
 break;
-case 77: return 51; 
+case 77: return 146; 
 break;
-case 78: return 146; 
+case 78: return 163; 
 break;
-case 79: return 163; 
+case 79: return 168; 
 break;
-case 80: return 168; 
+case 80: return 165; 
 break;
-case 81: return 165; 
+case 81: return 166; 
 break;
-case 82: return 166; 
+case 82: return 167; 
 break;
-case 83: return 167; 
+case 83: return 169; 
 break;
-case 84: return 169; 
+case 84: return 170; 
 break;
-case 85: return 170; 
+case 85: return 160; 
 break;
-case 86: return 160; 
+case 86: return 161; 
 break;
-case 87: return 161; 
+case 87: return 158; 
 break;
-case 88: return 158; 
+case 88: return 159; 
 break;
-case 89: return 159; 
+case 89: return 83; 
 break;
-case 90: return 83; 
+case 90: return 157; 
 break;
-case 91: return 157; 
+case 91: return 156; 
 break;
-case 92: return 156; 
+case 92: return 56; 
 break;
-case 93: return 56; 
+case 93: return 27; 
 break;
-case 94: return 27; 
+case 94: return 29; 
 break;
-case 95: return 29; 
+case 95: return 32; 
 break;
-case 96: return 32; 
+case 96: return 34; 
 break;
-case 97: return 34; 
+case 97: return 14; 
 break;
-case 98: return 14; 
+case 98: return 16; 
 break;
-case 99: return 16; 
+case 99: return '::'; 
 break;
-case 100: return '::'; 
+case 100: return 44; 
 break;
-case 101: return 44; 
+case 101: return 171; 
 break;
-case 102: return 171; 
+case 102: return 5; 
 break;
-case 103: return 5; 
-break;
-case 104: console.log("INVALID: " + yy_.yytext); return 'INVALID'
+case 103: console.log("INVALID: " + yy_.yytext); return 'INVALID'
 break;
 }
 },
-rules: [/^(?:\s+)/,/^(?:\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\/)/,/^(?:\/\/.*)/,/^(?:#pragma\s+[^\r\n]*)/,/^(?:col\b)/,/^(?:witness\b)/,/^(?:fixed\b)/,/^(?:container\b)/,/^(?:declare\b)/,/^(?:use\b)/,/^(?:alias\b)/,/^(?:include\b)/,/^(?:require\b)/,/^(?:in\b)/,/^(?:is\b)/,/^(?:publictable\b)/,/^(?:public\b)/,/^(?:constant\b)/,/^(?:const\b)/,/^(?:proofval\b)/,/^(?:airgroupval\b)/,/^(?:airval\b)/,/^(?:airgroup\b)/,/^(?:airtemplate\b)/,/^(?:air\b)/,/^(?:proof\b)/,/^(?:commit\b)/,/^(?:int\b)/,/^(?:fe\b)/,/^(?:expr\b)/,/^(?:string\b)/,/^(?:challenge\b)/,/^(?:for\b)/,/^(?:while\b)/,/^(?:do\b)/,/^(?:break\b)/,/^(?:continue\b)/,/^(?:if\b)/,/^(?:elseif\b)/,/^(?:else\b)/,/^(?:switch\b)/,/^(?:case\b)/,/^(?:default\b)/,/^(?:when\b)/,/^(?:aggregate\b)/,/^(?:stage\b)/,/^(?:on\b)/,/^(?:private\b)/,/^(?:final\b)/,/^(?:function\b)/,/^(?:return\b)/,/^(?:\.\.\+\.\.)/,/^(?:\.\.\*\.\.)/,/^(?:\.\.\.)/,/^(?:\.\.)/,/^(?:(0x[0-9A-Fa-f][0-9A-Fa-f_]*)|([0-9][0-9_]*))/,/^(?:"[^"]*")/,/^(?:`[^`]*`)/,/^(?:[a-zA-Z_]([a-zA-Z$_0-9]|`[^`]*`)*)/,/^(?:[a-zA-Z_][a-zA-Z$_0-9]*)/,/^(?:@[a-zA-Z_][a-zA-Z$_0-9]*)/,/^(?:\$[0-9][0-9]*)/,/^(?:\*\*)/,/^(?:\+\+)/,/^(?:--)/,/^(?:\+=)/,/^(?:-=)/,/^(?:\*=)/,/^(?:\+)/,/^(?:-)/,/^(?:\*)/,/^(?:')/,/^(?:\?)/,/^(?:%)/,/^(?:\\\\)/,/^(?:\/)/,/^(?:;)/,/^(?:,)/,/^(?:\.)/,/^(?:&&)/,/^(?:\|\|)/,/^(?:&)/,/^(?:\|)/,/^(?:\^)/,/^(?:<<)/,/^(?:>>)/,/^(?:<=)/,/^(?:>=)/,/^(?:<)/,/^(?:>)/,/^(?:===)/,/^(?:!=)/,/^(?:==)/,/^(?:=)/,/^(?:\()/,/^(?:\))/,/^(?:\[)/,/^(?:\])/,/^(?:\{)/,/^(?:\})/,/^(?:::)/,/^(?::)/,/^(?:!)/,/^(?:$)/,/^(?:.)/],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104],"inclusive":true}}
+rules: [/^(?:\s+)/,/^(?:\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\/)/,/^(?:\/\/.*)/,/^(?:#pragma\s+[^\r\n]*)/,/^(?:col\b)/,/^(?:witness\b)/,/^(?:fixed\b)/,/^(?:container\b)/,/^(?:declare\b)/,/^(?:use\b)/,/^(?:alias\b)/,/^(?:include\b)/,/^(?:require\b)/,/^(?:in\b)/,/^(?:is\b)/,/^(?:publictable\b)/,/^(?:public\b)/,/^(?:constant\b)/,/^(?:const\b)/,/^(?:proofval\b)/,/^(?:airgroupval\b)/,/^(?:airval\b)/,/^(?:airgroup\b)/,/^(?:airtemplate\b)/,/^(?:air\b)/,/^(?:proof\b)/,/^(?:commit\b)/,/^(?:int\b)/,/^(?:fe\b)/,/^(?:expr\b)/,/^(?:string\b)/,/^(?:challenge\b)/,/^(?:for\b)/,/^(?:while\b)/,/^(?:do\b)/,/^(?:break\b)/,/^(?:continue\b)/,/^(?:if\b)/,/^(?:elseif\b)/,/^(?:else\b)/,/^(?:switch\b)/,/^(?:case\b)/,/^(?:default\b)/,/^(?:when\b)/,/^(?:aggregate\b)/,/^(?:stage\b)/,/^(?:on\b)/,/^(?:private\b)/,/^(?:final\b)/,/^(?:function\b)/,/^(?:return\b)/,/^(?:\.\.\+\.\.)/,/^(?:\.\.\*\.\.)/,/^(?:\.\.\.)/,/^(?:\.\.)/,/^(?:(0x[0-9A-Fa-f][0-9A-Fa-f_]*)|([0-9][0-9_]*))/,/^(?:"[^"]*")/,/^(?:`[^`]*`)/,/^(?:[a-zA-Z_][a-zA-Z$_0-9]*)/,/^(?:@[a-zA-Z_][a-zA-Z$_0-9]*)/,/^(?:\$[0-9][0-9]*)/,/^(?:\*\*)/,/^(?:\+\+)/,/^(?:--)/,/^(?:\+=)/,/^(?:-=)/,/^(?:\*=)/,/^(?:\+)/,/^(?:-)/,/^(?:\*)/,/^(?:')/,/^(?:\?)/,/^(?:%)/,/^(?:\\\\)/,/^(?:\/)/,/^(?:;)/,/^(?:,)/,/^(?:\.)/,/^(?:&&)/,/^(?:\|\|)/,/^(?:&)/,/^(?:\|)/,/^(?:\^)/,/^(?:<<)/,/^(?:>>)/,/^(?:<=)/,/^(?:>=)/,/^(?:<)/,/^(?:>)/,/^(?:===)/,/^(?:!=)/,/^(?:==)/,/^(?:=)/,/^(?:\()/,/^(?:\))/,/^(?:\[)/,/^(?:\])/,/^(?:\{)/,/^(?:\})/,/^(?:::)/,/^(?::)/,/^(?:!)/,/^(?:$)/,/^(?:.)/],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103],"inclusive":true}}
 });
 return lexer;
 })();

@@ -62,7 +62,7 @@ module.exports = class ReferenceItem extends RuntimeItem {
         if (Debug.active) {
             console.log(`REFERENCE ${this.name} [${this.indexes.join('][')}]`)
             console.log(item);
-            console.log(item.eval());
+            console.log(item.eval(options));
         }
         return {result: item.eval(options), isExpression: item.isExpression || item instanceof ExpressionReference};
     }

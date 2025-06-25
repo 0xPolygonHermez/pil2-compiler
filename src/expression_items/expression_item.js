@@ -59,7 +59,6 @@ const { result } = require('lodash');
 const assert = require('../assert.js');
 class ExpressionItem {
     static _classToManager = {};
-    #rowOffset;
     constructor(options = {}) {
         this.options = options;
         this.indexes = false;
@@ -134,15 +133,6 @@ class ExpressionItem {
             }
             throw e;
         }
-    }
-    get rowOffset() {
-        return this.#rowOffset;
-    }
-    set rowOffset(value) {
-        if (Debug.active) {
-            if (!value.isZero()) console.log(['ROWOFFSET.SET', value]);
-        }
-        this.#rowOffset = value;
     }
     clone() {
         let cloned = this.cloneInstance();

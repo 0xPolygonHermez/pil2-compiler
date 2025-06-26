@@ -203,7 +203,6 @@ module.exports = class Expressions {
         const packer = new ExpressionPacker();
         for (let id = 0; id < this.expressions.length; ++id) {
             if (typeof this.packedIds[id] !== 'undefined') continue;    // already packed
-            // this.expressions[id].dump('PACK-EXPRESSION ');
             packer.set(container, this.expressions[id]);
             this.packedIds[id] = assert.returnTypeOf(packer.pack(options), 'number');
             // packedId === false, means directly was a alone term.

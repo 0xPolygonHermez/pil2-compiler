@@ -1,0 +1,30 @@
+airtemplate ConstExpressions(int N = 2**16) {
+
+    col witness a,b,c,d;
+    // col witness x[4];
+    // col witness y[2][3];
+
+    const expr p_ab = a * b;
+    expr c_ab = 2 * a + 3 * b;
+    const expr s_ab = a + b;
+    // const expr a_xy[2];
+    // a_xy[0] = x[0] + x[1];
+    // a_xy[1] = x[2] + x[3];
+    // const expr a_y[3];
+    // a_y[0]= y[0][0] + y[1][0];
+    // a_y[1]= y[0][1] + y[1][1];
+    // a_y[2]= y[0][2] + y[1][2];
+    c_ab === 0;
+    // dump(p_ab + s_ab);
+    // dump(p_ab + c_ab);
+    p_ab + s_ab === 0;
+    // p_ab - s_ab === 0;
+    p_ab + 's_ab === 0;
+    // a_xy[0] + a_xy[1] === 0;
+    // a_y[0] + a_y[1] + a_y[2] === 0;
+    // a' + 'b === 0;
+}
+
+airgroup ConstExpressions {
+    ConstExpressions();
+}

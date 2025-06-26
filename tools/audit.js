@@ -706,7 +706,7 @@ class AirOut {
                     const idx = data.idx;
                     const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false, false);
                     if (intermediate !==  false) {
-                        return '@@@'+intermediate;
+                        return '{'+intermediate+ '}';
                     }
                     if (idx >= ctx.expressions.length) {
                         console.log(cls, idx, data);

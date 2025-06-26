@@ -1,3 +1,4 @@
+const util = require('util');
 const Exceptions = require('./exceptions.js');
 const ExpressionItems = require('./expression_items.js');
 const Context = require('./context.js');
@@ -110,14 +111,16 @@ module.exports = class ExpressionPacker {
             this.container.pushAirValue(def.id);
         } else if (ope instanceof ExpressionItems.ExpressionReference) {
             const defvalue = Context.references.getDefinitionByItem(ope).getValue();
+
             if (defvalue.isExpression) {
-                if (this.container.pushExpressionReference(id)) {
+                let rowOffset = ope.rowOffset ? ope.rowOffset.value : 0;
+                if (this.container.pushExpressionReference(id, rowOffset)) {
                     return;
                 }
                 const packer = new ExpressionPacker(this.container, def.getValue());
                 const res = packer.pack(options);
                 if (typeof res === 'number') {
-                    this.container.saveAndPushExpressionReference(id, ope.label, res);
+                    this.container.saveAndPushExpressionReference(id, rowOffset, ope.label, res);
                 } else {
                     this.container.push(res);
                 }

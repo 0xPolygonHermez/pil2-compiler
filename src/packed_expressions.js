@@ -87,16 +87,22 @@ module.exports = class PackedExpressions {
         assert.defined(idx);
         this.values.push({expression: {idx}});
     }
-    pushExpressionReference (id) {
-        if (typeof this.references[id] === 'undefined') {
+    getReferenceKey(id, rowOffset = 0) {
+        return rowOffset ? (rowOffset > 0 ? `im_${id}+${rowOffset}` : `im_${id}${rowOffset}`) : `im_${id}`;
+    }
+    pushExpressionReference (id, rowOffset = 0) {
+        let key = this.getReferenceKey(id, rowOffset);
+        if (typeof this.references[key] === 'undefined') {
             return false;
         }
-        this.pushExpression(this.references[id]);
+        this.pushExpression(this.references[key]);
         return true;
     }
-    saveAndPushExpressionReference(id, label, res) {
-        this.references[id] = res;
-        this.expressionLabels[res] = label;
+    saveAndPushExpressionReference(id, rowOffset, label, res) {
+        const key = this.getReferenceKey(id, rowOffset);
+        this.references[key] = res;
+        const _label = this.rowOffsetToString(rowOffset, label);
+        this.expressionLabels[res] = _label;
         this.pushExpression(res);
     }
     dump() {

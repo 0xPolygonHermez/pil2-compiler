@@ -140,6 +140,7 @@ class ExpressionItem {
         return cloned;
     }
     cloneUpdate(source) {
+        if (typeof super.cloneUpdate === 'function') super.cloneUpdate(source);
         if (source.indexes) {
             this.indexes = source.indexes.map(index => (typeof index === 'object' && typeof index.clone === 'function') ? index.clone() : index);
         }

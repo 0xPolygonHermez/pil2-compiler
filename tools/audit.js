@@ -324,6 +324,11 @@ class AirOut {
 
         return this.symbols.find(symbol => symbol.name === name);
     }
+    getIntermediatesByAir(airGroupId, airId) {
+        if(this.symbols === undefined) return undefined;
+
+        return this.symbols.filter(symbol => symbol.type === SYMBOL_TYPES.IM_COL && symbol.airGroupId === airGroupId && symbol.airId === airId);
+    }
 
     getHintById(hintId) {
         if(this.hints === undefined) return undefined;
@@ -354,6 +359,7 @@ class AirOut {
             for (let airId = 0; airId < this.airGroups[airGroupId].airs.length; ++airId) {
                 this.verifyAirExpressions(airGroupId, airId);
                 this.verifyAirConstraints(airGroupId, airId);
+                this.verifyAirIntermediates(airGroupId, airId);
             }
         }
         this.verifyGlobalConstraints();
@@ -429,6 +435,21 @@ class AirOut {
             const res = this.expressionToString(ctx, expressionId, expressions[expressionId]);
             const degree = this.expressionDegree(ctx, expressionId, expressions[expressionId]);
             console.log(`CONSTRAINT.${constraintId} [${degree > 3 ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
+            ctx.referenced[expressionId] = false;
+        }
+    }
+    verifyAirIntermediates(airGroupId, airId) {
+        const air = this.airGroups[airGroupId].airs[airId];
+        const expressions = air.expressions ?? [];
+        const intermediates = this.getIntermediatesByAir(airGroupId, airId);
+        const expressionsCount = expressions.length;
+        let referenced = new Array(expressionsCount).fill(false);
+        let ctx = {path: `[airGroup:${airGroupId} air:${airId}]`, air: air.name, referenced, expressions, airGroupId, airId};
+        for (let index = 0; index < intermediates.length; ++index) {
+            const intermediate = intermediates[index];
+            const expressionId = intermediate.id;
+            ctx.referenced[expressionId] = true;
+            console.log(intermediate.name + ': ' + this.expressionToString(ctx, expressionId, expressions[expressionId]));
             ctx.referenced[expressionId] = false;
         }
     }

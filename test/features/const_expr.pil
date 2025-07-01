@@ -1,6 +1,11 @@
-airtemplate ConstExpressions(int N = 2**16) {
+public p1;
+
+const expr c_p1 = p1 + 5;
+
+airtemplate ConstExpressions(int N = 2**16, int use_c_p1 = 0) {
 
     col witness a,b,c,d;
+    col fixed L1 = [1,0...];
     // col witness x[4];
     // col witness y[2][3];
 
@@ -20,11 +25,21 @@ airtemplate ConstExpressions(int N = 2**16) {
     p_ab + s_ab === 0;
     // p_ab - s_ab === 0;
     p_ab + 's_ab === 0;
+    L1' * (p_ab + s_ab) === 0;
+    'L1 * (p_ab + s_ab) === 0;
+    const expr k;
+    if (use_c_p1) { k = 2 * c_p1 + 3 }
+    else { k = p_ab + 's_ab + 2 * L1' }
+    k + 5 === 0;
+    'k + 8 === 0;
     // a_xy[0] + a_xy[1] === 0;
     // a_y[0] + a_y[1] + a_y[2] === 0;
     // a' + 'b === 0;
 }
 
 airgroup ConstExpressions {
-    ConstExpressions();
+    ConstExpressions(use_c_p1: 1);
+    ConstExpressions(use_c_p1: 0) alias ConstExpressions2;
 }
+
+p1 * c_p1 === 23;

@@ -32,11 +32,18 @@ module.exports = class ExpressionReference extends ProofItem {
     cloneInstance(options) {
         return new ExpressionReference(this.id, this.instance, this.options);
     }
+
     eval(options) {
         // check if is baseType, in this case return it.
         const value = this.instance.get(this.id).getValue();
         if (value.isBaseType) return value;
 
+        if (options && options.unroll) {
+            // if constant expressio it's a alone item, so clone it directly.
+            if (value && value instanceof ProofItem) {
+                return value.clone();
+            }
+        } 
         return this.clone();
     }
     evalInside(options) {

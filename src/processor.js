@@ -1443,9 +1443,6 @@ module.exports = class Processor {
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
         this.proto.setSymbolsFromLabels(this.customCols.labelRanges, 'customcol', info);
-        const imSymbols = packed.expressionLabels.map((label, index) => typeof label === 'undefined' ? value : {label, from:index}).filter(x => typeof x !== 'undefined')
-        this.proto.setSymbolsFromLabels(imSymbols, 'im', {...info, namePrefix: Context.airName + '.'});
-        console.log(`  > Proto intermediates: ${imSymbols.length}`);
 
         if (airId == 0) {
             this.airGroupValues.clearOnceLabels(airGroupId);
@@ -1454,6 +1451,11 @@ module.exports = class Processor {
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS');
 
         this.proto.setSymbolsFromLabels(this.airValues.getLabels(['stage']), 'airvalue', info);
+
+        const imSymbols = packed.expressionLabels.map((label, index) => typeof label === 'undefined' ? value : {label, from:index}).filter(x => typeof x !== 'undefined')
+        this.proto.setSymbolsFromLabels(imSymbols, 'im', {...info, namePrefix: Context.airName + '.'});
+        console.log(`  > Proto intermediates: ${imSymbols.length}`);
+
         this.proto.addHints(this.hints, packed, {
                 airGroupId,
                 airId

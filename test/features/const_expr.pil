@@ -2,6 +2,11 @@ public p1;
 
 const expr c_p1 = p1 + 5;
 
+function double(expr x): expr {
+    const expr double_x = 2 * x;
+    return double_x;
+}
+
 airtemplate ConstExpressions(int N = 2**16, int use_c_p1 = 0) {
 
     col witness a,b,c,d;
@@ -35,6 +40,10 @@ airtemplate ConstExpressions(int N = 2**16, int use_c_p1 = 0) {
     // a_xy[0] + a_xy[1] === 0;
     // a_y[0] + a_y[1] + a_y[2] === 0;
     // a' + 'b === 0;
+
+    double(a) + 5 === 0;
+    double(b) + 10 === 0;
+    double(double(c)) + 20 === 0;
 }
 
 airgroup ConstExpressions {

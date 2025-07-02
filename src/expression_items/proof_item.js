@@ -1,6 +1,7 @@
 const ExpressionItem = require("./expression_item.js");
 const IntValue = require('./int_value.js');
 const RowOffset = require('./row_offset.js');
+const Context = require('../context.js');
 
 module.exports = class ProofItem extends ExpressionItem {
     static createWithId = true;
@@ -44,7 +45,10 @@ module.exports = class ProofItem extends ExpressionItem {
         // console.log(['ROWOFFSET.TOSTRING', next, prior, this.label, this.constructor.name, this.rowOffset]);
         let label = (options.hideClass ? '' : this.getTag() + '::') + this.label;
         if (options.hideLabel || !this.label) {
-            label = this.getTag() + '@' + this.id;
+            label = Context.references.getLabelByItem(this);
+            if (label === false) {
+                label = this.getTag() + '@' + this.id;
+            };
         }
         return next + label + prior;
     }

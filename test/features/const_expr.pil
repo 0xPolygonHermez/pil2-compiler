@@ -11,19 +11,19 @@ airtemplate ConstExpressions(int N = 2**16, int use_c_p1 = 0) {
 
     col witness a,b,c,d;
     col fixed L1 = [1,0...];
-    // col witness x[4];
-    // col witness y[2][3];
+    col witness x[4];
+    col witness y[2][3];
 
     const expr p_ab = a * b;
     expr c_ab = 2 * a + 3 * b;
     const expr s_ab = a + b;
-    // const expr a_xy[2];
-    // a_xy[0] = x[0] + x[1];
-    // a_xy[1] = x[2] + x[3];
-    // const expr a_y[3];
-    // a_y[0]= y[0][0] + y[1][0];
-    // a_y[1]= y[0][1] + y[1][1];
-    // a_y[2]= y[0][2] + y[1][2];
+    const expr a_xy[2];
+    a_xy[0] = x[0] + x[1];
+    a_xy[1] = x[2] + x[3];
+    const expr a_y[3];
+    a_y[0]= y[0][0] + y[1][0];
+    a_y[1]= y[0][1] + y[1][1];
+    a_y[2]= y[0][2] + y[1][2];
     c_ab === 0;
     // dump(p_ab + s_ab);
     // dump(p_ab + c_ab);
@@ -37,9 +37,9 @@ airtemplate ConstExpressions(int N = 2**16, int use_c_p1 = 0) {
     else { k = p_ab + 's_ab + 2 * L1' }
     k + 5 === 0;
     'k + 8 === 0;
-    // a_xy[0] + a_xy[1] === 0;
-    // a_y[0] + a_y[1] + a_y[2] === 0;
-    // a' + 'b === 0;
+    a_xy[0] + a_xy[1] === 0;
+    a_y[0] + a_y[1] + a_y[2] === 0;
+    a' + 'b === 0;
 
     double(a) + 5 === 0;
     double(b) + 10 === 0;

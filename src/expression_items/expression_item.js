@@ -174,9 +174,9 @@ class ExpressionItem {
             this.rowOffset = this.rowOffset.cloneInstance();
         }
         const prior = this.evalPrior(options);
-        const inside = this.evalInsideExtra({...options, asItem: true});
         const next = this.evalNext(options);
         const rowOffset = (next ? next : 0) + (prior ? prior : 0);
+        const inside = this.evalInsideExtra({...options, asItem: true, ignoreRowOffset: true});
         if (rowOffset === 0 || !inside.isExpression) {
             return inside.result;
         }

@@ -32,11 +32,11 @@ module.exports = class FixedCol extends ProofItem {
     isPeriodic() {
         return this.rows > 0;
     }
-    getValue(row) {
-        return this.getRowValue(row);
+    getValue(row, rowOffset = 0)  {
+        return this.getRowValue(row, rowOffset);
     }
-    getValueItem(row) {
-        return this.getRowItem(row);
+    getValueItem(row, rowOffset = 0) {
+        return this.getRowItem(row, rowOffset);
     }
     setValue(value) {
         // TODO: review
@@ -145,17 +145,25 @@ module.exports = class FixedCol extends ProofItem {
             this.currentSetRowValue = this.useBigIntValue() ? this.#ultraFastSetRowValue : this.#fastSetRowValue;
         }
     }
-    getRowValue(row) {
+    getRowValue(row, rowOffset = 0) {
         if (this.sequence) {
+            if (rowOffset) {
+                const rows  = BigInt(this.rows);
+                return this.sequence.getIntValue((BigInt(row) + BigInt(rowOffset) + rows) % rows);
+            }
             return this.sequence.getIntValue(row);
         }
         if (row >= this.size) {
             throw new Error(`Out-of-bounds on fixed, to access to row ${row} valid indexs [0..${this.size}] N=${Context.rows} in ${Context.references.getLabelByItem(this)}`);
         }
+        if (rowOffset) {
+            const rows  = BigInt(this.rows);
+            row = Number((BigInt(row) + BigInt(rowOffset) + rows) % rows);
+        }
         return BigInt(this.values[row]);
     }
-    getRowItem(row) {
-        return new IntValue(this.getRowValue(row));
+    getRowItem(row, rowOffset = 0) {
+        return new IntValue(this.getRowValue(row, rowOffset));
     }
     set(value) {
         if ((value instanceof Object) === false) {

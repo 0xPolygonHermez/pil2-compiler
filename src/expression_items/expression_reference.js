@@ -7,6 +7,7 @@ module.exports = class ExpressionReference extends ProofItem {
         super(options);
         this.id = id;
         this.instance = instance;
+        this.rowOffsetApply = true;
         this.const = true;
     }
     get degree() {

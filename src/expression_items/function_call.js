@@ -9,7 +9,7 @@ module.exports = class FunctionCall extends RuntimeItem {
         super(options);
         this.name = name;
         if (args instanceof ExpressionList) {
-            if (Debug.active) console.log(util.inspect(args, false, 10, true));
+            if (Debug.active) console.log(util.inspect([name, args], false, 10, true));
             this.namedargs = args.names ?? false;
             args = args.items;
         }        

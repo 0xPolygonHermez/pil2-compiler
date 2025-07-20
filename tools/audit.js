@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const fs = require('fs');
 const protobuf = require('protobufjs');
 const util = require('util');
@@ -50,8 +52,10 @@ class AirOut {
             off: '\x1b[0m'
         }
         this.fixedHash = {};
+        this.color = false;
         this.config = {};
         this.config.hashFixed = argv.hash ?? false;
+        this.uniqueSymbols = {};
         // this.color = {
         //     parentesis: '',
         //     operation: '',
@@ -72,6 +76,7 @@ class AirOut {
         this.checkFixed();
 
         this.printInfo();
+        this.markDuplicatedSymbols();
         this.displaySymbols();
         this.verifyExpressions();
         this.verifyHints();
@@ -322,6 +327,11 @@ class AirOut {
 
         return this.symbols.find(symbol => symbol.name === name);
     }
+    getIntermediatesByAir(airGroupId, airId) {
+        if(this.symbols === undefined) return undefined;
+
+        return this.symbols.filter(symbol => symbol.type === SYMBOL_TYPES.IM_COL && symbol.airGroupId === airGroupId && symbol.airId === airId);
+    }
 
     getHintById(hintId) {
         if(this.hints === undefined) return undefined;
@@ -352,6 +362,7 @@ class AirOut {
             for (let airId = 0; airId < this.airGroups[airGroupId].airs.length; ++airId) {
                 this.verifyAirExpressions(airGroupId, airId);
                 this.verifyAirConstraints(airGroupId, airId);
+                this.showAirIntermediates(airGroupId, airId);
             }
         }
         this.verifyGlobalConstraints();
@@ -395,6 +406,16 @@ class AirOut {
         }
         ctx.path = _ctxpath;
     }
+    colorString(text, color) {
+        if (this.color) {
+            return `\x1B[${color}${text}\x1B[0m`;
+        } else {
+            return text;
+        }
+    }
+    log(msg, color = '') {
+        console.log(this.colorString(msg, color));
+    }
     verifyAirExpressions(airGroupId, airId) {
         const air = this.airGroups[airGroupId].airs[airId];
         const expressions = air.expressions ?? [];
@@ -402,11 +423,18 @@ class AirOut {
         // TODO: detect circular dependencies
         let referenced = new Array(expressionsCount).fill(false);
         let ctx = {path: `[airGroup:${airGroupId} air:${airId}]`, air: air.name, referenced, expressions, airGroupId, airId};
+        this.log(`##### AIR: ${air.name} (expressions:${expressionsCount}) #####`,'1;36m');
         for (let expressionId = 0; expressionId < expressionsCount; ++expressionId) {
+            if (expressionId % 1000 === 0 && expressionId) {
+                console.log(`verify expression air:${airId} ${expressionId}/${expressionsCount}....`);
+            }
             ctx.referenced[expressionId] = true;
             this.verifyExpression(ctx, expressionId, expressions[expressionId]);
             ctx.referenced[expressionId] = false;
         }
+    }
+    clearCacheDegree() {
+        this.cacheDegree = {};
     }
     verifyAirConstraints(airGroupId, airId) {
         const air = this.airGroups[airGroupId].airs[airId];
@@ -416,17 +444,35 @@ class AirOut {
         // TODO: detect circular dependencies
         let referenced = new Array(expressionsCount).fill(false);
         let ctx = {path: `[airGroup:${airGroupId} air:${airId}]`, air: air.name, referenced, expressions, airGroupId, airId};
-        console.log(`\x1B[1;36m##### AIR: ${air.name}  #####\x1B[0m`);
+        this.log(`##### AIR: ${air.name} (constraints:${constraints.length}) #####`, '1;36m');
+        this.clearCacheDegree();
         for (let constraintId = 0; constraintId < constraints.length; ++constraintId) {
             const constraint = constraints[constraintId];
             const frame = Object.keys(constraint)[0];
             const constraintData = constraint[frame];
             const expressionId = constraintData.expressionIdx.idx;
-            console.log(`--- constraint ${constraintId+1}/${constraints.length} --- ${constraintData.debugLine}`);
+            this.log(`‣ constraint ${constraintId} => ${constraintData.debugLine}`, '38;2;192;255;2m');
             ctx.referenced[expressionId] = true;
             const res = this.expressionToString(ctx, expressionId, expressions[expressionId]);
             const degree = this.expressionDegree(ctx, expressionId, expressions[expressionId]);
-            console.log(`CONSTRAINT.${constraintId} [${degree > 3 ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
+            console.log(`CONSTRAINT.${constraintId} [${(degree > 3 && this.color) ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
+            ctx.referenced[expressionId] = false;
+        }
+    }
+    showAirIntermediates(airGroupId, airId) {
+        const air = this.airGroups[airGroupId].airs[airId];
+        const expressions = air.expressions ?? [];
+        const intermediates = this.getIntermediatesByAir(airGroupId, airId);
+        const expressionsCount = expressions.length;
+        let referenced = new Array(expressionsCount).fill(false);
+        let ctx = {path: `[airGroup:${airGroupId} air:${airId}]`, air: air.name, referenced, expressions, airGroupId, airId};
+        this.log(`##### AIR: ${air.name} (intermediates:${intermediates.length}) #####`, '1;36m');
+
+        for (let index = 0; index < intermediates.length; ++index) {
+            const intermediate = intermediates[index];
+            const expressionId = intermediate.id;
+            ctx.referenced[expressionId] = true;
+            console.log(intermediate.name + '@' + intermediate.id +': ' + this.expressionToString(ctx, expressionId, expressions[expressionId]));
             ctx.referenced[expressionId] = false;
         }
     }
@@ -437,7 +483,7 @@ class AirOut {
         // TODO: detect circular dependencies
         let referenced = new Array(expressionsCount).fill(false);
         let ctx = {path: `[global]`, referenced, expressions};
-        console.log(`\x1B[1;36m##### GLOBAL  #####\x1B[0m`);
+        this.log(`##### GLOBAL  #####`, '1;36m');
         for (let constraintId = 0; constraintId < constraints.length; ++constraintId) {
             console.log(`--- constraint ${constraintId+1}/${constraints.length} ---`);
             const constraint = constraints[constraintId];
@@ -445,7 +491,7 @@ class AirOut {
             ctx.referenced[expressionId] = true;
             const res = this.expressionToString(ctx, expressionId, expressions[expressionId]);
             const degree = this.expressionDegree(ctx, expressionId, expressions[expressionId]);
-            console.log(`CONSTRAINT.${constraintId} [${degree > 3 ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
+            console.log(`CONSTRAINT.${constraintId} [${(this.color && degree > 3) ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
             ctx.referenced[expressionId] = false;
         }
     }
@@ -460,6 +506,7 @@ class AirOut {
                 ctx.path = _ctxpath + `[@${idx} ${cls} lhs]`;
                 this.verifyExpressionOperand(ctx, data.lhs);
                 ctx.path = _ctxpath + `[@${idx} ${cls} rhs]`;
+                this.verifyExpressionOperand(ctx, data.rhs);
                 break;
             case 'neg':
                 ctx.path = _ctxpath + `[@${idx} ${cls} value]`;
@@ -529,11 +576,13 @@ class AirOut {
                 .replace(/\(\s+\(/g, '((')
                 .replace(/\)\s+\)/g, '))')
                 .replace(/\(\s+/g, '(')
-                .replace(/\s+\)/g, ')')
- //               .replace(/([\[\]])/g, this.color.array + '$1' + this.color.off)
-                .replace(/(\W)([0-9]+)(\W)/g, '$1' + this.color.constant + '$2' + this.color.off + '$3')
-                .replace(/([\(\)]+)/g, this.color.parentesis + '$1' + this.color.off)
-                .replace(/([\+\*\-]+)/g, this.color.operation + '$1' + this.color.off);
+                .replace(/\s+\)/g, ')');
+        if (this.color) {
+            res = res.replace(/([\[\]])/g, this.color.array + '$1' + this.color.off)
+                     .replace(/(?<![@A-Za-z_0-9])([0-9]+)(\W)/g, this.color.constant + '$1' + this.color.off + '$2')
+                     .replace(/([\(\)]+)/g, this.color.parentesis + '$1' + this.color.off)
+                     .replace(/([\+\*\-]+)/g, this.color.operation + '$1' + this.color.off);
+        }
         return res;
     }
 
@@ -545,7 +594,7 @@ class AirOut {
         switch (cls) {
             case 'add':
             case 'sub':
-            case 'mul':
+            case 'mul': {
                 const lhs = this.operandToString(ctx, id, data.lhs, cls);
                 const rhs = this.operandToString(ctx, id, data.rhs, cls);
                 if (typeof lhs === 'undefined' || typeof rhs === 'undefined') {
@@ -556,12 +605,15 @@ class AirOut {
                                      (parentOperation == 'add' && cls == 'add') || (parentOperation == 'mul' && cls == 'mul');
                                      (parentOperation == 'add' && cls == 'mul') || (parentOperation == 'sub' && cls == 'mul');
                 return `${noParentesis ? ' ':'('}${lhs} ${op} ${rhs}${noParentesis ? ' ':')'}`;
-            case 'neg':
-                console.log(data);
-                EXIT_HERE;
-                ctx.path = _ctxpath + `[@${idx} ${id, cls} value]`;
-                this.verifyExpressionOperand(ctx, id, data.value);
-                break;
+            }
+            case 'neg': {
+                const value = this.operandToString(ctx, id, data.value, cls);
+                if (typeof value === 'undefined') {
+                    console.log(util.inspect(expression, true, null, true));
+                    EXIT_HERE;
+                }
+                return `-(${value})`;
+            }
             default:
                 throw new Error(`${_ctxpath} @${idx} invalid cls:${cls}`);
         }
@@ -595,11 +647,25 @@ class AirOut {
         console.log(text);
 
     }
+    markDuplicatedSymbols() {
+        for (let index = 0; index < this.symbols.length; ++index) {
+            const key = this.symbols[index].name + '___' + this.symbols[index].airGroupId + '___' + this.symbols[index].airId;
+            if (typeof this.uniqueSymbols[key] === 'undefined') {
+                this.uniqueSymbols[key] = 0;
+            } else {         
+                ++this.uniqueSymbols[key];
+            }
+        }
+    }
     displaySymbols() {
         console.log('\n\x1B[44mname                                    |   id|type                |stage|group| air|commit|debug                                                                   \x1B[0m');
         for (let index = 0; index < this.symbols.length; ++index) {
             this.displaySymbol(this.symbols[index]);
         }
+    }
+    getUniqueSymbolName(ctx, symbol, id) {
+        const key = symbol.name + '___' + symbol.airGroupId + '___' + symbol.airId;
+        return this.uniqueSymbols[key] > 0 ? `${symbol.name}@${id}` : symbol.name;
     }
     getSymbol(ctx, id, stage, type, commitId, defaultResult) {
         // TODO: row_offset
@@ -622,10 +688,11 @@ class AirOut {
                 if (id < symbol.id) continue;
                 this.initOffsets(symbol);
                 if (id >= (symbol.id + symbol._size)) continue;
-                res = symbol.name + this.offsetToIndexesString(id - symbol.id, symbol);
+                const name = this.getUniqueSymbolName(ctx, symbol, id);
+                res = name + this.offsetToIndexesString(id - symbol.id, symbol);
                 break;
             } else if (id == symbol.id) {
-                res = symbol.name;
+                res = this.getUniqueSymbolName(ctx, symbol, id);
                 break;
             }
         }
@@ -704,7 +771,7 @@ class AirOut {
                     const idx = data.idx;
                     const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false, false);
                     if (intermediate !==  false) {
-                        return '@@@'+intermediate;
+                        return intermediate;
                     }
                     if (idx >= ctx.expressions.length) {
                         console.log(cls, idx, data);
@@ -764,8 +831,7 @@ class AirOut {
                 if (cls === 'mul') return lhs + rhs;
                 return lhs > rhs ? lhs : rhs;
             case 'neg':
-                console.log(data);
-                EXIT_HERE;
+                return this.operandDegree(ctx, id, data.value);
             default:
                 throw new Error(`${_ctxpath} @${idx} invalid cls:${cls}`);
         }
@@ -788,13 +854,17 @@ class AirOut {
                 return 1;
             case 'expression': {
                     const idx = data.idx;
-                    const intermediate = this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.IM_COL, false, false);
+                    let res = this.cacheDegree[idx];
+                    if (typeof res !== 'undefined') {
+                        return res;
+                    }
                     if (ctx.referenced[idx]) {
                         console.log(cls, idx, data);
                         throw new Error(`${ctx.path} circular reference idx:${idx}`);
                     }
                     ctx.referenced[idx] = true;
-                    const res = this.expressionDegree(ctx, idx, ctx.expressions[idx]);
+                    res = this.expressionDegree(ctx, idx, ctx.expressions[idx]);
+                    this.cacheDegree[idx] = res;
                     ctx.referenced[idx] = false;
                     return res;
                 }

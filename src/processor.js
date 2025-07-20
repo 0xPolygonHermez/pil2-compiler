@@ -272,6 +272,9 @@ module.exports = class Processor {
         this.proto.setChallenges(this.challenges);
         let packed = new PackedExpressions();
         this.globalExpressions.pack(packed);
+        const imSymbols = packed.expressionLabels.map((label, index) => typeof label === 'undefined' ? value : {label, from:index}).filter(x => typeof x !== 'undefined')
+        this.proto.setSymbolsFromLabels(imSymbols, 'im');
+        console.log(`  > Proto intermediates: ${imSymbols.length}`);
         this.proto.setGlobalConstraints(this.globalConstraints, packed);
         this.proto.addHints(this.globalHints, packed, {airGroupId: false });
         this.proto.setGlobalExpressions(packed);
@@ -1440,6 +1443,7 @@ module.exports = class Processor {
         this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
         this.proto.setSymbolsFromLabels(this.customCols.labelRanges, 'customcol', info);
+
         if (airId == 0) {
             this.airGroupValues.clearOnceLabels(airGroupId);
         }
@@ -1447,6 +1451,11 @@ module.exports = class Processor {
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS');
 
         this.proto.setSymbolsFromLabels(this.airValues.getLabels(['stage']), 'airvalue', info);
+
+        const imSymbols = packed.expressionLabels.map((label, index) => typeof label === 'undefined' ? value : {label, from:index}).filter(x => typeof x !== 'undefined')
+        this.proto.setSymbolsFromLabels(imSymbols, 'im', {...info, namePrefix: Context.airName + '.'});
+        console.log(`  > Proto intermediates: ${imSymbols.length}`);
+
         this.proto.addHints(this.hints, packed, {
                 airGroupId,
                 airId
@@ -1850,7 +1859,8 @@ module.exports = class Processor {
                     if (Debug.active) console.log(name, s.vtype, Context.sourceRef);
                     switch (s.vtype) {
                         case 'expr':
-                            initValue = init.eval();
+                            initValue = init.instance().eval();
+                            // initValue = init.eval();
                             break;
                         case 'int':
                             initValue = (s.multiple ? init.eval() : init.instance()).asIntItem();
@@ -1859,11 +1869,13 @@ module.exports = class Processor {
                         case 'string':
                             initValue = init.eval().asStringItem();
                             break;
+                        default:
+                            throw new Error(`Invalid variable type ${s.vtype} on ${Context.sourceRef}`);
                     }
                     if (Debug.active) console.log(name, s.vtype, initValue.toString ? initValue.toString() : initValue);
                 }
-            }
-            this.references.declare(name, s.vtype, lengths, { scope, sourceRef, const: s.const ?? false }, initValue);
+            }            
+            this.references.declare(name, s.vtype, lengths, { scope, sourceRef, const: s.const ?? false}, initValue);
             if (initValue !== null) {
                 const initValueText = typeof initValue.toString === 'function' ? initValue.toString() : initValue;
                 if (Debug.active) console.log(`ASSIGN(DECL) ${name} = ${initValueText} \x1B[0;90m[${Context.sourceTag}]\x1B[0m`);

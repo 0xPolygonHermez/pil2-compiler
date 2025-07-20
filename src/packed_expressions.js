@@ -8,6 +8,12 @@ module.exports = class PackedExpressions {
     constructor () {
         this.expressions = [];
         this.values = [];
+        this.references = [];
+        this.expressionLabels = [];
+        this.appliesRowOffset = [];
+    }
+    setAppliesRowOffset(id, appliesRowOffset) {
+        this.appliesRowOffset[id] = appliesRowOffset;
     }
     insert(expr) {
         return this.expressions.push(expr) - 1;
@@ -85,11 +91,43 @@ module.exports = class PackedExpressions {
         assert.defined(idx);
         this.values.push({expression: {idx}});
     }
+    getReferenceKey(id, rowOffset = 0) {
+        return rowOffset ? (rowOffset > 0 ? `im_${id}+${rowOffset}` : `im_${id}${rowOffset}`) : `im_${id}`;
+    }
+    // Returns the expression reference by id only if applies row offset, otherwise returns false.
+    getExpressionReference (id) {
+        let key = this.getReferenceKey(id, 0);
+        if (typeof this.references[key] === 'undefined') {
+            return false;
+        }
+        const res = this.references[key];
+        return this.appliesRowOffset[id] ? res : false;
+    }
+    pushExpressionReference (id, rowOffset = 0) {
+        let key = this.getReferenceKey(id, rowOffset);
+        if (typeof this.references[key] === 'undefined') {
+            return false;
+        }
+        this.pushExpression(this.references[key]);
+        return true;
+    }
+    saveAndPushExpressionReference(id, rowOffset, label, res) {
+        const key = this.getReferenceKey(id, rowOffset);
+        if (typeof this.references[key] === 'undefined') {        
+            this.references[key] = res;
+            const _label = this.rowOffsetToString(rowOffset, label);
+            this.expressionLabels[res] = _label;
+        }
+        this.pushExpression(res);
+    }
     dump() {
         console.log(util.inspect(this.expressions, false, null, true /* enable colors */));
     }
     exprToString(id, options) {
         assert.typeOf(id, 'number');
+        if (typeof this.expressionLabels[id] !== 'undefined') {
+            return this.expressionLabels[id];
+        }
         const expr = this.expressions[id];
         if (!expr) {
             console.log(expr);

@@ -309,7 +309,6 @@ module.exports = class References {
         options = options ?? {};
 
         const reference = this.getReference(name);
-        // TODO: if reference is a 'reference' check if name is correct
         const item = reference.getItem(indexes, {...options, label: reference.label ? reference.label : reference.name });
 
         if (options.preDelta) {
@@ -325,54 +324,6 @@ module.exports = class References {
             instance.set(info.locator + info.offset, tvalue.value + options.postDelta);
         }
         return item;
-
-        const [instance, info, def] = this._getInstanceAndLocator(name, indexes);
-        let tvalue;
-        if (info.array) {
-            // array info, could not be resolved
-            console.log('***** ARRAY ******');
-            tvalue = new ArrayOf(instance.cls, info.locator + info.offset, info.type ?? def.type, instance);
-        } else {
-            // no array could be resolved
-            console.log([instance.constructor.name, info.type]);
-            tvalue = instance.getTypedValue(info.locator + info.offset, 0, info.type);
-        }
-        // TODO: review
-        if (info.type !== 'function') {
-            assert.instanceOf(tvalue, ExpressionItem, {name, infotype: info.type, tvalue});
-        }
-        if (typeof info.row !== 'undefined') {
-            tvalue.row = info.row;
-        }
-        if (!info.array) {
-            tvalue.id = info.locator;
-        }
-        if (options.full) {
-            tvalue.locator = info.locator;
-            tvalue.instance = instance;
-            tvalue.offset = info.offset;
-        }
-        if (info.dim) {
-            tvalue.dim = info.dim;
-//            tvalue.arrayType = info.arrayType;
-            tvalue.lengths = info.lengths;
-        }
-        if (info.array) {
-            tvalue.dim = 'DEPRECATED';
-            tvalue.lengths = 'DEPRECATED';
-            tvalue.array = info.array;
-        }
-        if (options.preDelta) {
-            console.log(typeof tvalue.value);
-            if (assert.isEnabled) assert.ok(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
-            tvalue.value += options.preDelta;
-            instance.set(info.locator + info.offset, tvalue.value);
-        }
-        if (options.postDelta) {
-            if (assert.isEnabled) assert.ok(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
-            instance.set(info.locator + info.offset, tvalue.value + options.postDelta);
-        }
-        return tvalue;
     }
     _getTypedValue (name, indexes, options) {
         indexes = indexes ?? [];
@@ -481,10 +432,7 @@ module.exports = class References {
         if (Debug.active) console.log('ISVISIBLE', (def.constructor ?? {name: '_'}).name, def);
         const res = !def.scopeId || def.scopeId === 1 || !this.hasScope(def.type) || def.type === 'function' ||
                     def.scopeId >= this.visibilityScope[0] || (this.visibilityScope[1] !== false && def.scopeId <= this.visibilityScope[1]);
-                    // this.visibilityScopes.some((x,i) => def.scopeId >= x && (i === 0 || def.scopeId < this.getNextVisibilityScope(x)));
-        // console.log('**** IS_VISIBLE', def.name, def.scopeId, this.visibilityScope, this.visibilityStack/*, Context.scope*/);
         return res;
-                // def.scopeId >= this.visibilityScopes;
     }
     /**
      *
@@ -636,7 +584,6 @@ module.exports = class References {
     *keyValuesOfTypes(types) {
         for (let index in this.references) {
             const def = this.references[index];
-            // console.log({index, ...def});
             if (!types.includes(def.type)) continue;
             yield [index, def];
         }
@@ -657,7 +604,6 @@ module.exports = class References {
         for (let name in this.references) {
             const def = this.references[index];
             const indexes = def.array === false ? '': def.multiarray.getLengths().join(',');
-            // console.log(`${name.padEnd(30)}|${def.type.padEnd(10)}|${indexes}`);
         }
     }
 }

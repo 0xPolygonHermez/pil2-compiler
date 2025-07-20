@@ -32,6 +32,7 @@ const REF_TYPE_AIR_VALUE = 9;
 const REF_TYPE_CUSTOM_COL = 10;
 
 const SPV_AGGREGATIONS = ['sum', 'prod'];
+
 module.exports = class ProtoOut {
     constructor (Fr, options = {}) {
         this.version = 2;
@@ -203,10 +204,24 @@ module.exports = class ProtoOut {
     setGlobalSymbols(symbols) {
         this._setSymbols(symbols.keyValuesOfTypes(['public', 'proofvalue', 'challenge', 'publictable']));
     }
+    // if a prefix should be applied to the name, if original name has a negative row offset, move the row offset before the prefix.
+    applyPrefixNameToSymbol(name, prefix = false) {
+        if (prefix === false || typeof prefix === 'undefined' || prefix === '') {
+            return name;
+        }
+        const primaRegExp = new RegExp('[0-9]*\'(?=[A-Za-z_])', 'gm');
+        const matches = primaRegExp.exec(name)??false;
+        if (matches === false) {
+            return prefix + name;
+        } else {
+            return matches[0] + prefix + name.substring(matches[0].length);
+        }
+    }
     setSymbolsFromLabels(labels, type, data = {}) {
         let symbols = [];
         for (const label of labels) {
-            symbols.push([label.label, {type, locator: label.from, array: label.multiarray, data: {}, ...(label.data ?? {})}]);
+            const name = this.applyPrefixNameToSymbol(label.label, data.namePrefix);
+            symbols.push([name, {type, locator: label.from, array: label.multiarray, data: {}, ...(label.data ?? {})}]);
         }
         this._setSymbols(symbols, data);
     }
@@ -424,6 +439,7 @@ module.exports = class ProtoOut {
             }
             expressions.push(e);
         }
+        console.log(`  > Proto expressions: ${expressions.length}`);
     }
     translate(ope) {
         const [key] = Object.keys(ope);

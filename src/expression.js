@@ -767,13 +767,13 @@ class Expression extends ExpressionItem {
 
         let result = operand.eval(_options);
         let updated = true;
-        while (result && updated) {
+        while (result && updated && !result.const) {
             updated = false;
-            while (result && result.isReferencedType) {
+            while (result && result.isReferencedType && !result.const) {
                 result = result.eval();
                 updated = true;
             }
-            while (result && result instanceof Expression && result.isAlone()) {
+            while (result && result instanceof Expression && result.isAlone() && !result.const) {
                 result = result.getAloneOperand();
                 updated = true;
             }

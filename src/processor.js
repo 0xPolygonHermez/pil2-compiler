@@ -213,6 +213,8 @@ module.exports = class Processor {
         this.references.declare('AIRGROUP', 'string', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('AIRGROUP_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
         this.references.declare('AIR_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
+        this.references.declare('AIR_NAME', 'string', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.StringValue(''));
+        this.references.declare('AIRTEMPLATE', 'string', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.StringValue(''));
     }
     startExecution(program) {
         const t1 = performance.now();
@@ -281,6 +283,7 @@ module.exports = class Processor {
         this.proto.setGlobalSymbols(this.references);
         this.proto.encode();
         this.memoryUpdate();
+        console.log(`  > Saving fixed to file ${Context.config.outputFile} ...`);
         this.proto.saveToFile(Context.config.outputFile);
         this.memoryUpdate();
     }
@@ -393,7 +396,23 @@ module.exports = class Processor {
         }
         process.exit(1);
     }
-
+    getPragmaStringTemplateParam(param, defaultValue) {
+        if (typeof param === 'undefined') {
+            return defaultValue ?? false;
+        }
+        param = typeof param === 'string' ? param.trim() : String(param);
+        if (param.startsWith('"') || param.startsWith("'") || param.startsWith('`')) {
+            if (param.length < 2 || param[0] !== param[param.length-1]) {
+                throw new Error(`Invalid string template param parameter ${param} at ${Context.sourceRef}`);
+            }
+            const isTemplate = param[0] === '`';
+            param = param.slice(1, -1);
+            if (isTemplate) {
+                param = this.expandTemplates(param);
+            }
+        }
+        return param;
+    }
     execPragma(st) {
         let params = st.value.split(/\s+/);
         const instr = params[0] ?? false;
@@ -478,8 +497,32 @@ module.exports = class Processor {
                 this.pragmas.nextFixed.temporal = true;
                 break;
             }
-            case 'fixed_external': {
-                this.pragmas.nextFixed.external = true;
+            // case 'fixed_external': {
+            //     this.pragmas.nextFixed.external = this.getPragmaStringTemplateParam(params[1], true);
+            //     break;
+            // }
+            case 'extern_fixed_file': {
+                this.currentAir.loadExternFixedFile(this.getPragmaStringTemplateParam(params[1], true));
+            } 
+            case 'fixed_load': {
+                if (typeof params[1] === 'undefined') {
+                    if (typeof this.currentAir.fixedLoadFromFile === 'undefined') {
+                        throw new Error(`Pragma fixed_load without filename at ${Context.sourceRef}`);
+                    } 
+                    params[1] = this.currentAir.fixedLoadFromFile.filename;
+                    ++this.currentAir.fixedLoadFromFile.col;
+                    params[2] = this.currentAir.fixedLoadFromFile.col;
+                } else if (typeof params[2] === 'undefined' && typeof this.currentAir.fixedLoadFromFile !== 'undefined') {
+                    ++this.currentAir.fixedLoadFromFile.col;
+                    params[2] = this.currentAir.fixedLoadFromFile.col;
+                } else {
+                    this.currentAir.fixedLoadFromFile = {filename: params[1], col: this.value2num(params[2] ?? 0)};
+                }
+                this.pragmas.nextFixed.loadFromFile = {filename: this.getPragmaStringTemplateParam(params[1], true), col: this.value2num(params[2] ?? 0)};
+                break;
+            }
+            case 'output_fixed_file': {
+                Context.air.setOutputFixedFile(this.getPragmaStringTemplateParam(params[1], Context.airName+'.fixed'));
                 break;
             }
             case 'debugger':
@@ -1245,6 +1288,8 @@ module.exports = class Processor {
         this.references.set('BITS', [], air.bits ?? 0);
         // TODO: alert to AIR_ID because really was undefined
         this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? -1));
+        this.references.set('AIR_NAME', [], new ExpressionItems.StringValue(air.name ?? ''));
+        this.references.set('AIRTEMPLATE', [], new ExpressionItems.StringValue(air.airTemplate ? (air.airTemplate.name.name ?? ''):''));
     }
     executeAirTemplate(airTemplate, airTemplateFunc, callinfo, options = {}) {
         const name = options.alias ? options.alias : airTemplate.name;
@@ -1405,12 +1450,20 @@ module.exports = class Processor {
 
         chrono.start();
 
-        this.proto.setFixedCols(this.fixeds);
-        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
+        if (Context.air.fixedFile) {
+            const t1 = performance.now();
 
-        this.proto.setPeriodicCols(this.fixeds);
-        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-PERIODIC-COLS');
+            this.proto.setFixedColsToFile(this.fixeds, Context.air.fixedFile);
+            chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
+            const t2 = performance.now();
+            console.log('  > Fixed File time: ' + units.getHumanTime(t2-t1));
+        } else {
+            this.proto.setFixedCols(this.fixeds);
+            chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
 
+            this.proto.setPeriodicCols(this.fixeds);
+            chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-PERIODIC-COLS');
+        }
         this.proto.setWitnessCols(this.witness);
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-WITNESS-COLS');
 
@@ -1561,14 +1614,14 @@ module.exports = class Processor {
             // console.log(`COL_FIXED_DECLARATION(${colname})`);
             const lengths = this.decodeLengths(col);
             let init = s.sequence ?? null;
-            let seq = null;
+            let initValue = null;
             if (init) {
-                seq = new Sequence(init, {maxSize: ExpressionItems.IntValue.castTo(this.references.get('N'))});
-                if (Context.config.fixed !== false) seq.extend();
+                initValue = new Sequence(init, {maxSize: ExpressionItems.IntValue.castTo(this.references.get('N'))});
+                if (Context.config.fixed !== false) initValue.extend();
             } else if (s.init) {
-                seq = s.init.instance();
-                if (seq.dump) seq.dump();
-                else console.log(seq);
+                initValue = s.init.instance();
+                if (initValue.dump) initValue.dump();
+                else console.log(initValue);
             }
             let data = {global};
             if (this.pragmas.nextFixed.bytes !== false) {
@@ -1583,7 +1636,17 @@ module.exports = class Processor {
                 data.external = true;
                 this.pragmas.nextFixed.external = false;
             }
-            this.declareFullReference(colname, 'fixed', lengths, data, seq);
+            if (this.pragmas.nextFixed.loadFromFile) {
+                data.loadFromFile = this.pragmas.nextFixed.loadFromFile;
+                this.pragmas.nextFixed.loadFromFile = false;
+            }
+            if (initValue === null) {
+                const loadData = this.currentAir.findExternFixedCol(colname);
+                if (loadData !== false) {
+                    initValue = loadData;
+                }
+            }
+            this.declareFullReference(colname, 'fixed', lengths, data, initValue);
         }
     }
     execDebugger(s) {
@@ -1827,13 +1890,13 @@ module.exports = class Processor {
             const prompt = global ? '> ': '  > ';
             const color = global ? '\x1B[38;2;93;240;0m': '\x1B[38;2;192;255;2m';
             const expr = constraints.getExpr(id);
-            const prefix = global ? 'Global ' : '';
             // draw constraint +1 to match with verify constraints message
+            const prefix = `${prompt}${global ? 'Global ' : ''}Constraint #${constraintId+1} [${Context.proofLevel}]`;
             if (Context.config.bothConstraintsFormat || !Context.config.rawConstraintsFormat) {
-                console.log(`${prompt}${prefix}Constraint #${constraintId+1} [${Context.proofLevel}] > ${color}${expr.toString({hideClass:true, hideLabel:false})} === 0\x1B[0m (${sourceTag})`);
+                console.log(`${prefix} > ${color}${expr.toString({hideClass:true, hideLabel:false})} === 0\x1B[0m (${sourceTag})`);
             }
             if (Context.config.bothConstraintsFormat || Context.config.rawConstraintsFormat) {
-                console.log(`${prompt}${prefix}Constraint #${constraintId+1} [${Context.proofLevel}] (RAW) > ${color}${expr.toString({hideClass:true, hideLabel:true})} === 0\x1B[0m (${sourceTag})`);
+                console.log(`${prefix} (RAW) > ${color}${expr.toString({hideClass:true, hideLabel:true})} === 0\x1B[0m (${sourceTag})`);
             }
         }
     }

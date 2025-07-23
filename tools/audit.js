@@ -575,7 +575,7 @@ class AirOut {
         switch (cls) {
             case 'add':
             case 'sub':
-            case 'mul':
+            case 'mul': {
                 const lhs = this.operandToString(ctx, id, data.lhs, cls);
                 const rhs = this.operandToString(ctx, id, data.rhs, cls);
                 if (typeof lhs === 'undefined' || typeof rhs === 'undefined') {
@@ -586,12 +586,22 @@ class AirOut {
                                      (parentOperation == 'add' && cls == 'add') || (parentOperation == 'mul' && cls == 'mul');
                                      (parentOperation == 'add' && cls == 'mul') || (parentOperation == 'sub' && cls == 'mul');
                 return `${noParentesis ? ' ':'('}${lhs} ${op} ${rhs}${noParentesis ? ' ':')'}`;
-            case 'neg':
-                console.log(data);
+            }
+            case 'neg': {
+                const lhs = 0;
+                const rhs = this.operandToString(ctx, id, data.value, 'sub');
+                if (typeof rhs === 'undefined') {
+                    console.log(util.inspect(expression, true, null, true));
+                    EXIT_HERE;
+                }
+                const noParentesis = parentOperation === false;
+                return `${noParentesis ? ' ':'('}${lhs} - ${rhs}${noParentesis ? ' ':')'}`;
+/*                console.log(data);
                 EXIT_HERE;
                 ctx.path = _ctxpath + `[@${idx} ${id, cls} value]`;
                 this.verifyExpressionOperand(ctx, id, data.value);
-                break;
+                break;*/
+            }
             default:
                 throw new Error(`${_ctxpath} @${idx} invalid cls:${cls}`);
         }

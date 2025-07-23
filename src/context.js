@@ -89,6 +89,12 @@ module.exports = class Context {
     static get references() {
         return this._instance._processor.references;
     }
+    static get fileDir() {
+        return this.processor.compiler.fileDir;
+    }
+    static get basePath() {
+        return this.processor.compiler.basePath;
+    }
     static get proofLevel() {
         if (this.airName) {
             return `AIR:${this.airName}`;

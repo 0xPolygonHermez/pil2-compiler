@@ -2,7 +2,7 @@ const ProofItem = require("./proof_item.js");
 const Context = require('../context.js');
 const fs = require('fs');
 const IntValue = require('../expression_items/int_value.js');
-// const Sequence = require("../sequence.js");
+const FixedFile = require('../fixed_file.js');
 
 const U64_MAX = 2n**64n - 1n;
 
@@ -23,8 +23,26 @@ module.exports = class FixedCol extends ProofItem {
         this.buffer = null;
         this.converter = x => x;
         this.currentSetRowValue = this.#setRowValue;
+        if (data.loadFromFile) {
+            this.fromFile = data.loadFromFile;
+            this.loaded = false;
+        } else {
+            this.fromFile = false;
+            this.loaded = true;
+        }
         // TODO: more faster option, change function that call
         // for each value to avoid verify if value is bigger than bytes specified
+    }
+    loadFromFile() {
+        this.rows = Context.rows;
+        if (this.bytes === false) {
+            this.bytes = 8;
+        }
+        [this.buffer, this.values, this.converter] = this.createBuffer(this.rows, this.bytes);
+        this.updateSize();
+        this.updateSetRowValue(); 
+        FixedFile.loadColumnFromFile(this.fromFile.filename, this.fromFile.col, this.rows, this.values, this.label);
+        this.loaded = true;
     }
     getId() {
         return this.id;
@@ -77,6 +95,9 @@ module.exports = class FixedCol extends ProofItem {
         if (this.sequence) {
             throw new Error(`setting a row value but assigned a sequence previously ${Context.sourceTag}`);
         }
+        if (this.fromFile) {
+            throw new Error(`Cannot assign a value to a fixed column that is loaded from file ${this.fromFile} at ${Context.sourceRef}`);
+        }
         if (value && typeof value.asInt === 'function') {
             value = value.asInt();
         }
@@ -106,6 +127,15 @@ module.exports = class FixedCol extends ProofItem {
         }
         if (row > this.maxRow) this.maxRow = row;
         this.values[row] = this.converter(value);
+    }
+    getValues() {
+        if (this.sequence) {
+            return this.sequence.getValues();
+        }
+        if (!this.loaded) {
+            this.loadFromFile();
+        }
+        return this.values;
     }
     #fastSetRowValue(row, value) {
         value = Context.Fr.e(value);
@@ -149,8 +179,15 @@ module.exports = class FixedCol extends ProofItem {
         if (this.sequence) {
             return this.sequence.getIntValue(row);
         }
+        if (!this.loaded) {
+            this.loadFromFile();
+        }
         if (row >= this.size) {
             throw new Error(`Out-of-bounds on fixed, to access to row ${row} valid indexs [0..${this.size}] N=${Context.rows} in ${Context.references.getLabelByItem(this)}`);
+        }
+        if (typeof this.values[row] === 'undefined') {
+            console.log(this.values);
+            throw new Error(`undefined valued for row ${row}`);
         }
         return BigInt(this.values[row]);
     }
@@ -168,8 +205,21 @@ module.exports = class FixedCol extends ProofItem {
         if (this.values.length > 0) {
             throw new Error('Assign a sequence when has values');
         }
-        this.sequence = value;
-        this.rows = this.sequence.size;
+        if (value.isSequence) {
+            this.sequence = value;
+            this.rows = this.sequence.size;
+            return;
+        }
+        if (value.arrayInfo) {
+            throw new Error('Extern fixed for arrays not implemented yet');
+        }
+        this.bytes = 8;
+        this.buffer = value.values.buffer;
+        this.values = value.values;
+        this.converter = x => x;
+        this.rows = value.values.length;
+        this.updateSize();
+        this.updateSetRowValue();        
     }
     clone() {
         console.log('\x1B[41mWARING: clonning a FixedCol\x1B[0m');

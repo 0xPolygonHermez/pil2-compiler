@@ -321,7 +321,7 @@ module.exports = class ProtoOut {
         this.setConstantCols(periodicCols, this.currentAir.numRows, true);
     }
     setFixedColsToFile(fixedCols, filename) {
-        this.saveFixedColsToFile(fixedCols, this.currentAir.numRows, filename);
+        return this.saveFixedColsToFile(fixedCols, this.currentAir.numRows, filename);
     }
     setChallenges(challenges) {
         this.pilOut.numChallenges = this.getNumByStage(challenges);
@@ -368,7 +368,7 @@ module.exports = class ProtoOut {
             colnames.push(col.label);
         }
         const fixedFile = new FixedFile(values, rows, colnames);
-        fixedFile.saveToFile(filename);
+        return fixedFile.saveToFile(filename);
     }
     setRegularConstantsCols(col, rows) {
         let values = [];

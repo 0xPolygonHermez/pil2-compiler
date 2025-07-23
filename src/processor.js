@@ -1453,10 +1453,10 @@ module.exports = class Processor {
         if (Context.air.outputFixedFile) {
             const t1 = performance.now();
 
-            this.proto.setFixedColsToFile(this.fixeds, Context.air.outputFixedFile);
+            const filename = this.proto.setFixedColsToFile(this.fixeds, Context.air.outputFixedFile);
             chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
             const t2 = performance.now();
-            console.log('  > Fixed File time: ' + units.getHumanTime(t2-t1));
+            console.log(`  > Fixed File time: ${units.getHumanTime(t2-t1)} (${filename})`);
         } else {
             this.proto.setFixedCols(this.fixeds);
             chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');

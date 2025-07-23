@@ -107,6 +107,12 @@ module.exports = class Context {
         }
         return 'PROOF';
     }
+    static get outputDir() {
+        return Context.applyTemplates(Context._instance.config.outputDir ?? '');
+    }
+    static get inputDir() {
+        return Context.applyTemplates(Context._instance.config.inputDir ?? '');
+    }
     static applyTemplates(value) {
         return this._instance.applyTemplates(value);
     }

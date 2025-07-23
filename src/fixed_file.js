@@ -19,9 +19,10 @@ module.exports = class FixedFile {
         this.valuesList[col] = values;
         this.labels[col] = label;
     }
-    saveToFile(filename) {
-        const _filename = (!Context.config.outputDir || filename.startsWith('/')) ? filename : path.join(Context.config.outputDir, filename);
+    saveToFile(filename) {                
+        const _filename = (!Context.outputDir || filename.startsWith('/')) ? filename : path.join(Context.outputDir, filename);
         const dirname = path.dirname(_filename);
+        console.log(`  > Saving fixed file ${_filename} ...`);
         if (!fs.existsSync(dirname)) {
             fs.mkdirSync(dirname, { recursive: true });
         }
@@ -64,6 +65,7 @@ module.exports = class FixedFile {
         }
 
         fs.closeSync(fd);
+        return _filename;
     }    
     static loadColumnFromFile(filename, col, rows, values, label) {
         const fd = FixedFile.openFile(filename);

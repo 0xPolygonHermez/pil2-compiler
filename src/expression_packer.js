@@ -129,20 +129,30 @@ module.exports = class ExpressionPacker {
                     return;
                 }
                 const packer = new ExpressionPacker(this.container, def.getValue(), rowOffset);
-                const res = packer.pack(options);
-                if (packer.appliesRowOffset) {
-                    this.appliesRowOffset = true;
-                }
-                if (typeof res === 'number') {
-                    if (!packer.appliesRowOffset && rowOffset) {
-                        // if rowOffset doesn't apply, store with rowOffset = 0, because rowOffset not change
-                        // and it isn't necessary to duplicate expression by rowOffset application
-                        rowOffset = 0;
+                try {
+                    const res = packer.pack(options);
+                    if (packer.appliesRowOffset) {
+                        this.appliesRowOffset = true;
                     }
-                    this.container.saveAndPushExpressionReference(id, rowOffset, ope.label, res);
-                } else {
-                    this.container.push(res);
+                    if (typeof res === 'number') {
+                        if (!packer.appliesRowOffset && rowOffset) {
+                            // if rowOffset doesn't apply, store with rowOffset = 0, because rowOffset not change
+                            // and it isn't necessary to duplicate expression by rowOffset application
+                            rowOffset = 0;
+                        }
+                        this.container.saveAndPushExpressionReference(id, rowOffset, ope.label, res);
+                    } else {
+                        this.container.push(res);
+                    }
+                } catch (error) {
+                    console.error(`Error packing expression reference ${id}:`, error);
+                    console.log(defvalue);
+                    defvalue.dump();
+                    throw error;
                 }
+            } else if (defvalue.isReference) {
+                // if is a reference, pack it as reference
+                this.container.pushExpressionReference(id, ope.rowOffset + this.rowOffset);
             } else {
                 this.referencePack(defvalue, options);
             }

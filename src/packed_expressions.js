@@ -101,7 +101,7 @@ module.exports = class PackedExpressions {
             return false;
         }
         const res = this.references[key];
-        return this.appliesRowOffset[id] ? false : res;
+        return this.appliesRowOffset[id] ? res : false;
     }
     pushExpressionReference (id, rowOffset = 0) {
         let key = this.getReferenceKey(id, rowOffset);

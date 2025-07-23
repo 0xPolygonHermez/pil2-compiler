@@ -23,14 +23,14 @@ module.exports = class FixedCols extends Indexable {
             console.log(`SET ${this.constructor.name}.${this.type} @${id} ${value}`);
         }
     }
-    getRowValue(id, row) {
+    getRowValue(id, row, rowOffset = 0) {
         const item = this.get(id);
         if (assert.isEnabled) assert.ok(item, {type: this.type, definition: this.definitionClass, id, item});
         if (typeof item.getRowValue !== 'function') {
             console.log({type: this.type, definition: this.definitionClass, id, item});
             throw new Error(`Invalid access at ${Context.sourceTag}`);
         }
-        return item.getRowValue(row);
+        return item.getRowValue(row, rowOffset);
     }
     getNonTemporalLabelRanges() {
         let res = [];

@@ -52,6 +52,7 @@ class AirOut {
             off: '\x1b[0m'
         }
         this.fixedHash = {};
+        this.color = false;
         this.config = {};
         this.config.hashFixed = argv.hash ?? false;
         this.uniqueSymbols = {};
@@ -405,6 +406,16 @@ class AirOut {
         }
         ctx.path = _ctxpath;
     }
+    colorString(text, color) {
+        if (this.color) {
+            return `\x1B[${color}${text}\x1B[0m`;
+        } else {
+            return text;
+        }
+    }
+    log(msg, color = '') {
+        console.log(this.colorString(msg, color));
+    }
     verifyAirExpressions(airGroupId, airId) {
         const air = this.airGroups[airGroupId].airs[airId];
         const expressions = air.expressions ?? [];
@@ -412,7 +423,11 @@ class AirOut {
         // TODO: detect circular dependencies
         let referenced = new Array(expressionsCount).fill(false);
         let ctx = {path: `[airGroup:${airGroupId} air:${airId}]`, air: air.name, referenced, expressions, airGroupId, airId};
+        this.log(`##### AIR: ${air.name} (expressions:${expressionsCount}) #####`,'1;36m');
         for (let expressionId = 0; expressionId < expressionsCount; ++expressionId) {
+            if (expressionId % 1000 === 0 && expressionId) {
+                console.log(`verify expression air:${airId} ${expressionId}/${expressionsCount}....`);
+            }
             ctx.referenced[expressionId] = true;
             this.verifyExpression(ctx, expressionId, expressions[expressionId]);
             ctx.referenced[expressionId] = false;
@@ -429,18 +444,18 @@ class AirOut {
         // TODO: detect circular dependencies
         let referenced = new Array(expressionsCount).fill(false);
         let ctx = {path: `[airGroup:${airGroupId} air:${airId}]`, air: air.name, referenced, expressions, airGroupId, airId};
-        console.log(`\x1B[1;36m##### AIR: ${air.name} (constraints:${constraints.length}) #####\x1B[0m`);
+        this.log(`##### AIR: ${air.name} (constraints:${constraints.length}) #####`, '1;36m');
         this.clearCacheDegree();
         for (let constraintId = 0; constraintId < constraints.length; ++constraintId) {
             const constraint = constraints[constraintId];
             const frame = Object.keys(constraint)[0];
             const constraintData = constraint[frame];
             const expressionId = constraintData.expressionIdx.idx;
-            console.log(`\x1B[38;2;192;255;2m‣ constraint ${constraintId} => ${constraintData.debugLine}\x1B[0m`);
+            this.log(`‣ constraint ${constraintId} => ${constraintData.debugLine}`, '38;2;192;255;2m');
             ctx.referenced[expressionId] = true;
             const res = this.expressionToString(ctx, expressionId, expressions[expressionId]);
             const degree = this.expressionDegree(ctx, expressionId, expressions[expressionId]);
-            console.log(`CONSTRAINT.${constraintId} [${degree > 3 ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
+            console.log(`CONSTRAINT.${constraintId} [${(degree > 3 && this.color) ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
             ctx.referenced[expressionId] = false;
         }
     }
@@ -451,7 +466,8 @@ class AirOut {
         const expressionsCount = expressions.length;
         let referenced = new Array(expressionsCount).fill(false);
         let ctx = {path: `[airGroup:${airGroupId} air:${airId}]`, air: air.name, referenced, expressions, airGroupId, airId};
-        console.log(`\x1B[1;36m##### AIR: ${air.name} (intermediates:${intermediates.length}) #####\x1B[0m`);
+        this.log(`##### AIR: ${air.name} (intermediates:${intermediates.length}) #####`, '1;36m');
+
         for (let index = 0; index < intermediates.length; ++index) {
             const intermediate = intermediates[index];
             const expressionId = intermediate.id;
@@ -467,7 +483,7 @@ class AirOut {
         // TODO: detect circular dependencies
         let referenced = new Array(expressionsCount).fill(false);
         let ctx = {path: `[global]`, referenced, expressions};
-        console.log(`\x1B[1;36m##### GLOBAL  #####\x1B[0m`);
+        this.log(`##### GLOBAL  #####`, '1;36m');
         for (let constraintId = 0; constraintId < constraints.length; ++constraintId) {
             console.log(`--- constraint ${constraintId+1}/${constraints.length} ---`);
             const constraint = constraints[constraintId];
@@ -475,7 +491,7 @@ class AirOut {
             ctx.referenced[expressionId] = true;
             const res = this.expressionToString(ctx, expressionId, expressions[expressionId]);
             const degree = this.expressionDegree(ctx, expressionId, expressions[expressionId]);
-            console.log(`CONSTRAINT.${constraintId} [${degree > 3 ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
+            console.log(`CONSTRAINT.${constraintId} [${(this.color && degree > 3) ? '\x1B[1;31m' + degree + '\x1B[0m' : degree}] ${res}`);
             ctx.referenced[expressionId] = false;
         }
     }
@@ -490,6 +506,7 @@ class AirOut {
                 ctx.path = _ctxpath + `[@${idx} ${cls} lhs]`;
                 this.verifyExpressionOperand(ctx, data.lhs);
                 ctx.path = _ctxpath + `[@${idx} ${cls} rhs]`;
+                this.verifyExpressionOperand(ctx, data.rhs);
                 break;
             case 'neg':
                 ctx.path = _ctxpath + `[@${idx} ${cls} value]`;
@@ -559,11 +576,13 @@ class AirOut {
                 .replace(/\(\s+\(/g, '((')
                 .replace(/\)\s+\)/g, '))')
                 .replace(/\(\s+/g, '(')
-                .replace(/\s+\)/g, ')')
- //               .replace(/([\[\]])/g, this.color.array + '$1' + this.color.off)
-                .replace(/(?<![@A-Za-z_0-9])([0-9]+)(\W)/g, this.color.constant + '$1' + this.color.off + '$2')
-                .replace(/([\(\)]+)/g, this.color.parentesis + '$1' + this.color.off)
-                .replace(/([\+\*\-]+)/g, this.color.operation + '$1' + this.color.off);
+                .replace(/\s+\)/g, ')');
+        if (this.color) {
+            res = res.replace(/([\[\]])/g, this.color.array + '$1' + this.color.off)
+                     .replace(/(?<![@A-Za-z_0-9])([0-9]+)(\W)/g, this.color.constant + '$1' + this.color.off + '$2')
+                     .replace(/([\(\)]+)/g, this.color.parentesis + '$1' + this.color.off)
+                     .replace(/([\+\*\-]+)/g, this.color.operation + '$1' + this.color.off);
+        }
         return res;
     }
 
@@ -588,19 +607,12 @@ class AirOut {
                 return `${noParentesis ? ' ':'('}${lhs} ${op} ${rhs}${noParentesis ? ' ':')'}`;
             }
             case 'neg': {
-                const lhs = 0;
-                const rhs = this.operandToString(ctx, id, data.value, 'sub');
-                if (typeof rhs === 'undefined') {
+                const value = this.operandToString(ctx, id, data.value, cls);
+                if (typeof value === 'undefined') {
                     console.log(util.inspect(expression, true, null, true));
                     EXIT_HERE;
                 }
-                const noParentesis = parentOperation === false;
-                return `${noParentesis ? ' ':'('}${lhs} - ${rhs}${noParentesis ? ' ':')'}`;
-/*                console.log(data);
-                EXIT_HERE;
-                ctx.path = _ctxpath + `[@${idx} ${id, cls} value]`;
-                this.verifyExpressionOperand(ctx, id, data.value);
-                break;*/
+                return `-(${value})`;
             }
             default:
                 throw new Error(`${_ctxpath} @${idx} invalid cls:${cls}`);
@@ -819,8 +831,7 @@ class AirOut {
                 if (cls === 'mul') return lhs + rhs;
                 return lhs > rhs ? lhs : rhs;
             case 'neg':
-                console.log(data);
-                EXIT_HERE;
+                return this.operandDegree(ctx, id, data.value);
             default:
                 throw new Error(`${_ctxpath} @${idx} invalid cls:${cls}`);
         }

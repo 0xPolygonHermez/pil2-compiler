@@ -213,6 +213,8 @@ module.exports = class FixedCol extends ProofItem {
         if (value.arrayInfo) {
             throw new Error('Extern fixed for arrays not implemented yet');
         }
+        console.log(`  > Fixed ${this.label} loaded from file`);
+
         this.bytes = 8;
         this.buffer = value.values.buffer;
         this.values = value.values;
@@ -220,6 +222,7 @@ module.exports = class FixedCol extends ProofItem {
         this.rows = value.values.length;
         this.updateSize();
         this.updateSetRowValue();        
+        this.loaded = true;
     }
     clone() {
         console.log('\x1B[41mWARING: clonning a FixedCol\x1B[0m');

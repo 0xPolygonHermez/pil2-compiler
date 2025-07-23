@@ -95,6 +95,9 @@ module.exports = class Context {
     static get basePath() {
         return this.processor.compiler.basePath;
     }
+    static get fullFilename() {
+        return this.processor.compiler.getFullFilename(this._instance._processor.sourceRef.split(':')[0]);
+    }
     static get proofLevel() {
         if (this.airName) {
             return `AIR:${this.airName}`;

@@ -1450,10 +1450,10 @@ module.exports = class Processor {
 
         chrono.start();
 
-        if (Context.air.fixedFile) {
+        if (Context.air.outputFixedFile) {
             const t1 = performance.now();
 
-            this.proto.setFixedColsToFile(this.fixeds, Context.air.fixedFile);
+            this.proto.setFixedColsToFile(this.fixeds, Context.air.outputFixedFile);
             chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
             const t2 = performance.now();
             console.log('  > Fixed File time: ' + units.getHumanTime(t2-t1));

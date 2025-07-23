@@ -34,13 +34,13 @@ module.exports = class Air {
         this.outputFixedFile = filename;
     }
     // Unused function to define a load fixed column, to allow load all fixed file columns together
-    defineLoadFixedFile(filename, col, values) {
+    defineLoadFixedFile(filename, col, values, label) {
         let fixedFile = this.loadFixedFiles[filename];
         if (!fixedFile) {
             fixedFile = new FixedFile([], this.rows);
             this.loadFixedFiles[filename] = fixedFile;
         }
-        fixedFile.defineCol(col, values);
+        fixedFile.defineCol(col, values, label);
     }
     // Unused function to load all fixed file columns together
     loadFiledFiles() {
@@ -54,9 +54,7 @@ module.exports = class Air {
             throw new Error(`Invalid extern fixed file name ${filename} on ${Context.sourceRef}`);
         }
         console.log(`  > Loading extern fixed file ${filename} ...`);
-        // console.log(Context.processor);
-        // console.log(Context);
-        this.externFixedFiles.push(new ExternFixedFile(filename, {...Context.config, fileDir: path.join(Context.basePath, path.dirname(Context.sourceRef)), basePath: Context.basePath}));
+        this.externFixedFiles.push(new ExternFixedFile(filename, {...Context.config, fileDir: path.dirname(Context.fullFilename), basePath: Context.basePath}));
     }
     findExternFixedCol(colname) {
         let data = false;

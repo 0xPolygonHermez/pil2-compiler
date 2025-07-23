@@ -361,11 +361,13 @@ module.exports = class ProtoOut {
             airCols.push({values});
         }
         let values = [];
+        let colnames = [];
         for (const col of cols) {
             if (col.temporal || col.external) continue; // ignore temporal and external columns
             values.push(col.getValues());
+            colnames.push(col.label);
         }
-        const fixedFile = new FixedFile(values, rows);
+        const fixedFile = new FixedFile(values, rows, colnames);
         fixedFile.saveToFile(filename);
     }
     setRegularConstantsCols(col, rows) {

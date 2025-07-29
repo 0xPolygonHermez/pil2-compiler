@@ -40,6 +40,10 @@ class Compiler {
         this.skippedPols = {};
         this.includePaths = (this.config && this.config.includePaths) ? (Array.isArray(this.config.includePaths) ? this.config.includePaths: [this.config.includePaths]): [];
         this.relativeFileName = '';
+        this.relativeToFullFilename = {};
+    }
+    getFullFilename(filename) {
+        return this.relativeToFullFilename[filename] ?? false;
     }
     compile(fileName, config = {}) {
         const isMain = true;
@@ -101,6 +105,7 @@ class Compiler {
             }
         }
         const [_src, fileDir, fullFileName, relativeFileName] = this.loadSource(fileName, isMain, options);
+        this.relativeToFullFilename[relativeFileName] = fullFileName;
 
         const preSrc = options.preSrc ?? '';
         const postSrc = options.postSrc ?? '';

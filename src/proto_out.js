@@ -7,6 +7,7 @@ const assert = require('./assert.js');
 const Context = require('./context.js');
 const StringValue = require('./expression_items/string_value.js');
 const IntValue = require('./expression_items/int_value.js');
+const FixedFile = require('./fixed_file.js');
 
 const MAX_CHALLENGE = 200;
 const MAX_STAGE = 20;
@@ -319,6 +320,9 @@ module.exports = class ProtoOut {
     setPeriodicCols(periodicCols) {
         this.setConstantCols(periodicCols, this.currentAir.numRows, true);
     }
+    setFixedColsToFile(fixedCols, filename) {
+        return this.saveFixedColsToFile(fixedCols, this.currentAir.numRows, filename);
+    }
     setChallenges(challenges) {
         this.pilOut.numChallenges = this.getNumByStage(challenges);
     }
@@ -348,6 +352,24 @@ module.exports = class ProtoOut {
             airCols.push({values});
         }
     }
+    saveFixedColsToFile(cols, rows, filename) {
+        const airCols = this.setupAirProperty('fixedCols');
+        for (const col of cols) {
+            if (col.temporal) continue; // ignore temporal columns, only use to help to create other fixed columns
+            this.fixedId2ProtoId[col.id] = ['F', airCols.length];
+            let values = [];
+            airCols.push({values});
+        }
+        let values = [];
+        let colnames = [];
+        for (const col of cols) {
+            if (col.temporal || col.external) continue; // ignore temporal and external columns
+            values.push(col.getValues());
+            colnames.push(col.label);
+        }
+        const fixedFile = new FixedFile(values, rows, colnames);
+        return fixedFile.saveToFile(filename);
+    }
     setRegularConstantsCols(col, rows) {
         let values = [];
         for (let irow = 0; irow < rows; ++irow) {
@@ -361,6 +383,7 @@ module.exports = class ProtoOut {
         return values;
     }
     setCompressedConstantsCols(col) {
+        throw new Error('UNIMPLEMENTED: setCompressedConstantsCols');
     }
     setWitnessCols(cols) {
         const stageWidths = this.setupAirProperty('stageWidths');

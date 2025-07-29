@@ -6,7 +6,7 @@
 %%
 
 \s+                                         { /* skip whitespace */ }
-\/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+\/ { /* console.log("MULTILINE COMMENT: "+yytext); */  }
+\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\/            { /* console.log("MULTILINE COMMENT: "+yytext); */ }
 \/\/.*                                      { /* console.log("SINGLE LINE COMMENT: "+yytext); */ }
 \#pragma\s+[^\r\n]*                         { yytext = yytext.replace(/^#pragma\s+/, ''); return 'PRAGMA'; }
 

@@ -1,5 +1,4 @@
-include "precompiles/keccakf.pil"
-/* const int P2_8 = 2**8;
+const int P2_8 = 2**8;
 const int P2_9 = 2**9;
 const int P2_14 = 2**14;
 const int P2_15 = 2**15;
@@ -11,7 +10,7 @@ const int P2_19 = 2**19;
 airtemplate Keccakf(int N = 2**22) {
     #pragma output_fixed_file `${AIR_NAME}.fixed`
 
-    #pragma extern_fixed_file "precompiles/keccakf/src/keccakf_fixed.bin"
+    #pragma extern_fixed_file "keccakf/src/keccakf_fixed.bin"
     col witness multiplicity;
 
     col fixed A[2];
@@ -25,8 +24,4 @@ airtemplate Keccakf(int N = 2**22) {
 
     @myhint {ref: A[0]}
     @myhint {ref: CONN_A}
-}
-*/
-airgroup Keccakf {
-    Keccakf();
 }

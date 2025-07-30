@@ -1,0 +1,85 @@
+airtemplate  TestVirtualVariable(int N = 2**16, int expected_value = 0, int deep = 1) {
+    println(`VIRTUAL:${VIRTUAL}`);
+    assert_eq(VIRTUAL, expected_value, "Virtual variable did not match expected value");
+    if (deep > 0) {
+        check_virtual_variable(expected_value, deep - 1);
+    }
+    assert_eq(VIRTUAL, expected_value, "Virtual variable did not match expected value");
+}
+
+int counter = 0;
+
+function check_virtual_variable(int expected_value, int deep) {
+    println(`check_virtual_variable: expected_value=${expected_value}, deep=${deep}`);
+    assert_eq(VIRTUAL, expected_value, "Virtual variable did not match expected value");
+    TestVirtualVariable(N, 0, 0) alias `T${counter}`;
+    virtual TestVirtualVariable(N, 1, 0) alias `TV${counter}`;
+    counter += 1;
+}   
+
+airtemplate  TestCopy(int N = 2**16) {
+    const int values[20];
+    const int b = 18;
+
+    col witness stage(2) tmp2;
+    col fixed virtual(8) tmp = [0...];
+
+    println(foo(10));
+    virtualTables.hello(1, 2);
+    println(`VIRTUAL:${VIRTUAL}`);
+}
+
+airtemplate TestWriteAfterCopy(int N = 2**16) {
+    col fixed F1 = [0..N-1];
+    col fixed F2 = F1;
+
+    assert_eq(F1[1], 1);
+    assert_eq(F2[1], 1);
+
+    F2[1] = N*2;
+
+    assert_eq(F1[1], 1);
+    assert_eq(F2[1], 2*N);
+}
+
+
+airtemplate TestWriteAfterPartialCopy(int N = 2**16) {
+    col fixed F1 = [0..N-1];
+    col fixed F2;
+
+    assert_eq(F1[1], 1);
+    assert_eq(F1[N-1], N-1);
+
+    Tables.copy(F1, 0, F2, 16, N-16);
+
+    assert_eq(F1[1], 1);
+    assert_eq(F2[1], 0);
+    assert_eq(F1[N-1], N-1);
+    assert_eq(F2[N-1], N-16-1);
+}
+
+airtemplate TestReference(int N = 2**16) {
+    col fixed F1 = [1..N];
+    k = F1;
+}
+
+
+airtemplate TestTablesNumRows(int N = 2**16) {
+    col fixed F1 = [1..N];
+    col fixed virtual(80) F2;
+    assert_eq(Tables.num_rows(F1), N);
+    assert_eq(Tables.num_rows(F2), 80);
+    Tables.copy(F1, 80, F2, 0, 80);
+    k = F2;
+}
+
+expr k; 
+
+airgroup TestVirtualTables {
+    TestVirtualVariable(2**16, 0);
+    virtual TestVirtualVariable(2**16, 1) alias TestVirtualVariable2;
+    TestWriteAfterCopy();
+    TestWriteAfterPartialCopy();
+    TestReference();
+    TestTablesNumRows();
+}

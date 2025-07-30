@@ -9,6 +9,8 @@ module.exports = class Scope {
         this.labels = {};
         this.instanceType = 'air';
         this.stackInstanceTypes = [];
+        this.values = {};
+        this.valuesStack = [];
     }
     mark(label) {
         this.labels[label] = this.deep;
@@ -77,6 +79,7 @@ module.exports = class Scope {
             Context.references.unsetProperty(property, this.properties[this.deep][property]);
         }
         this.properties[this.deep] = {};
+        this.popValues();
         --this.deep;
         this.purgeLabels();
         // console.log(`POP ${this.deep}`)
@@ -86,10 +89,38 @@ module.exports = class Scope {
         // console.log(`PUSH ${this.deep}`)
         this.shadows[this.deep] = {};
         this.properties[this.deep] = {};
+        this.pushValues();
         if (label !== false) {
             this.mark(label);
         }
         return this.deep;
+    }
+    setValue(name, value) {
+        // set sigle value associate to current level with hiherancy
+        if (typeof this.values[name] === 'undefined') {
+            this.values[name] = value;
+        } else if (this.valuesStack.length > 0)  {
+            this.valuesStack[this.valuesStack.length - 1][name] = this.values[name];
+            this.values[name] = value;
+        } else {
+            // empty scope stack, never recover previous value
+            this.values[name] = value;              
+        }
+    }
+    getValue(name, defaultValue = false) {
+        if (typeof this.values[name] !== 'undefined') {
+            return this.values[name];
+        }
+        return defaultValue;
+    }
+    popValues() {
+        let values = this.valuesStack.pop();
+        for (const name in values) {
+            this.values[name] = values[name];
+        }
+    }
+    pushValues() {
+        this.valuesStack.push({});
     }
     getInstanceType() {
         return this.instanceType;

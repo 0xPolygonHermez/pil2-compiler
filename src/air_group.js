@@ -6,11 +6,13 @@ const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js"
 const ExpressionItems = require('./expression_items.js');
 const assert = require('./assert.js');
 
+const BASE_VIRTUAL_ID = 10000;
 module.exports = class AirGroup {
     constructor (name, statements, aggregate) {
         // TODO: when instance a airgroup return an integer (as a handler id)
         this.id = false;
         this.airs = [];
+        this.virtualAirs = [];
         this.aggregate = aggregate;
         this.name = name;
         this.airGroupValues = {};
@@ -24,6 +26,12 @@ module.exports = class AirGroup {
         for (let airId = 0; airId < this.airs.length; ++airId) {
             this.checkAirGroupValues(airId);
         }
+        for (let airId = 0; airId < this.virtualAirs.length; ++airId) {
+            this.checkAirGroupValues(BASE_VIRTUAL_ID + airId);
+        }
+    }
+    getAir(id) {
+        return id >= BASE_VIRTUAL_ID ? this.virtualAirs[id - BASE_VIRTUAL_ID] : this.airs[id];
     }
     getId(id) {
         return this.id;
@@ -32,6 +40,12 @@ module.exports = class AirGroup {
         this.id = id;
     }
     createAir(airTemplate, rows, options = {}) {
+        if (options.virtual) {            
+            const id = BASE_VIRTUAL_ID + this.virtualAirs.length;
+            const air = airTemplate.instance(id, this, rows, options);
+            this.virtualAirs.push(air);
+            return air;
+        }
         const id = this.airs.length;
         const air = airTemplate.instance(id, this, rows, options);
         this.airs.push(air);

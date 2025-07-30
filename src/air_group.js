@@ -54,9 +54,9 @@ module.exports = class AirGroup {
     airStart(airId) {
         ++this.openedAirIds;
     }
-    airEnd(airId) {
+    airEnd(airId, virtual = false) {
         assert.typeOf(airId, 'number');
-        this.checkAirGroupValues(airId);
+        if (!virtual) this.checkAirGroupValues(airId);
         --this.openedAirIds;
     }
     checkAirGroupValues(airId) {

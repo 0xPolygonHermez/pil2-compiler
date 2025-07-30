@@ -503,7 +503,6 @@ module.exports = class Processor {
             }
             case 'fixed_tmp':{
                 this.pragmas.nextFixed.temporal = true;
-                console.log(params[1]);
                 break;
             }
             // case 'fixed_external': {
@@ -1370,7 +1369,7 @@ module.exports = class Processor {
         const customCols = this.customCols.length
         const constraints = this.constraints.length;
         const N = this.rows;
-        airGroup.airEnd(air.id);
+        airGroup.airEnd(air.id, air.virtual ?? false);
         const ti2 = performance.now();
         console.log('  > Witness cols: ' + witnessCols + ' from stage 1 (' + this.witness.countByStage(1).join() + ')');
         console.log('  > Fixed cols: ' + fixedCols);
@@ -1888,7 +1887,6 @@ module.exports = class Processor {
             if (init && init && typeof init.instance === 'function') {
                 init = init.instance();
             }
-            console.log(data);
             if (fullName) this.declareFullReference(col.name, type, lengths, data, ignoreInit ? null : init);
             else this.declareReference(col.name, type, lengths, data, ignoreInit ? null : init);
             /// TODO: INIT / SEQUENCE

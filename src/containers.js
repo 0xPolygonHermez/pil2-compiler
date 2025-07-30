@@ -131,13 +131,20 @@ module.exports = class Containers {
         }
         container.references[name] = reference;
     }
-    addUse(name) {
+    addUse(name, alias = false) {
         if (!this.isDefined(name)) {
             // TODO: defined must be check containers
             throw new Error(`Use not created container ${name}`);
         }
-        Context.scope.addToScopeProperty('uses', name);
-        this.uses.push(name);
+        if (alias !== false && this.getAlias(alias, false)) {
+            throw new Error(`Use not created container ${name} with duplicated alias ${alias}`);
+        }
+        if (alias === false) {
+            Context.scope.addToScopeProperty('uses', name);
+            this.uses.push(name);
+        } else {
+            this.addScopeAlias(alias, name);
+        }
     }
     getReferenceInside(container, name, defaultValue) {
         return this.#getReference(name, defaultValue, container, false);

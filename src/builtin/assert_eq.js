@@ -4,8 +4,8 @@ const Context = require('../context.js');
 const IntValue = require('../expression_items/int_value.js');
 const assert = require('../assert.js');
 module.exports = class AssertEq extends Function {
-    constructor () {
-        super(999999, {name: 'assert_eq'});
+    constructor (parent) {
+        super(parent, {name: 'assert_eq'});
     }
     mapArguments(s) {
         if (s.args.length < 2 || s.args.length > 3) {

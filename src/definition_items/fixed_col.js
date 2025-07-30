@@ -9,12 +9,12 @@ const U64_MAX = 2n**64n - 1n;
 module.exports = class FixedCol extends ProofItem {
     constructor (id, data) {
         super(id);
-        this.rows = 0;
+        this.rows = data.virtual ?? 0;
         this.sequence = null;
         this.values = false;
         this.maxValue = 0;
         this.bytes = data.bytes ?? false;
-        this.temporal = data.temporal ?? false;
+        this.temporal = Boolean(data.temporal || data.virtual)
         this.external = data.external ?? false;
         this.label = data.label ?? false;
         this.size = 0;
@@ -29,26 +29,32 @@ module.exports = class FixedCol extends ProofItem {
         } else {
             this.fromFile = false;
             this.loaded = true;
-        }
+        }        
         // TODO: more faster option, change function that call
         // for each value to avoid verify if value is bigger than bytes specified
     }
-    loadFromFile() {
-        this.rows = Context.rows;
+    initDefaultValues() {
         if (this.bytes === false) {
             this.bytes = 8;
         }
         [this.buffer, this.values, this.converter] = this.createBuffer(this.rows, this.bytes);
         this.updateSize();
         this.updateSetRowValue(); 
+    }
+    loadFromFile() {
+        this.rows = Context.rows;
+        this.initDefaultValues();
         FixedFile.loadColumnFromFile(this.fromFile.filename, this.fromFile.col, this.rows, this.values, this.label);
         this.loaded = true;
     }
+    getRowCount() {
+        return this.getValues().length;
+    }   
     getId() {
         return this.id;
     }
     isPeriodic() {
-        return this.rows > 0;
+        return false;
     }
     getValue(row, rowOffset = 0)  {
         return this.getRowValue(row, rowOffset);
@@ -134,6 +140,12 @@ module.exports = class FixedCol extends ProofItem {
         }
         if (!this.loaded) {
             this.loadFromFile();
+        }
+        if (this.values === false) {
+            if (this.rows === 0) {
+                this.rows = Context.rows;   
+            }
+            this.initDefaultValues();
         }
         return this.values;
     }
@@ -223,6 +235,33 @@ module.exports = class FixedCol extends ProofItem {
         }
         console.log(`  > Fixed ${this.label} loaded from file`);
 
+        if (value.isExpression) {
+            value = value.eval().getAlone();
+            if (value === false) {
+                throw new Error('Invalid value for fixed column');
+            }
+
+            const values = value.getValues();
+            if (values instanceof BigUint64Array) {
+                this.values = new BigUint64Array(values);
+            } else if (Array.isArray(values)) {
+                this.values = [...values];
+            } else {
+                this.values = values.slice();
+            }
+    
+            this.buffer = value.buffer;
+            this.converter = value.converter;
+            this.rows = value.rows;
+            this.bytes = value.bytes;
+            this.fullFilled = value.fullFilled;
+            this.label = value.label;
+            this.bytes = value.bytes ?? 8;
+            this.updateSize();
+            this.updateSetRowValue();
+            this.loaded = true;
+            return;
+        }
         this.bytes = 8;
         this.buffer = value.values.buffer;
         this.values = value.values;

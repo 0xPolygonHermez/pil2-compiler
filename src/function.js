@@ -26,6 +26,8 @@ module.exports = class Function {
         this.statements = data.statements ?? [];
         this.sourceRef = data.sourceRef;
         this.isBridge = false;
+        this.isVirtualizable = false;
+        this.package = data.package ?? false;  
     }
     setValue(value) {
         if (Debug.active) {

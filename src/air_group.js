@@ -26,9 +26,6 @@ module.exports = class AirGroup {
         for (let airId = 0; airId < this.airs.length; ++airId) {
             this.checkAirGroupValues(airId);
         }
-        for (let airId = 0; airId < this.virtualAirs.length; ++airId) {
-            this.checkAirGroupValues(BASE_VIRTUAL_ID + airId);
-        }
     }
     getAir(id) {
         return id >= BASE_VIRTUAL_ID ? this.virtualAirs[id - BASE_VIRTUAL_ID] : this.airs[id];

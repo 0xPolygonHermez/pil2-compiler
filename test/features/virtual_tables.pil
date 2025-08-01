@@ -17,7 +17,7 @@ function check_virtual_variable(int expected_value, int deep) {
     counter += 1;
 }   
 
-airtemplate  TestCopy(int N = 2**16) {
+airtemplate TestCopy(int N = 2**16) {
     const int values[20];
     const int b = 18;
 
@@ -28,6 +28,28 @@ airtemplate  TestCopy(int N = 2**16) {
     virtualTables.hello(1, 2);
     println(`VIRTUAL:${VIRTUAL}`);
 }
+
+airtemplate TestFill(int N = 2**4, int num_groups = 2) {
+    col fixed UID;
+    int uid = 10;
+    int h = 16;
+
+    println("uid", uid);
+    Tables.fill(uid, UID, 0, h);
+    Tables.print(UID, 0, h);
+}
+
+airtemplate TestFillArray(int N = 2**4, int num_groups = 2) {
+    col fixed UID[num_groups];
+    int uid = 10;
+    int h = 16;
+
+    for (int i = 0; i < num_groups; ++i) {
+        println("uid", uid);
+        Tables.fill(uid, UID[i], 0, h);
+        Tables.print(UID[i], 0, h);
+    }
+}   
 
 airtemplate TestWriteAfterCopy(int N = 2**16) {
     col fixed F1 = [0..N-1];
@@ -96,6 +118,8 @@ function recursive_function() {
 expr k; 
 
 airgroup TestVirtualTables {
+    TestFill();
+    /*
     TestVirtualVariable(2**16, 0);
     virtual TestVirtualVariable(2**16, 1) alias TestVirtualVariable2;
     TestWriteAfterCopy();
@@ -106,5 +130,5 @@ airgroup TestVirtualTables {
     TestTablesNumRows();
     TestRecursiveA();
     println(k);
-    Tables.print(k, 0, 16);
+    Tables.print(k, 0, 16);*/
 }

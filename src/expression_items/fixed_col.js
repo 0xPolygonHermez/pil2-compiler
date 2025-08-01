@@ -111,14 +111,6 @@ module.exports = class FixedCol extends ProofItem {
             throw new Error('Destination range exceeds destination length');
         }
         const values = this.getValues();
-
-        // Obtain the Buffer from the ArrayBuffer
-        const buffer = Buffer.from(values.buffer);
-        
-        // Copy bytes (convert 64bits index to bytes)
-        const byteOffset = Number(offset) * 8;
-        const byteLength = Number(count) * 8;
-        
-        buffer.fill(buffer, byteOffset, byteOffset + byteLength);
+        values.fill(value, Number(offset), Number(offset + count));
     }
 }

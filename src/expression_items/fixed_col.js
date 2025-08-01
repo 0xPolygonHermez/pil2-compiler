@@ -103,4 +103,22 @@ module.exports = class FixedCol extends ProofItem {
         
         srcBuffer.copy(dstBuffer, dstByteOffset, srcByteOffset, srcByteOffset + byteLength);
     }
+    fillRowsFrom(value, offset, count) {
+        if (offset < 0 || count < 0) {
+            throw new Error('Invalid copy parameters');
+        }
+        if (offset + count > this.getValues().length) {
+            throw new Error('Destination range exceeds destination length');
+        }
+        const values = this.getValues();
+
+        // Obtain the Buffer from the ArrayBuffer
+        const buffer = Buffer.from(values.buffer);
+        
+        // Copy bytes (convert 64bits index to bytes)
+        const byteOffset = Number(offset) * 8;
+        const byteLength = Number(count) * 8;
+        
+        buffer.fill(buffer, byteOffset, byteOffset + byteLength);
+    }
 }

@@ -53,12 +53,17 @@ airtemplate TestFillArray(int N = 2**4, int num_groups = 2) {
 
 airtemplate TestCopyArray(int N = 2**4) {
     col fixed PATTERN = [0..N-1];
+    col fixed PATTERN2 = [1000000..(1000000 + N -1)];
     col fixed UID[2];
     int uid = 10;
     int h = 8;
 
     for (int i = 0; i < 2; ++i) {
         Tables.copy(PATTERN, i * h, UID[i], i*2, h);
+        Tables.print(UID[i], 0, N);
+    }
+    for (int i = 0; i < 2; ++i) {
+        Tables.copy(PATTERN2, i * h, UID[i], i*2, h);
         Tables.print(UID[i], 0, N);
     }
 }   

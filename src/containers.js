@@ -8,6 +8,7 @@ module.exports = class Containers {
         this.uses = [];
         this.aliases = [];
         this.airGroupContainers = [];
+        this.containersStack = [];
     }
     addScopeAlias(alias, value) {
         // NOTE: there is no need to check for aliases because by grammatical definition,
@@ -50,12 +51,26 @@ module.exports = class Containers {
     }
     clearScope(proofScope) {
         // const previousScopes = Object.keys(this.containers).map(name => `${name}(${this.containers[name].scope})`).join();
-        const _containers = Object.keys(this.containers).map(name => [name, this.containers[name].scope]);
         this.containers = Object.keys(this.containers)
             .filter(name => this.containers[name].scope !== proofScope)
             .reduce((containers, name) => { containers[name] = this.containers[name]; return containers; }, {});
         // console.log(`clearScope(Container) ${proofScope}: ` + _containers.filter(c => typeof this.containers[c[0]] === 'undefined').map(c => `${c[0]}(${c[1]})`).join(', '));
     }
+    pushScope(proofScope) {
+        const [remain, save] = Object.entries(this.containers)
+            .reduce((res, [name, value]) => { res[value.scope !== proofScope ? 0:1][name] = value; return res }, [{}, {}]);
+        this.containers = remain;
+        this.containersStack.push(save);
+    }    
+    popScope() {
+        const saved = this.containersStack.pop();
+        if (!saved) {
+            throw new Error(`No saved containers to pop`);
+        }
+        for (const [name, value] of Object.entries(saved)) {
+            this.containers[name] = value;
+        }
+    }    
     create(name, alias = false)
     {
         if (this.current !== false) {

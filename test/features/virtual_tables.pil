@@ -73,6 +73,26 @@ airtemplate TestTablesNumRows(int N = 2**16) {
     k = F2;
 }
 
+airtemplate TestRecursiveA(int N = 2**16) {
+    col fixed F1A = [9:N];
+    col witness a;
+    recursive_function();
+
+    a + F1A === 0;    
+    2*a + F1A === 0;    
+}
+
+airtemplate TestRecursiveB(int N = 2**16) {
+    col witness b;
+    col fixed F1B = [10:N];
+
+    b + F1B === 0;
+    2*b + F1B === 0;
+}
+
+function recursive_function() {
+    TestRecursiveB();
+}
 expr k; 
 
 airgroup TestVirtualTables {
@@ -81,5 +101,10 @@ airgroup TestVirtualTables {
     TestWriteAfterCopy();
     TestWriteAfterPartialCopy();
     TestReference();
+    println(k);
+    Tables.print(k, 0, 16);
     TestTablesNumRows();
+    TestRecursiveA();
+    println(k);
+    Tables.print(k, 0, 16);
 }

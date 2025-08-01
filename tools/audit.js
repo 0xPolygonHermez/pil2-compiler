@@ -766,6 +766,7 @@ class AirOut {
             case 'customCol':
                 return this.getSymbol(ctx, data.colIdx, data.stage, SYMBOL_TYPES.CUSTOM_COL, data.commitId);
             case 'fixedCol':
+                console.log([cls, data]);
                 return this.getSymbol(ctx, data.idx, 0, SYMBOL_TYPES.FIXED_COL);
             case 'expression': {
                     const idx = data.idx;

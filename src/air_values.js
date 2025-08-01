@@ -1,7 +1,7 @@
-const Indexable = require("./indexable.js");
+const GlobalIndexable = require("./global_indexable.js");
 const AirValueItem = require("./expression_items/air_value.js");
 const AirValueDefinition = require("./definition_items/air_value.js");
-module.exports = class AirValues extends Indexable {
+module.exports = class AirValues extends GlobalIndexable {
     constructor () {
         super('airvalue', AirValueDefinition, AirValueItem)
     }
@@ -16,5 +16,5 @@ module.exports = class AirValues extends Indexable {
             labels.push({...label, data});
         }
         return labels;
-    }
+    }    
 }

@@ -3,6 +3,7 @@ const Context = require('../context.js');
 const fs = require('fs');
 const IntValue = require('../expression_items/int_value.js');
 const FixedFile = require('../fixed_file.js');
+const assert = require('../assert.js');
 
 const U64_MAX = 2n**64n - 1n;
 

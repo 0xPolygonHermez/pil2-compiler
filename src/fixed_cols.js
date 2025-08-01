@@ -1,9 +1,10 @@
-const Indexable = require("./indexable.js");
+const GlobalIndexable = require("./global_indexable.js");
 const FixedColItem = require("./expression_items/fixed_col.js");
 const FixedCol = require("./definition_items/fixed_col.js");
 const Context = require('./context.js');
 const assert = require('./assert.js');
-module.exports = class FixedCols extends Indexable {
+const { ContinueCmd } = require("./flow_cmd.js");
+module.exports = class FixedCols extends GlobalIndexable {
 
     constructor () {
         super('fixed', FixedCol, FixedColItem);
@@ -36,6 +37,7 @@ module.exports = class FixedCols extends Indexable {
         let res = [];
         for (const range of this.labelRanges) {
             const from = range.from;
+            if (!this.activeIds.includes(from)) continue;
             if (this.values[from].temporal) continue;
             res.push(range);
         }

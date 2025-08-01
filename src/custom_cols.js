@@ -1,7 +1,7 @@
-const Indexable = require("./indexable.js");
+const GlobalIndexable = require("./global_indexable.js");
 const CustomColItem = require("./expression_items/custom_col.js");
 const CustomCol = require("./definition_items/custom_col.js");
-module.exports = class CustomCols extends Indexable {
+module.exports = class CustomCols extends GlobalIndexable {
     constructor () {
         super('customcol', CustomCol, CustomColItem);
     }

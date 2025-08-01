@@ -12,7 +12,11 @@ module.exports = class Expressions {
         this.expressions = [];
         this.packedIds = [];
         this.labelRanges = new LabelRanges();
+        this.expressionsStack = [];
+        this.packedIdsStack = [];
+        this.labelRangesStack = [];
     }
+
     clone() {
         let cloned = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
         cloned.expressions = this.expressions.map(x => x.clone());
@@ -233,6 +237,17 @@ module.exports = class Expressions {
         this.expressions = [];
         this.packedIds = [];
         this.labelRanges = new LabelRanges();
+    }
+    push(label = '') {
+        this.expressionsStack.push(this.expressions);
+        this.packedIdsStack.push(this.packedIds);
+        this.labelRangesStack.push(this.labelRanges);
+        this.clear(label);
+    }
+    pop(label = '') {
+        this.expressions = this.expressionsStack.pop();
+        this.packedIds = this.packedIdsStack.pop();
+        this.labelRanges = this.labelRangesStack.pop();
     }
 
     *[Symbol.iterator]() {

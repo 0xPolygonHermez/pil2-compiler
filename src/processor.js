@@ -155,6 +155,7 @@ module.exports = class Processor {
         this.loadConfigDefines();
         this.loadBuiltInClass();
         this.scopeType = 'proof';
+        this.currentAir = false;
 
         this.currentAirGroup = false;
         this.airGroupStack = [];
@@ -1345,6 +1346,7 @@ module.exports = class Processor {
         airTemplateFunc.prepare(callinfo, mapinfo);
 
         const air = this.createAir(this.currentAirGroup, airTemplate, {...options, name});
+        const nestedAir = this.currentAir !== false;
         this.currentAir = air;
 
         const hasAlias = name != airTemplate.name;
@@ -1352,7 +1354,11 @@ module.exports = class Processor {
             this.context.push(airTemplate.name);
         }
         this.context.push(name);
+        if (nestedAir) {            
+            this.pushAirScope();
+        }
         this.scope.pushInstanceType('air');
+
         airGroup.airStart(air.id);
         this.memoryUpdate();
         const bdir = airTemplate.getBaseDir();
@@ -1380,7 +1386,6 @@ module.exports = class Processor {
         console.log('  > Constraints: ' + constraints);
         console.log('  > Execution time: ' + units.getHumanTime(ti2-ti1));
 
-
         if (this.proto && !air.virtual) {
             const t1 = performance.now();
             this.memoryUpdate();
@@ -1399,7 +1404,11 @@ module.exports = class Processor {
         this.constraints = new Constraints();
 
         const t1 = performance.now();
-        this.clearAirScope(air.name);
+        if (nestedAir) {
+            this.popAirScope();
+        } else {
+            this.clearAirScope(air.name);
+        }
         this.scope.popInstanceType(['witness', 'fixed', 'customcol', 'im', 'airvalue']);
         // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
@@ -1407,6 +1416,7 @@ module.exports = class Processor {
             this.context.pop();
         }
         this.closeAir(air);
+        this.currentAir = false;
 
         // closing airgroup but no closing final
         // this.suspendCurrentAirGroup(false);
@@ -1537,9 +1547,9 @@ module.exports = class Processor {
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-CONSTRAINTS');
 
         const info = {airId, airGroupId};
-        this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
+        this.proto.setSymbolsFromLabels(this.witness.getLabelRanges(), 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
-        this.proto.setSymbolsFromLabels(this.customCols.labelRanges, 'customcol', info);
+        this.proto.setSymbolsFromLabels(this.customCols.getLabelRanges(), 'customcol', info);
 
         if (airId == 0) {
             this.airGroupValues.clearOnceLabels(airGroupId);
@@ -1573,6 +1583,24 @@ module.exports = class Processor {
         this.references.clearScope('air');
         this.expressions.clear(label);
         this.hints.clear();
+    }
+    pushAirScope(label = '') {
+        this.references.pushType('fixed', label);
+        this.references.pushType('witness', label);
+        this.references.pushType('customcol', label);
+        this.references.pushType('airvalue', label);
+        this.references.pushScope('air');
+        this.expressions.push(label);
+        this.hints.push();
+    }
+    popAirScope(label = '') {
+        this.references.popType('fixed', label);
+        this.references.popType('witness', label);
+        this.references.popType('customcol', label);
+        this.references.popType('airvalue', label);
+        this.references.popScope('air');
+        this.expressions.pop(label);
+        this.hints.pop();
     }
     finalAirGroupScope() {
         this.callDeferredFunctions('airgroup', 'final');

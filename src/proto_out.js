@@ -472,10 +472,9 @@ module.exports = class ProtoOut {
                     // and it implies change index number and type if finally is a periodic col.
                     const [type, protoId] = this.fixedId2ProtoId[ope.fixedCol.idx] ?? [false,false];
                     if (protoId === false) {
-                        console.log(ope);
                         throw new Error(`Translate: Found invalid fixedColId ${ope.fixedCol.idx}`);
                     }
-                    ope.fixedCol.colIdx = protoId;
+                    ope.fixedCol.idx = protoId;
                     if (type === 'P') {
                         ope.periodicCol = ope.fixedCol;
                         delete(ope.fixedCol);

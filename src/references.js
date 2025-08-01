@@ -15,6 +15,7 @@ module.exports = class References {
         this.visibilityScope = [0,false];
         this.visibilityStack = [];
         this.containers = new Containers(this);
+        this.referencesStack = [];
     }
     isContainerDefined(name) {
         return this.containers.isDefined(name);
@@ -108,8 +109,43 @@ module.exports = class References {
             delete this.references[name];
         }
     }
+    pushType(type, label) {
+        const typeInfo = this.types[type];
+        if (typeof typeInfo === 'undefined') {
+            throw new Error(`type ${type} not registered`);
+        }
+        typeInfo.instance.push(label);
+
+        let stackReferences = {};
+        for (const name in this.references) {
+            if (this.references[name].type !== type) continue;
+            stackReferences[name] = this.references[name];
+            delete this.references[name];
+        }
+        this.referencesStack.push(stackReferences);
+    }
+    popType(type, label) {
+        const typeInfo = this.types[type];
+        if (typeof typeInfo === 'undefined') {
+            throw new Error(`type ${type} not registered`);
+        }
+        typeInfo.instance.pop(label);
+        let stackReferences = this.referencesStack.pop();
+        for (const name in stackReferences) {
+            if (this.references[name]!== undefined) {
+                throw new Error(`Reference ${name} already defined when restoring references at ${Context.sourceRef}`);
+            }
+            this.references[name] = stackReferences[name];
+        }
+    }
     clearScope(proofScope) {
         this.containers.clearScope(proofScope);
+    }
+    pushScope(proofScope) {
+        this.containers.pushScope(proofScope);
+    }
+    popScope() {
+        this.containers.popScope();
     }
     isReferencedType(type) {
         return type.at(0) === '&'

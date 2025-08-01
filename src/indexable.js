@@ -17,28 +17,33 @@ module.exports = class Indexable {
         assert.instanceOf(this.expressionItemClass.prototype, ExpressionItem);
         this.labelRanges = new LabelRanges();
         this.debug = false;
-    }
+        this.globalIndexable = options.globalIndexable ?? false;
+    }    
     get length() {
         return this.values.length;
     }
+    static getGlobalId(id) {        
+        return this.globalIds[id] ?? false;
+    }
     clone() {
-        let cloned = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
-        cloned.values = [];
-        for (const value of this.values) {
-            let clonedValue = value;
-            if (typeof value.clone === 'function') {
-               clonedValue = value.clone();
-            } else if (value instanceof Object) {
-               clonedValue = Object.assign(Object.create(Object.getPrototypeOf(value)), value);
-            }
-            cloned.values.push(clonedValue);
-        }
-        cloned.labelRanges = this.labelRanges.clone();
+        throw new Error('Clone method is not implemented for Indexable');
+        // let cloned = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
+        // cloned.values = [];
+        // for (const value of this.values) {
+        //     let clonedValue = value;
+        //     if (typeof value.clone === 'function') {
+        //        clonedValue = value.clone();
+        //     } else if (value instanceof Object) {
+        //        clonedValue = Object.assign(Object.create(Object.getPrototypeOf(value)), value);
+        //     }
+        //     cloned.values.push(clonedValue);
+        // }
+        // cloned.labelRanges = this.labelRanges.clone();
 
-        return cloned;
+        // return cloned;
     }
     clear(label = '') {
-        if (Debug.active) console.log(`CLEARING ${label} (${this.type})`);
+        if (true || Debug.active) console.log(`CLEARING ${label} (${this.type})`);
         this.values = [];
         this.labelRanges = new LabelRanges();
     }
@@ -55,11 +60,14 @@ module.exports = class Indexable {
         if (this.type === 'airgroupvalue' && Debug.active) {
             console.log(['AIRGROUP-VALUE-R', data]);
         }
-        const id = this.values.length;
+        const id = this.getNextId();
         for (let index = 0; index < count; ++index) {
             const absoluteIndex = index + id;
             const _label = label + (multiarray ? multiarray.offsetToIndexesString(index) : '');
             const initialValue = this.const ? null : this.getEmptyValue(absoluteIndex, {...data, label: _label});
+            if (this.useGlobalIds) {
+                Indexable.globalIds[absoluteIndex] = initialValue;
+            }            
             this.values[absoluteIndex] = initialValue;
             if (initialValue !== null) {
                 this.values[absoluteIndex].sourceRef = Context.sourceRef;

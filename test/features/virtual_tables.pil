@@ -32,22 +32,34 @@ airtemplate TestCopy(int N = 2**16) {
 airtemplate TestFill(int N = 2**4, int num_groups = 2) {
     col fixed UID;
     int uid = 10;
-    int h = 16;
+    int h = 8;
 
     println("uid", uid);
     Tables.fill(uid, UID, 0, h);
-    Tables.print(UID, 0, h);
+    Tables.print(UID, 0, N);
 }
 
 airtemplate TestFillArray(int N = 2**4, int num_groups = 2) {
     col fixed UID[num_groups];
     int uid = 10;
-    int h = 16;
+    int h = 8;
 
     for (int i = 0; i < num_groups; ++i) {
         println("uid", uid);
-        Tables.fill(uid, UID[i], 0, h);
-        Tables.print(UID[i], 0, h);
+        Tables.fill(uid + i, UID[i], 0, h);
+        Tables.print(UID[i], 0, N);
+    }
+}   
+
+airtemplate TestCopyArray(int N = 2**4) {
+    col fixed PATTERN = [0..N-1];
+    col fixed UID[2];
+    int uid = 10;
+    int h = 8;
+
+    for (int i = 0; i < 2; ++i) {
+        Tables.copy(PATTERN, i * h, UID[i], i*2, h);
+        Tables.print(UID[i], 0, N);
     }
 }   
 
@@ -119,6 +131,8 @@ expr k;
 
 airgroup TestVirtualTables {
     TestFill();
+    TestFillArray();
+    TestCopyArray();
     /*
     TestVirtualVariable(2**16, 0);
     virtual TestVirtualVariable(2**16, 1) alias TestVirtualVariable2;

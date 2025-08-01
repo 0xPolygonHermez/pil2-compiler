@@ -14,7 +14,8 @@ module.exports = class FixedCol extends ProofItem {
         this.sequence = null;
         this.values = false;
         this.maxValue = 0;
-        this.bytes = data.bytes ?? false;
+        this.bytes = data.bytes ? 8 : false;
+
         this.temporal = Boolean(data.temporal || data.virtual)
         this.external = data.external ?? false;
         this.label = data.label ?? false;

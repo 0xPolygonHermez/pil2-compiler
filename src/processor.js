@@ -865,21 +865,22 @@ module.exports = class Processor {
         this.execute(s.init, `FOR ${this.sourceRef} INIT`);
         let index = 0;
         // while (this.expressions.e2bool(s.condition)) {
-        let tmark = performance.now();
         let ttotal = 0;
         let tcount = 0;
         let mesure = true;
         let t = [0,0,0,0];
         let large = false;
+        const tmark = performance.now();
+        let loop_mark = tmark;
         while (true) {
             if (index % 10000 === 0 && index) {
                 large = true;
-                let tmark2 = performance.now();
-                const ms = tmark2 - tmark;
+                let loop_mark2 = performance.now();
+                const ms = loop_mark2 - tmark;
                 ttotal += ms;
                 tcount += 1;
-                console.log(`> inside loop ${this.sourceTag} index:${index} time(ms):${Math.trunc(tmark2-tmark)} avg(ms):${Math.trunc(ttotal/tcount)} total(s):${Math.trunc(ttotal/1000)}`);
-                tmark = tmark2;
+                console.log(`  > inside loop ${Context.sourceTag} index:${index} time(ms):${Math.trunc(loop_mark2-loop_mark)} avg(ms):${Math.trunc(ttotal/tcount)} total(s):${Math.trunc(ttotal/1000)}`);
+                loop_mark = loop_mark2;
             }
             const loopCond = s.condition.eval().asBool();
             if (Debug.active) console.log('FOR.CONDITION', loopCond, s.condition.toString(), s.condition);
@@ -904,7 +905,7 @@ module.exports = class Processor {
         }
         if (large) {
             const tend = performance.now();
-            console.log(`> total loop ${this.sourceTag} ${Math.round((tmark-tend) * 100)/100.0} ms`);
+            console.log(`  > total loop ${Context.sourceTag} ${Math.round((tend-tmark) * 100)/100.0} ms`);
         }
         this.scope.pop();
         const tmark2 = performance.now();

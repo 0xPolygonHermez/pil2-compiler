@@ -1297,7 +1297,9 @@ module.exports = class Processor {
             throw new Error(`an int parameter N must be declared as airGroup argument`);
         }
         const rows = item.asInt();
-        this.checkRows(rows);
+        if (!options.virtual) {
+            this.checkRows(rows);
+        }
         const air = airGroup.createAir(airTemplate, rows, options);
         this.airStack.push(air);
         this.updateAir();

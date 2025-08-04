@@ -83,12 +83,12 @@ module.exports = class ExternFixedFile {
             const values = new BigUint64Array(buffer.buffer, 0, this.rows);
             fs.readSync(this.fd, buffer, 0, size, this.position);
             this.position += size;
-            return  [name, 1, {arrayInfo: false, lengths, values}];
+            return  [name, 1, {arrayInfo: false, lengths, values, loaded: true}];
         }
         // array column
         const arrayInfo = new MultiArray(lengths);
         const count = arrayInfo.getSize();
-        let res = {arrayInfo, lengths, values: []};
+        let res = {arrayInfo, lengths, values: [], loaded: true};
         for (let index = 0; index < count; ++index) {
             const buffer = Buffer.alloc(size);
             const values = new BigUint64Array(buffer.buffer, 0, this.rows);

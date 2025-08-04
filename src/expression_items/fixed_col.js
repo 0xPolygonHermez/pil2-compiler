@@ -60,57 +60,66 @@ module.exports = class FixedCol extends ProofItem {
         return this.clone();
     }
     printRowsFrom(offset, count) {
-        if (offset < 0 || count < 0) {
-            throw new Error('Invalid copy parameters');
-        }
-        if (offset + count > this.getValues().length) {
-            throw new Error('Source range exceeds source length');
-        }
-        let _values = [];
-        for (let index = 0n; index < count; index++) {
-            const value = this.getValue(offset + index);
-            _values.push(value);
-        }
-        // TODO: use println sytle, common code 
-        const source = Context.config.printlnLines ? '['+Context.sourceTag+'] ':'';
-        const spaces = Context.scope.getInstanceType() === 'proof' ? '': '  ';
-        console.log(`\x1B[36m${spaces}> ${source}[${offset}..${offset+count-1n}] ${_values.join(' ')}\x1B[0m`);
+        this.definition.printRowsFrom(offset, count);
     }
     copyRowsFrom(src, src_offset, dst_offset, count) {
-        if (src_offset < 0 || dst_offset < 0 || count < 0) {
-            throw new Error('Invalid copy parameters');
-        }
-        if (src_offset + count > src.getValues().length) {
-            throw new Error('Source range exceeds source length');
-        }
-        if (dst_offset + count > this.getValues().length) {
-            throw new Error('Destination range exceeds destination length');
-        }
-        const srcValues = src.getValues();
-        const dstValues = this.getValues();
-
-        // Obtain the Buffer from the ArrayBuffer
-        const srcBuffer = Buffer.from(srcValues.buffer);
-        const dstBuffer = Buffer.from(dstValues.buffer);
-        
-        // O si ya tienes un Buffer, usa directamente:
-        // const srcBuffer = srcValues.buffer; // si srcValues.buffer ya es un Buffer
-        
-        // Copy bytes (convert 64bits index to bytes)
-        const srcByteOffset = Number(src_offset) * 8;
-        const dstByteOffset = Number(dst_offset) * 8;
-        const byteLength = Number(count) * 8;
-        
-        srcBuffer.copy(dstBuffer, dstByteOffset, srcByteOffset, srcByteOffset + byteLength);
+        this.definition.copyRowsFrom(src, src_offset, dst_offset, count);
     }
     fillRowsFrom(value, offset, count) {
-        if (offset < 0 || count < 0) {
-            throw new Error('Invalid copy parameters');
-        }
-        if (offset + count > this.getValues().length) {
-            throw new Error('Destination range exceeds destination length');
-        }
-        const values = this.getValues();
-        values.fill(value, Number(offset), Number(offset + count));
+        this.definition.fillRowsFrom(value, offset, count);
     }
+    // printRowsFrom(offset, count) {
+    //     if (offset < 0 || count < 0) {
+    //         throw new Error('Invalid copy parameters');
+    //     }
+    //     if (offset + count > this.getValues().length) {
+    //         throw new Error('Source range exceeds source length');
+    //     }
+    //     let _values = [];
+    //     for (let index = 0n; index < count; index++) {
+    //         const value = this.getValue(offset + index);
+    //         _values.push(value);
+    //     }
+    //     // TODO: use println sytle, common code 
+    //     const source = Context.config.printlnLines ? '['+Context.sourceTag+'] ':'';
+    //     const spaces = Context.scope.getInstanceType() === 'proof' ? '': '  ';
+    //     console.log(`\x1B[36m${spaces}> ${source}[${offset}..${offset+count-1n}] ${_values.join(' ')}\x1B[0m`);
+    // }
+    // copyRowsFrom(src, src_offset, dst_offset, count) {
+    //     if (src_offset < 0 || dst_offset < 0 || count < 0) {
+    //         throw new Error('Invalid copy parameters');
+    //     }
+    //     if (src_offset + count > src.getValues().length) {
+    //         throw new Error('Source range exceeds source length');
+    //     }
+    //     if (dst_offset + count > this.getValues().length) {
+    //         throw new Error('Destination range exceeds destination length');
+    //     }
+    //     const srcValues = src.getValues();
+    //     const dstValues = this.getValues();
+
+    //     // Obtain the Buffer from the ArrayBuffer
+    //     const srcBuffer = Buffer.from(srcValues.buffer);
+    //     const dstBuffer = Buffer.from(dstValues.buffer);
+        
+    //     // O si ya tienes un Buffer, usa directamente:
+    //     // const srcBuffer = srcValues.buffer; // si srcValues.buffer ya es un Buffer
+        
+    //     // Copy bytes (convert 64bits index to bytes)
+    //     const srcByteOffset = Number(src_offset) * 8;
+    //     const dstByteOffset = Number(dst_offset) * 8;
+    //     const byteLength = Number(count) * 8;
+        
+    //     srcBuffer.copy(dstBuffer, dstByteOffset, srcByteOffset, srcByteOffset + byteLength);
+    // }
+    // fillRowsFrom(value, offset, count) {
+    //     if (offset < 0 || count < 0) {
+    //         throw new Error('Invalid copy parameters');
+    //     }
+    //     if (offset + count > this.getValues().length) {
+    //         throw new Error('Destination range exceeds destination length');
+    //     }
+    //     const values = this.getValues();
+    //     values.fill(value, Number(offset), Number(offset + count));
+    // }
 }

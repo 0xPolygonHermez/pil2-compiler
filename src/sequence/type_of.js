@@ -69,9 +69,9 @@ module.exports = class SequenceTypeOf extends SequenceBase {
     repeatSeq(e) {
         this.checkNumericValues([e.times]);
         const times = this.e2num(e.times);
-        for (let itime = 0; itime < times; ++itime) {
-            if (!this.insideExecute(e.value)) return false;
-        }
+        // for (let itime = 0; itime < times; ++itime) {   
+            if (!this.insideExecute(e.value)) return false; 
+        // }
         return this.isSequence || this.isList;
     }    
 }

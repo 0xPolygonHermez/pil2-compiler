@@ -125,7 +125,8 @@ module.exports = class FixedCol extends ProofItem {
         if (this.values === false){
             this.rows = Context.rows;
             if (this.bytes === false) {
-                this.bytes = this.valueToBytes(value);
+                this.bytes = 8;
+                // this.bytes = this.valueToBytes(value);
             }
             [this.buffer, this.values, this.converter] = this.createBuffer(this.rows, this.bytes);
             this.updateSize();

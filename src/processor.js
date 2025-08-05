@@ -497,10 +497,10 @@ module.exports = class Processor {
                 this.pragmas.nextFixed.temporal = true;
                 break;
             }
-            // case 'fixed_external': {
-            //     this.pragmas.nextFixed.external = this.getPragmaStringTemplateParam(params[1], true);
-            //     break;
-            // }
+            case 'fixed_external': {
+                this.pragmas.nextFixed.external = this.getPragmaStringTemplateParam(params[1], true);
+                break;
+            }
             case 'extern_fixed_file': {
                 this.currentAir.loadExternFixedFile(this.getPragmaStringTemplateParam(params[1], true));
             } 

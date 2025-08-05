@@ -8,7 +8,8 @@ module.exports = class AirValues extends GlobalIndexable {
     getLabels(dataFields = []) {
         let labels = [];
         for (const label of this.labelRanges) {
-            const value = this.values[label.from];
+            if (!this.activeIds.includes(label.from)) continue;
+            const value = this.globalValues[label.from];
             let data = {};
             for (const field of dataFields) {
                 data[field] = value[field];

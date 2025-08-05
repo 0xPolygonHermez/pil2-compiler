@@ -100,7 +100,7 @@ module.exports = class AirGroup {
         }
 
         const airGroupValue = this.airGroupValues[name] ?? false;
-        console.log(`\x1B[36m[AIRGROUP] DECLARE ${name} (${fullname}) ${this.name} ${airId} ${airGroupValue === false ? '(new)':''}\x1B[0m`);
+        console.log(`\x1B[36m  > Declare airgroupval ${name} (${fullname}) ${airGroupValue === false ? '(new)':''}\x1B[0m`);
         if (airGroupValue === false) {
             const res = Context.references.declare(fullname, 'airgroupvalue', lengths, data);
             const definition = Context.references.get(fullname);

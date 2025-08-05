@@ -33,13 +33,13 @@ module.exports = class GlobalIndexable extends Indexable {
             const index = id + rindex;
             const _label = label + (multiarray ? multiarray.offsetToIndexesString(rindex) : '');
             const initialValue = this.const ? null : this.getEmptyValue(index, {...data, label: _label});
-            this.values[index] = initialValue;
+            this.globalValues[index] = initialValue;
             this.activeIds.push(index);
             if (initialValue !== null) {
                 initialValue.sourceRef = Context.sourceRef;
             }
             if (this.debug) {
-                console.log(`INIT ${this.constructor.name}.${this.type} @${index} (${rindex}) ${this.values[index]} LABEL:${label}`);
+                console.log(`INIT ${this.constructor.name}.${this.type} @${index} (${rindex}) ${this.globalValues[index]} LABEL:${label}`);
             }
         }
         if (label) {
@@ -48,7 +48,7 @@ module.exports = class GlobalIndexable extends Indexable {
         return id;
     }
     isDefined(id) {
-        return (typeof this.values[id] !== 'undefined' && (!this.const || this.values[id] !== null));
+        return (typeof this.globalValues[id] !== 'undefined' && (!this.const || this.globalValues[id] !== null));
     }
 
     define(id, value) {
@@ -58,10 +58,10 @@ module.exports = class GlobalIndexable extends Indexable {
         this.set(id, value);
     }
     getLastId() {
-        return this.values.length === 0 ? false : this.values.length - 1;
+        return this.globalValues.length === 0 ? false : this.globalValues.length - 1;
     }
     getNextId() {
-        return this.values.length;
+        return this.globalValues.length;
     }
     set(id, value) {
         const defined = this.isDefined(id);
@@ -69,7 +69,7 @@ module.exports = class GlobalIndexable extends Indexable {
             throw new Error(`Invalid assignation at ${Context.sourceRef} to const indexable element [${id}]`);
         }
         if (!defined && this.const) {
-            this.values[id] = value;
+            this.globalValues[id] = value;
             return;
         }
         const item = this.get(id);
@@ -92,27 +92,28 @@ module.exports = class GlobalIndexable extends Indexable {
           yield this.get(this.activeIds[index]);
         }
     }
-
+    getValues() {
+        return this.activeIds.map(id => this.globalValues[id]);
+    }
     *values() {
         for (let index = 0; index < this.activeIds.length; ++index) {
-          yield this.values[this.activeIds[index]];
+          yield this.globalValues[this.activeIds[index]];
         }
     }
-
     *keyValues() {
         for (let index = 0; index < this.activeIds.length; ++index) {
-            yield [this.activeIds[index], this.values[this.activeIds[index]]];
+            yield [this.activeIds[index], this.globalValues[this.activeIds[index]]];
         }
     }
     dump () {
-        console.log(`DUMP ${this.type} #:${this.values.length}`);
-        for (let index = 0; index < this.values.length; ++index) {
-            const value = this.values[index];
+        console.log(`DUMP ${this.type} #:${this.globalValues.length}`);
+        for (let index = 0; index < this.globalValues.length; ++index) {
+            const value = this.globalValues[index];
 /*            if (value && typeof value.dump === 'function') {
                 console.log(`#### ${this.type} ${index} ####`);
                 value.dump();
             }*/
-            console.log(`${index}: ${this.values[index]}`);
+            console.log(`${index}: ${this.globalValues[index]}`);
         }
     }
     countByProperty(property) {

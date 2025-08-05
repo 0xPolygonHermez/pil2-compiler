@@ -9,7 +9,7 @@ module.exports = class Indexable {
         this.expressionItemClass = expressionItemClass ?? false;
         this.expressionItemConstClass = options.constClass ?? expressionItemClass;
         this.definitionClass = definitionClass ?? false;
-        this.values = [];
+        this.globalValues = [];
         this.type = type;
         this.options = options ?? {}
         this.rtype = this.options.rtype ?? type;
@@ -20,7 +20,7 @@ module.exports = class Indexable {
         this.globalIndexable = options.globalIndexable ?? false;
     }    
     get length() {
-        return this.values.length;
+        return this.globalValues.length;
     }
     static getGlobalId(id) {        
         return this.globalIds[id] ?? false;
@@ -44,7 +44,7 @@ module.exports = class Indexable {
     }
     clear(label = '') {
         if (true || Debug.active) console.log(`CLEARING ${label} (${this.type})`);
-        this.values = [];
+        this.globalValues = [];
         this.labelRanges = new LabelRanges();
     }
     getType(id) {
@@ -68,12 +68,12 @@ module.exports = class Indexable {
             if (this.useGlobalIds) {
                 Indexable.globalIds[absoluteIndex] = initialValue;
             }            
-            this.values[absoluteIndex] = initialValue;
+            this.globalValues[absoluteIndex] = initialValue;
             if (initialValue !== null) {
-                this.values[absoluteIndex].sourceRef = Context.sourceRef;
+                this.globalValues[absoluteIndex].sourceRef = Context.sourceRef;
             }
             if (this.debug) {
-                console.log(`INIT ${this.constructor.name}.${this.type} @${absoluteIndex} (${id}+${index}) ${this.values[absoluteIndex]} LABEL:${label}`);
+                console.log(`INIT ${this.constructor.name}.${this.type} @${absoluteIndex} (${id}+${index}) ${this.globalValues[absoluteIndex]} LABEL:${label}`);
             }
         }
         if (label) {
@@ -83,10 +83,10 @@ module.exports = class Indexable {
     }
     // get definition object
     get(id) {
-        let res = this.values[id];
+        let res = this.globalValues[id];
         if (res === null) {
             res = this.getEmptyValue(id);
-            this.values[id] = res;
+            this.globalValues[id] = res;
         }
         return res;
     }
@@ -96,7 +96,7 @@ module.exports = class Indexable {
     }
     // get expression item to add in a expression
     getItem(id, properties = {}) {
-        let res = this.values[id];
+        let res = this.globalValues[id];
         const isConst = (properties.const && this.expressionItemConstClass);
         const itemClass = isConst ? this.expressionItemConstClass : this.expressionItemClass;
         if (Debug.active) {
@@ -129,7 +129,7 @@ module.exports = class Indexable {
     }
     // get expression item to add in a expression
     getDefinition(id, options = {}) {
-        return this.values[id];
+        return this.globalValues[id];
     }
 
     getLabel(id, options) {
@@ -137,7 +137,7 @@ module.exports = class Indexable {
     }
 
     isDefined(id) {
-        return (typeof this.values[id] !== 'undefined' && (!this.const || this.values[id] !== null));
+        return (typeof this.globalValues[id] !== 'undefined' && (!this.const || this.globalValues[id] !== null));
     }
 
     define(id, value) {
@@ -147,10 +147,10 @@ module.exports = class Indexable {
         this.set(id, value);
     }
     getLastId() {
-        return this.values.length === 0 ? false : this.values.length - 1;
+        return this.globalValues.length === 0 ? false : this.globalValues.length - 1;
     }
     getNextId() {
-        return this.values.length;
+        return this.globalValues.length;
     }
     set(id, value) {
         const defined = this.isDefined(id);
@@ -158,7 +158,7 @@ module.exports = class Indexable {
             throw new Error(`Invalid assignation at ${Context.sourceRef} to const indexable element [${id}]`);
         }
         if (!defined && this.const) {
-            this.values[id] = value;
+            this.globalValues[id] = value;
             return;
         }
         const item = this.get(id);
@@ -173,42 +173,42 @@ module.exports = class Indexable {
     }
 
     unset(id) {
-        if (id < this.values.length) {
-            delete this.values[id];
+        if (id < this.globalValues.length) {
+            delete this.globalValues[id];
         }
     }
 
     *[Symbol.iterator]() {
-        for (let index = 0; index < this.values.length; ++index) {
+        for (let index = 0; index < this.globalValues.length; ++index) {
           yield this.get(index);
         }
     }
 
     *values() {
-        for (let value of this.values) {
+        for (let value of this.globalValues) {
             yield value;
         }
     }
 
     *keyValues() {
-        for (let index = 0; index < this.values.length; ++index) {
-            yield [index, this.values[index]];
+        for (let index = 0; index < this.globalValues.length; ++index) {
+            yield [index, this.globalValues[index]];
         }
     }
     dump () {
-        console.log(`DUMP ${this.type} #:${this.values.length}`);
-        for (let index = 0; index < this.values.length; ++index) {
-            const value = this.values[index];
+        console.log(`DUMP ${this.type} #:${this.globalValues.length}`);
+        for (let index = 0; index < this.globalValues.length; ++index) {
+            const value = this.globalValues[index];
 /*            if (value && typeof value.dump === 'function') {
                 console.log(`#### ${this.type} ${index} ####`);
                 value.dump();
             }*/
-            console.log(`${index}: ${this.values[index]}`);
+            console.log(`${index}: ${this.globalValues[index]}`);
         }
     }
     countByProperty(property) {
         let res = {};
-        for (let index = 0; index < this.values.length; ++index) {
+        for (let index = 0; index < this.globalValues.length; ++index) {
             const value = this.get(index);
             const key = value[property];
             res[key] = (res[key] ?? 0) + 1;
@@ -219,7 +219,7 @@ module.exports = class Indexable {
         let res = [];
         let isArray = Array.isArray(property);
         const properties = isArray ? property : [property];
-        for (let index = 0; index < this.values.length; ++index) {
+        for (let index = 0; index < this.globalValues.length; ++index) {
             let value;
             let pvalues = [];
             for (const _property of properties) {
@@ -236,7 +236,7 @@ module.exports = class Indexable {
     }
     getPropertiesString(properties, options = {}) {
         let res = [];
-        for (let index = 0; index < this.values.length; ++index) {
+        for (let index = 0; index < this.globalValues.length; ++index) {
             const definition = this.get(index);
             let propValues = [];
             for (const property of properties) {

@@ -13,9 +13,9 @@ module.exports = class CustomCols extends GlobalIndexable {
         return this.getCommits().map(x => x.name);
     }
     getCommits() {
-        return this.values.map(x => x.commit).filter((commit, index, commits) => commits.indexOf(commit) === index);
+        return this.getValues().map(x => x.commit).filter((commit, index, commits) => commits.indexOf(commit) === index);
     }
     getColsByCommit(commit) {
-        return this.values.filter(x => x.commit === commit);
+        return this.getValues().filter(x => x.commit === commit);
     }
 }

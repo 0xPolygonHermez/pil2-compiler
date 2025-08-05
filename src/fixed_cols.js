@@ -38,7 +38,7 @@ module.exports = class FixedCols extends GlobalIndexable {
         for (const range of this.labelRanges) {
             const from = range.from;
             if (!this.activeIds.includes(from)) continue;
-            if (this.values[from].temporal) continue;
+            if (this.globalValues[from].temporal) continue;
             res.push(range);
         }
         return res;

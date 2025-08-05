@@ -7,7 +7,7 @@ module.exports = class Challenges extends Indexable {
     }
     getEmptyValue(id, data = {}) {
         const stage = data.stage ?? 2;
-        const relativeId = this.values.reduce((rid, val) => val.stage === stage ? rid + 1 : rid, 0);
+        const relativeId = this.globalValues.reduce((rid, val) => val.stage === stage ? rid + 1 : rid, 0);
         let definition = super.getEmptyValue(id, {relativeId, ...data});
         return definition;
     }

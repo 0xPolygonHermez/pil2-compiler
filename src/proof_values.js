@@ -8,7 +8,7 @@ module.exports = class ProofValues extends Indexable {
     }
     getEmptyValue(id, data = {}) {
         const stage = data.stage ?? 1;
-        const relativeId = this.values.reduce((rid, v) => v.stage === stage ? rid + 1 : rid, 0);
+        const relativeId = this.globalValues.reduce((rid, v) => v.stage === stage ? rid + 1 : rid, 0);
         let definition = super.getEmptyValue(id, {relativeId, ...data});
         return definition;
     }

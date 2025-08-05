@@ -196,9 +196,10 @@ module.exports = class ProtoOut {
     }
     setAirValues(airValues) {
         this.currentAir.airValues = [];
+        this.airValueId2ProtoId = [];
+        this.getRelative(airValues, this.airValueId2ProtoId, [this.currentAirGroup.airGroupId, this.currentAir.airId]);
         for (let index = 0; index < airValues.length; ++index) {
-            const airValue = airValues[index];
-            const stage = airValue.stage;
+            const stage = airValues[index].stage;
             this.currentAir.airValues.push({stage});
         }
     }
@@ -273,10 +274,8 @@ module.exports = class ProtoOut {
                 return {type: REF_TYPE_AIR_GROUP_VALUE, id: relativeId, airGroupId, stage};
             }
             case 'airvalue': {
-                const stage = assert.returnTypeOf(ref.stage, 'number');
-                const airGroupId = assert.returnTypeOf(ref.data.airGroupId, 'number');
-                const airId = assert.returnTypeOf(ref.data.airId, 'number');
-                return {type: REF_TYPE_AIR_VALUE, id, airId, airGroupId, stage};
+                const [stage, protoId, airGroupId, airId] = this.airValueId2ProtoId[id];
+                return {type: REF_TYPE_AIR_VALUE, id: protoId, airId, airGroupId, stage};
             }
             case 'proofvalue':
                 const def = ref.instance.getDefinition(id);
@@ -388,10 +387,16 @@ module.exports = class ProtoOut {
     setWitnessCols(cols) {
         const stageWidths = this.setupAirProperty('stageWidths');
         this.witnessId2ProtoId = [];
-        this.getGetRelativeStageWidths(cols, this.witnessId2ProtoId, stageWidths, 1);
+        this.getRelativeStageWidths(cols, this.witnessId2ProtoId, stageWidths, 1);
         // sort by stage
     }
-    getGetRelativeStageWidths(cols, translationTable, stageWidths, initialStage, extraCols = []) {
+    getRelative(cols, translationTable, extraCols = []) {
+        let index = 0;
+        for (const col of cols) {
+            translationTable[col.id] = [col.stage ?? 0, index++, ...extraCols];
+        }
+    }
+    getRelativeStageWidths(cols, translationTable, stageWidths, initialStage, extraCols = []) {
         let stages = [];
         for (const col of cols) {
             if (col.stage < initialStage) {
@@ -432,7 +437,7 @@ module.exports = class ProtoOut {
             const commitCols = cols.getColsByCommit(commit);
             let stageWidths = [];
             const commitId = customCommits.length;
-            this.getGetRelativeStageWidths(commitCols, this.customId2ProtoId, stageWidths, 0, [commitId]);
+            this.getRelativeStageWidths(commitCols, this.customId2ProtoId, stageWidths, 0, [commitId]);
             customCommits.push(this.setCustomCommit(commit, stageWidths, commit.publics.map(x => { return {idx: x.id} })));
         }
     }
@@ -508,7 +513,16 @@ module.exports = class ProtoOut {
                 }
                 break;
             // airGroupValue not need to translate or to add extra information
-            // airValue not need to translate or to add extra information
+            case 'airValue': {
+                    // translate index of airvalue because compiler use global ids
+                    const [stage, protoId, airGroupId, airId] = this.airValueId2ProtoId[ope.airValue.idx] ?? [false, false, false, false];
+                    // // console.log(`TRANSLATE witnessCol colIdx:${ope.witnessCol.colIdx}=>${protoId} rowOffset:${ope.witnessCol.rowOffset} stage:${ope.witnessCol.stage}=>${stage}`);
+                    if (protoId === false) {
+                        throw new Error(`Translate: Found invalid airValueId ${ope.airValue.idx}`);
+                    }
+                    ope.airValue.idx = protoId;
+                }
+                break;
             // challenge not need to translate or to add extra information
             case 'constant':
                 ope.constant.value = this.toBaseField(ope.constant.value);

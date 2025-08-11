@@ -22,7 +22,7 @@ airtemplate TestCopy(int N = 2**16) {
     const int b = 18;
 
     col witness stage(2) tmp2;
-    col fixed virtual(8) tmp = [0...];
+    col fixed temporal(8) tmp = [0...];
 
     println(foo(10));
     virtualTables.hello(1, 2);
@@ -105,7 +105,7 @@ airtemplate TestReference(int N = 2**16) {
 
 airtemplate TestTablesNumRows(int N = 2**16) {
     col fixed F1 = [1..N];
-    col fixed virtual(80) F2;
+    col fixed temporal(80) F2;
     assert_eq(Tables.num_rows(F1), N);
     assert_eq(Tables.num_rows(F2), 80);
     Tables.copy(F1, 80, F2, 0, 80);

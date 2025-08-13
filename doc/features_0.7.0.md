@@ -1,11 +1,10 @@
-## Virtual Tables
+## Release 0.7.0
 
+The features main features of this release are:
 
-The `virtual` keyword applies to several elements:
 - Packages
-- New features for fixed columns
-- AirTemplate instantiation
-- Features of fixed columns
+- New features for fixed columns (bits, temporal)
+- Virtual instantiation of AirTemplates
 
 ---
 
@@ -46,7 +45,7 @@ Columns can now define additional "features" such as:
 col fixed temporal() my_temporal_col_with_default_rows;
 col fixed temporal(8000) my_temporal_col_with_8000_rows;
 ```
-- **bits(<num_bits>[,signed|unsigned])**: This feature adds extra information to the witness about the number of bits used for its representation. IMPORTANT: This feature does not add any constraint; it is only **extra information** for witness computation.
+- **bits(<num_bits>[,signed|unsigned])**: This feature adds extra information to the witness about the number of bits used for its representation. **IMPORTANT**: This feature does not add any constraint; it is only **extra information** for witness computation.
 ```
 col witness bits(1) enable;
 enable * (1 - enable) === 0;
@@ -62,6 +61,7 @@ A virtual instantiation specifies that an AirTemplate instance is virtual. This 
 
 
 #### Key characteristics:
+
 - The special variable **`VIRTUAL`** is set to `1` inside a virtual AirTemplate, and `0` otherwise.
 - The **number of rows** (`N`) in a virtual AirTemplate **does not need to be a power of 2**. This is especially useful when the AirTemplate contains a table, as it allows specifying the exact number of rows without padding.
 - For security reasons, a virtual AirTemplate **cannot have constraints**. If air constraints are defined inside a virtual AirTemplate, an error will be thrown.
@@ -74,22 +74,22 @@ virtual myAirTable();
 ```
 
 #### Package Tables
+
 To efficiently manage tables, the `Tables` package was created as a built-in package.
 The following functions are available:
-- `Tables.num_rows(col)`: Returns the number of rows of a fixed column.
-```
-int rows = Tables.num_rows(my_fixed_col);
-```
-- `Tables.copy(src_col, src_offset, dst_col, dst_offset, count)`
-```
-int rows = Tables.copy(my_fixed_col);
-```
-- `Tables.fill(value, dst_col, offset, count)`
-- `Tables.print(col, offset, count)`
-
-
-### Features of Fixed Columns
-This is used to specify that an instantiation of an AirTemplate is virtual, meaning it creates a virtual AirTemplate that will not end up in the pilout. This mechanism allows a library such as `std` to access the AirTemplate's information. Its characteristics are:
-- Within a virtual AirTemplate, the value of the variable `VIRTUAL` is 1; otherwise, it is 0.
-- The number of rows (N) in a virtual AirTemplate does not have to be a power of 2. This is very useful when the AirTemplate contains a table because the specified number of rows can be set without padding.
-- For security reasons, a virtual AirTemplate cannot have constraints.
+- **num_rows(col)**: Returns the number of rows of a fixed column.
+    ```
+    int rows = Tables.num_rows(my_fixed_col);
+    ```
+- **copy(src_col, src_offset, dst_col, dst_offset, count)**: Copy `<count>` rows starting from row `<src_offset>` of `<src_col>` to '<dst_offset>` from `<dst_col>`.
+    ```
+    Tables.copy(big_fixed_col, 0, small_fixed_col, 16, 32);
+    ```
+- **fill(value, dst_col, offset, count)**: Fill with value `<value>`, `<count>` rows starting from row `<offset>`.
+    ```
+    Tables.fill(0xFFFF, my_fixed_col, 0, 32);
+    ```
+- **print(col, offset, count)**: Used by debugging proposal, print `<count>` rows of `<col>` starting from row `<offset>`.
+    ```
+    Tables.copy(my_fixed_col, 16, 32);
+    ```

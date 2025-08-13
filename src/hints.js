@@ -6,6 +6,7 @@ module.exports = class Hints {
     constructor (expressions) {
         this.expressions = expressions;
         this.hints = [];
+        this.hintsStack = [];
     }
     clone() {
         let cloned = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
@@ -68,5 +69,12 @@ module.exports = class Hints {
         for (let index = 0; index < this.hints.length; ++index) {
           yield this.hints[index];
         }
+    }
+    push() {
+        this.hintsStack.push(this.hints);
+        this.clear();
+    }
+    pop() {
+        this.hints = this.hintsStack.pop();
     }
 }

@@ -211,6 +211,9 @@ class ExpressionItem {
     isAlone() {
         return true;
     }
+    getAlone() {
+        return this;
+    }
     getAloneOperand() {
         return this;
     }
@@ -220,6 +223,18 @@ class ExpressionItem {
     evalInsideExtra(options = {}) {
         return {result: this.evalInside(options)};
     }
+    static value2num(value) {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'bigint' || typeof value === 'string') return Number(value);
+        if (typeof value.asInt === 'function') return Number(value.asInt());
+        return false;
+    }
+    static value2bint(value) {
+        if (typeof value === 'bigint') return value;
+        if (typeof value === 'number' || typeof value === 'string') return BigInt(value);
+        if (typeof value.asInt === 'function') return value.asInt();
+        return false;
+    }    
 }
 
 module.exports = ExpressionItem;

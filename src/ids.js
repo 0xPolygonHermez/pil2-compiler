@@ -19,7 +19,6 @@ module.exports = class Ids {
         this.labelRanges = new LabelRanges();
     }
     reserve(count = 1, label, multiarray, data = {}) {
-        // console.log(`RESERVE ${this.type} ${this.lastId}-${this.lastId+count-1} LABEL:${label}`);
         const id = this.lastId;
         this.lastId += count;
         this.datas[id] = data;

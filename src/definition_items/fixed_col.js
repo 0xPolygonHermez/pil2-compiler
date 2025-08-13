@@ -3,18 +3,21 @@ const Context = require('../context.js');
 const fs = require('fs');
 const IntValue = require('../expression_items/int_value.js');
 const FixedFile = require('../fixed_file.js');
+const ExpressionItems = require('../expression_items.js');
+const assert = require('../assert.js');
 
 const U64_MAX = 2n**64n - 1n;
 
 module.exports = class FixedCol extends ProofItem {
     constructor (id, data) {
         super(id);
-        this.rows = 0;
+        this.rows = data.virtual ?? 0;
         this.sequence = null;
         this.values = false;
         this.maxValue = 0;
-        this.bytes = data.bytes ?? false;
-        this.temporal = data.temporal ?? false;
+        this.bytes = data.bytes ? 8 : false;
+
+        this.temporal = Boolean(data.temporal || data.virtual)
         this.external = data.external ?? false;
         this.label = data.label ?? false;
         this.size = 0;
@@ -29,26 +32,32 @@ module.exports = class FixedCol extends ProofItem {
         } else {
             this.fromFile = false;
             this.loaded = true;
-        }
+        }        
         // TODO: more faster option, change function that call
         // for each value to avoid verify if value is bigger than bytes specified
     }
-    loadFromFile() {
-        this.rows = Context.rows;
+    initDefaultValues() {
         if (this.bytes === false) {
             this.bytes = 8;
         }
         [this.buffer, this.values, this.converter] = this.createBuffer(this.rows, this.bytes);
         this.updateSize();
         this.updateSetRowValue(); 
+    }
+    loadFromFile() {
+        this.rows = Context.rows;
+        this.initDefaultValues();
         FixedFile.loadColumnFromFile(this.fromFile.filename, this.fromFile.col, this.rows, this.values, this.label);
         this.loaded = true;
     }
+    getRowCount() {
+        return this.getValues().length;
+    }   
     getId() {
         return this.id;
     }
     isPeriodic() {
-        return this.rows > 0;
+        return false;
     }
     getValue(row, rowOffset = 0)  {
         return this.getRowValue(row, rowOffset);
@@ -117,7 +126,8 @@ module.exports = class FixedCol extends ProofItem {
         if (this.values === false){
             this.rows = Context.rows;
             if (this.bytes === false) {
-                this.bytes = this.valueToBytes(value);
+                this.bytes = 8;
+                // this.bytes = this.valueToBytes(value);
             }
             [this.buffer, this.values, this.converter] = this.createBuffer(this.rows, this.bytes);
             this.updateSize();
@@ -134,6 +144,12 @@ module.exports = class FixedCol extends ProofItem {
         }
         if (!this.loaded) {
             this.loadFromFile();
+        }
+        if (this.values === false) {
+            if (this.rows === 0) {
+                this.rows = Context.rows;   
+            }
+            this.initDefaultValues();
         }
         return this.values;
     }
@@ -221,16 +237,54 @@ module.exports = class FixedCol extends ProofItem {
         if (value.arrayInfo) {
             throw new Error('Extern fixed for arrays not implemented yet');
         }
-        console.log(`  > Fixed ${this.label} loaded from file`);
 
-        this.bytes = 8;
-        this.buffer = value.values.buffer;
-        this.values = value.values;
-        this.converter = x => x;
-        this.rows = value.values.length;
-        this.updateSize();
-        this.updateSetRowValue();        
-        this.loaded = true;
+        if (value.isExpression) {
+            value = value.eval().getAlone();
+            if (value === false) {
+                throw new Error('Invalid value for fixed column');
+            }
+
+            const values = value.getValues();
+            if (values instanceof BigUint64Array) {
+                this.values = new BigUint64Array(values);
+            } else if (Array.isArray(values)) {
+                this.values = [...values];
+            } else {
+                this.values = values.slice();
+            }
+    
+            this.buffer = value.buffer;
+            this.converter = value.converter;
+            this.rows = value.rows;
+            this.bytes = value.bytes;
+            this.fullFilled = value.fullFilled;
+            this.label = value.label;
+            this.bytes = value.bytes ?? 8;
+            this.updateSize();
+            this.updateSetRowValue();
+            this.loaded = true;
+            return;
+        }
+
+        if (value instanceof ExpressionItems.FixedCol) {
+            this.copyRowsFrom(value, 0, 0, value.getRowCount());
+            this.loaded = true;
+            return;
+        }
+
+        if (value && value.loaded) {
+            console.log(`  > Fixed ${this.label} loaded from file`);
+            this.bytes = 8;
+            this.buffer = value.values.buffer;
+            this.values = value.values;
+            this.converter = x => x;
+            this.rows = value.values.length;
+            this.updateSize();
+            this.updateSetRowValue();        
+            this.loaded = true;
+            return;
+        }
+        throw new Error(`Invalid value for fixed column ${this.id} at ${Context.sourceTag}, expected a sequence or an expression, got ${value.constructor.name}`);
     }
     clone() {
         console.log('\x1B[41mWARING: clonning a FixedCol\x1B[0m');
@@ -256,4 +310,59 @@ module.exports = class FixedCol extends ProofItem {
                 throw new Error(`Error saving file ${filename}: ${err}`);
             }});
     }
+
+    printRowsFrom(offset, count) {
+        if (offset < 0 || count < 0) {
+            throw new Error('Invalid copy parameters');
+        }
+        if (offset + count > this.getValues().length) {
+            throw new Error('Source range exceeds source length');
+        }
+        let _values = [];
+        for (let index = 0n; index < count; index++) {
+            const value = this.getValue(offset + index);
+            _values.push(value);
+        }
+        // TODO: use println sytle, common code 
+        const source = Context.config.printlnLines ? '['+Context.sourceTag+'] ':'';
+        const spaces = Context.scope.getInstanceType() === 'proof' ? '': '  ';
+        console.log(`\x1B[36m${spaces}> ${source}[${offset}..${offset+count-1n}] ${_values.join(' ')}\x1B[0m`);
+    }
+    copyRowsFrom(src, src_offset, dst_offset, count) {
+        if (src_offset < 0 || dst_offset < 0 || count < 0) {
+            throw new Error('Invalid copy parameters');
+        }
+        if (src_offset + count > src.getValues().length) {
+            throw new Error('Source range exceeds source length');
+        }
+        if (dst_offset + count > this.getValues().length) {
+            throw new Error('Destination range exceeds destination length');
+        }
+        const srcValues = src.getValues();
+        const dstValues = this.getValues();
+
+        // Obtain the Buffer from the ArrayBuffer
+        const srcBuffer = Buffer.from(srcValues.buffer);
+        const dstBuffer = Buffer.from(dstValues.buffer);
+        
+        // O si ya tienes un Buffer, usa directamente:
+        // const srcBuffer = srcValues.buffer; // si srcValues.buffer ya es un Buffer
+        
+        // Copy bytes (convert 64bits index to bytes)
+        const srcByteOffset = Number(src_offset) * 8;
+        const dstByteOffset = Number(dst_offset) * 8;
+        const byteLength = Number(count) * 8;
+        
+        srcBuffer.copy(dstBuffer, dstByteOffset, srcByteOffset, srcByteOffset + byteLength);
+    }
+    fillRowsFrom(value, offset, count) {
+        if (offset < 0 || count < 0) {
+            throw new Error('Invalid copy parameters');
+        }
+        if (offset + count > this.getValues().length) {
+            throw new Error('Destination range exceeds destination length');
+        }
+        const values = this.getValues();
+        values.fill(value, Number(offset), Number(offset + count));
+    }    
 }

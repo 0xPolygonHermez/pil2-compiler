@@ -106,9 +106,9 @@ module.exports = class SequenceSizeOf extends SequenceBase {
         return this.maxValue;
     }
     getMaxBytes() {
-        if (this.maxValue < 256n) return 1;
-        if (this.maxValue < 65536n) return 2;
-        if (this.maxValue < 4294967296n) return 4;
+        // if (this.maxValue < 256n) return 1;
+        // if (this.maxValue < 65536n) return 2;
+        // if (this.maxValue < 4294967296n) return 4;
         if (this.maxValue < 0x10000000000000000n) return 8;
         return true;  // means bigdata
     }

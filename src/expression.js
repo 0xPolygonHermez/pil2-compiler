@@ -201,8 +201,12 @@ class Expression extends ExpressionItem {
         this.assertIsAlone();
         return this.getAloneOperand().popArrayIndex(index);
     }
+
     getAloneOperand () {
         return this.stack[0].operands[0];
+    }
+    getAlone () {
+        return this.isAlone() ? this.getAloneOperand() : false;
     }
     cloneAloneOperand () {
         return this.getAloneOperand().clone();

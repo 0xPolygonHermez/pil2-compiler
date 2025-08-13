@@ -69,34 +69,20 @@ module.exports = class ExternFixedFile {
     loadColHeader() {
         const name = this.readString();
         const dim = this.readULE32();
-        let lengths = [];
-        for (let index = 0; index < dim; ++index) {
-            lengths.push(this.readULE32());
+        let indexes = [];
+        for (let idim = 0; idim < dim; ++idim) {
+            indexes.push(this.readULE32());
         }  
         const size = this.rows * 8;
-        if (this.config.logFixedFile) {
-            console.log(`    - Loading column ${name}${dim === 0?'':('['+lengths.join('][')+']')}`);
+        if (true || this.config.logFixedFile) {
+            console.log(`    • loading ${name}${dim === 0?'':('['+indexes.join('][')+']')}`);
         }
-        if (dim === 0) {
-            // non array column
-            const buffer = Buffer.alloc(size);
-            const values = new BigUint64Array(buffer.buffer, 0, this.rows);
-            fs.readSync(this.fd, buffer, 0, size, this.position);
-            this.position += size;
-            return  [name, 1, {arrayInfo: false, lengths, values}];
-        }
-        // array column
-        const arrayInfo = new MultiArray(lengths);
-        const count = arrayInfo.getSize();
-        let res = {arrayInfo, lengths, values: []};
-        for (let index = 0; index < count; ++index) {
-            const buffer = Buffer.alloc(size);
-            const values = new BigUint64Array(buffer.buffer, 0, this.rows);
-            fs.readSync(this.fd, buffer, 0, size, this.position);
-            this.position += size;
-            res.values.push(values);
-        }
-        return [name, count, res];
+        
+        const buffer = Buffer.alloc(size);
+        const values = new BigUint64Array(buffer.buffer, 0, this.rows);
+        fs.readSync(this.fd, buffer, 0, size, this.position);
+        this.position += size;
+        return  [name, dim === 0 ? false : indexes, values];
     } 
     getFullFilename() {
         let fullFilename = (!this.config.inputDir || this.filename.startsWith('/')) ? this.filename : path.join(this.config.inputDir, this.filename);
@@ -113,6 +99,24 @@ module.exports = class ExternFixedFile {
         }
         throw new Error(`Fixed file ${this.filename} (${fullFilename}) not found`);
     }
+    initValuesArray(indexes, values, level = 0) {
+        if (indexes.length > 1) {
+            let res = new Array(indexes[0] + 1);
+            res[indexes[0]] = this.initValuesArray(indexes.slice(1), values, level + 1);
+            return res;
+        } else {
+            let res = new Array(indexes[0] + 1);
+            res[indexes[0]] = values;
+            return res;
+        }
+    }
+    updateValuesArray(avalues, indexes, values, level = 0) {
+        if (indexes.length > 1) {
+            this.initValuesArray(avalues[indexes[0]], indexes.slice(1), values, level + 1);
+        } else {
+            avalues[indexes[0]] = values;
+        }
+    }
     load() {
         this.fullFilename = this.getFullFilename();
         try {
@@ -122,12 +126,24 @@ module.exports = class ExternFixedFile {
             this.loadHeader();
             let colsRead = 0;
             while (colsRead < this.cols) {
-                const [name, count, data] = this.loadColHeader();
-                if (this.colsByName[name]) {
-                    throw new Error(`Duplicate column name ${name} in file ${this.filename}`);
+                const [name, indexes, values] = this.loadColHeader();
+                if (indexes === false) {
+                    if (this.colsByName[name]) {
+                        throw new Error(`Duplicate column name ${name} in file ${this.filename}`);
+                    } else {
+                        this.colsByName[name] = {values, loaded: true};
+                    }
+                } else {
+                    let sindex = indexes.join('_');
+                    if (this.colsByName[name] === undefined) {
+                        this.colsByName[name] = this.initValuesArray(indexes, {values, loaded: true});
+                    // } else if (this.colsByName[name].indexes[sindex] === undefined) {
+                    } else {
+                        this.updateValuesArray(this.colsByName[name], indexes, {values, loaded: true});
+                        // throw new Error(`Duplicate column index ${name}[${indexes.join(',')}] in file ${this.filename}`);
+                    }
                 }
-                this.colsByName[name] = data;
-                colsRead += count;
+                ++colsRead;
             }
         } finally {
             fs.closeSync(this.fd);

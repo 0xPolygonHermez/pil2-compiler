@@ -33,7 +33,8 @@ airtemplate                                 { return 'AIR_TEMPLATE' }
 air                                         { return 'AIR' }
 proof                                       { return 'PROOF' }
 commit                                      { return 'COMMIT' }
-
+package                                     { return 'PACKAGE'; }    
+virtual                                     { return 'VIRTUAL'; }
 int                                         { return 'INT' }
 fe                                          { return 'FE' }
 expr                                        { return 'EXPR' }
@@ -129,8 +130,9 @@ return                                      { return 'RETURN' }
 %nonassoc NUMBER
 %nonassoc POSITIONAL_PARAM
 %nonassoc NON_DELIMITED_STATEMENT
+%nonassoc NO_STAGE STAGE
 %right IF_NO_ELSE ELSE
-%right NO_STAGE STAGE
+// %right NO_STAGE STAGE
 %left '?' ':'
 
 %left ','
@@ -211,11 +213,11 @@ all_top_level_blocks
     | EOF { $$ = {statements: []}; return $$ }
     ;
 
-
-
 use_directive
     : USE name_reference
         { $$ = { type: 'use', name: $2.name } }
+    | USE name_reference ALIAS IDENTIFIER
+        { $$ = { type: 'use', name: $2.name, alias: $4 } }
     ;
 
 no_closed_container_definition
@@ -340,6 +342,9 @@ statement_closed
 
     | '{' statement_block '}'
         { $$ = { type: 'scope_definition', ...$2 }; }
+
+    | PACKAGE IDENTIFIER '{' statement_block '}'
+        { $$ = { type: 'package_block', name: $2, ...$4 }; }
 
     | air_template_definition
         { $$ = $1 }
@@ -564,6 +569,10 @@ statement_no_closed
     | expression
         { $$ = { type: 'expr', expr: $1 } }
 
+    // virtual instances
+    | VIRTUAL expression
+        { $$ = {type: 'expr', expr: $2, virtual: true} }
+
     | expression '===' expression
         { $$ = { type: 'constraint', left: $1, right: $3 } }
 
@@ -595,10 +604,16 @@ statement_no_closed
         { $$ = $1 }
 
     | function_call ALIAS IDENTIFIER
-        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$1}), alias: $3} }
+        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$1}), alias: $3, virtual: false} }
 
     | function_call ALIAS flexible_string
-        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$1}), alias: $3} }
+        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$1}), alias: $3, virtual: false} }
+
+    | VIRTUAL function_call ALIAS IDENTIFIER
+        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$2}), alias: $4, virtual: true} }
+
+    | VIRTUAL function_call ALIAS flexible_string
+        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$2}), alias: $4, virtual: true} }
     ;
 
 
@@ -1179,10 +1194,10 @@ col_declaration_ident
     ;
 
 col_declaration_list
-    : col_declaration_list ',' col_declaration_item
+    : col_declaration_list ',' col_declaration_item     %prec ','
         { $$ = { items: [ ...$1.items, $3 ] } }
 
-    | col_declaration_item
+    | col_declaration_item  %prec EMPTY
         { $$ = { items: [$1] } }
     ;
 
@@ -1191,21 +1206,63 @@ col_declaration_list
     (1) initialization only allowed with single non-array column (col_declaration_ident)
 */
 
-col_declaration
-    : COL WITNESS optional_stage_definition col_declaration_list
-        { $$ = { type: 'witness_col_declaration', items: $4.items, stage: $3.stage ?? DEFAULT_COL_WITNESS_STAGE } }
+col_features
+    : col_features IDENTIFIER '(' multiple_expression_list ')' %prec STAGE
+        { $$ = { features: [...$1.features, { name: $2, args: $4 }] } }
 
-    | COL IDENTIFIER optional_stage_definition col_declaration_list
-        { $$ = { type: 'custom_col_declaration', items: $4.items, stage: $3.stage ?? false, commit: $2 } }
+    | col_features STAGE '(' multiple_expression_list ')' %prec STAGE
+        { $$ = { features: [...$1.features, { name: 'stage', args: $4 }] } }
+
+    | col_features VIRTUAL '(' multiple_expression_list ')' %prec STAGE
+        { $$ = { features: [...$1.features, { name: 'virtual', args: $4 }] } }
+
+    | IDENTIFIER '(' multiple_expression_list ')' %prec STAGE
+        { $$ = { features: [{ name: $1, args: $3 }] } }
+
+    | STAGE '(' multiple_expression_list ')' %prec STAGE
+        { $$ = { features: [{ name: 'stage', args: $3 }] } }
+
+    | VIRTUAL '(' multiple_expression_list ')' %prec STAGE
+        { $$ = { features: [{ name: 'virtual', args: $3 }] } }
+    ;
+
+
+col_declaration
+//    : COL WITNESS optional_stage_definition col_declaration_list
+//        { $$ = { type: 'witness_col_declaration', items: $4.items, stage: $3.stage ?? DEFAULT_COL_WITNESS_STAGE } }
+
+//    | COL IDENTIFIER optional_stage_definition col_declaration_list
+//        { $$ = { type: 'custom_col_declaration', items: $4.items, stage: $3.stage ?? false, commit: $2 } }
+
+    : COL WITNESS col_declaration_list
+        { $$ = { type: 'witness_col_declaration', items: $3.items, features: [] } }
+
+    | COL WITNESS col_features col_declaration_list
+        { $$ = { type: 'witness_col_declaration', items: $4.items, features: $3.features } }
+
+    | COL IDENTIFIER col_declaration_list
+        { $$ = { type: 'custom_col_declaration', items: $3.items, features: [], commit: $2 } }
+
+    | COL IDENTIFIER col_features col_declaration_list
+        { $$ = { type: 'custom_col_declaration', items: $4.items, features: $3.features, commit: $2 } }
 
     | COL FIXED col_declaration_list
-        { $$ = { type: 'fixed_col_declaration', items: $3.items } }
+        { $$ = { type: 'fixed_col_declaration', items: $3.items, features: [] } }
 
-    | COL FIXED col_declaration_ident '=' expression  // (1)
-        { $$ = { type: 'fixed_col_declaration', items: [$3], init: $5 } }
+    | COL FIXED col_features col_declaration_list
+        { $$ = { type: 'fixed_col_declaration', items: $4.items, features: $3.features } }
 
-    | COL FIXED col_declaration_ident '=' sequence_definition  // (1)
-        { $$ = { type: 'fixed_col_declaration',  items: [$3], sequence: $5 } }
+    | COL FIXED col_declaration_ident '=' expression
+        { $$ = { type: 'fixed_col_declaration', items: [$3], init: $5, features: [] } }
+
+    | COL FIXED col_declaration_ident '=' sequence_definition
+        { $$ = { type: 'fixed_col_declaration',  items: [$3], sequence: $5, features: [] } }
+
+    | COL FIXED col_features col_declaration_ident '=' expression
+        { $$ = { type: 'fixed_col_declaration', items: [$4], init: $6, features: $3.features } }
+
+    | COL FIXED col_features col_declaration_ident '=' sequence_definition
+        { $$ = { type: 'fixed_col_declaration',  items: [$4], sequence: $6, features: $3.features } }
     ;
 
 air_value_declaration

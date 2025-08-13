@@ -15,6 +15,7 @@ module.exports = class References {
         this.visibilityScope = [0,false];
         this.visibilityStack = [];
         this.containers = new Containers(this);
+        this.referencesStack = [];
     }
     isContainerDefined(name) {
         return this.containers.isDefined(name);
@@ -108,8 +109,43 @@ module.exports = class References {
             delete this.references[name];
         }
     }
+    pushType(type, label) {
+        const typeInfo = this.types[type];
+        if (typeof typeInfo === 'undefined') {
+            throw new Error(`type ${type} not registered`);
+        }
+        typeInfo.instance.push(label);
+
+        let stackReferences = {};
+        for (const name in this.references) {
+            if (this.references[name].type !== type) continue;
+            stackReferences[name] = this.references[name];
+            delete this.references[name];
+        }
+        this.referencesStack.push(stackReferences);
+    }
+    popType(type, label) {
+        const typeInfo = this.types[type];
+        if (typeof typeInfo === 'undefined') {
+            throw new Error(`type ${type} not registered`);
+        }
+        typeInfo.instance.pop(label);
+        let stackReferences = this.referencesStack.pop();
+        for (const name in stackReferences) {
+            if (this.references[name]!== undefined) {
+                throw new Error(`Reference ${name} already defined when restoring references at ${Context.sourceRef}`);
+            }
+            this.references[name] = stackReferences[name];
+        }
+    }
     clearScope(proofScope) {
         this.containers.clearScope(proofScope);
+    }
+    pushScope(proofScope) {
+        this.containers.pushScope(proofScope);
+    }
+    popScope() {
+        this.containers.popScope();
     }
     isReferencedType(type) {
         return type.at(0) === '&'
@@ -262,6 +298,12 @@ module.exports = class References {
         } else {
             this.references[nameInfo.name] = reference;
         }
+        if (typeof options.globalReference === 'string') {
+            if (typeof this.references[options.globalReference] !== 'undefined') {
+                throw new Error(`Global reference ${options.globalReference} already defined at ${Context.sourceRef}`);
+            }
+            this.references[options.globalReference] = reference;
+        }
 
         if (initValue !== null) {
             if (Debug.active) {
@@ -282,12 +324,12 @@ module.exports = class References {
         return ['public', 'proofvalue', 'challenge', 'airgroupvalue', 'publictable'].includes(type) === false;
     }
 
-    get (name, indexes = []) {
+    get (name, indexes = [], options = {}) {
         assert.typeOf(name, 'string');
         if (Debug.active) console.log('GET', name, indexes);
 
         // getReference produce an exception if name not found
-        return this.getReference(name).get(indexes);
+        return this.getReference(name, undefined, options).get(indexes);
     }
     getIdRefValue(type, id) {
         return this.getTypeDefinition(type).instance.getItem(id);
@@ -382,8 +424,8 @@ module.exports = class References {
     getTypeInfo (name, indexes = []) {
         return this._getInstanceAndLocator(name, indexes);
     }
-    addUse(name) {
-        this.containers.addUse(name);
+    addUse(name, alias = false) {
+        this.containers.addUse(name, alias);
     }
     searchDefinition(name) {
         const subnames = name.split('.');
@@ -441,7 +483,7 @@ module.exports = class References {
      * @param {Object} debug
      * @returns {Reference}
      */
-    getReference(name, defaultValue, debug = {}) {
+    getReference(name, defaultValue, options = {}) {
         // if more than one name is sent, use the first one (mainName). Always first name it's directly
         // name defined on source code, second optionally could be name with airgroup, because as symbol is
         // stored with full name.
@@ -466,7 +508,10 @@ module.exports = class References {
         if (!names) {
             names = Context.current.getNames(name);
         }
-
+        
+        if (nameInfo.scope === false && options.insideName && !names.includes(options.insideName)) {
+            names.unshift(options.insideName);
+        }
         if (Debug.active) console.log(names);
         // console.log(`getReference(${name}) on ${this.context.sourceRef} = [${names.join(', ')}]`);
         let reference = false;

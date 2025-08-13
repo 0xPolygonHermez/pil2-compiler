@@ -117,7 +117,6 @@ class Reference {
         }
         const [row, id] = this.getRowAndId(indexes);
         if (this.const) {
-            // TODO: more info
             throw new Error(`setting ${this.name} a const element on ${Context.sourceRef}`);
         }
         if (row !== false) this.instance.setRowValue(id, row, value);

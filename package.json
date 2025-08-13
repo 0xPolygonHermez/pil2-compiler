@@ -1,6 +1,6 @@
 {
   "name": "pil2-compiler",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "PIL2 compiler",
   "main": "index.js",
   "bin": {

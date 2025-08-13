@@ -10,16 +10,18 @@ module.exports = class Air {
         this.airGroup = airGroup;
         this.airTemplate = airTemplate;
         this.rows = Number(rows);
-        this.bits = log2(this.rows);
+        const bits = log2(this.rows);
+        this.bits = this.rows > (2 ** bits) ? bits + 1 : bits;
         this.name = (options.name ?? airTemplate.name) ?? '';
         this.loadFixedFiles = {};
+        this.virtual = options.virtual ?? false;
         const previousNameIsUsed = Air._airnames[this.name];
         if (typeof previousNameIsUsed !== 'undefined') {
             throw new Error(`Air name ${this.name} on ${Context.sourceRef} already exists on ${previousNameIsUsed}`);
         }
         Air._airnames[this.name] = Context.sourceRef;
         this.outputFixedFile = Context.config.fixedToFile ? this.name + '.fixed' : false;
-        this.externFixedFiles = [];
+        this.externFixedFiles = [];        
     }
     declareAirValue(name, lengths = [], data = {}) {
         const fullname = Context.getFullName(name);

@@ -698,7 +698,7 @@ module.exports = class Processor {
             }
             this.hints.define(name, res);
         } else {
-            throw new Error(`Hint definition on invalid scope (${scopeType}) ${sourceTag}`);
+            throw new Error(`Hint definition on invalid scope (${scopeType}) ${Context.sourceTag}`);
         }
     }
     processHintData(hdata) {

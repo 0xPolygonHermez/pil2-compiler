@@ -1,12 +1,31 @@
 ## Release 0.7.0
 
-The features main features of this release are:
+The main features of this release are:
 
+- Export fixed rows to external files
+- Loading fixed data from external files
 - Packages
 - New features for fixed columns (bits, temporal)
 - Virtual instantiation of AirTemplates
 
 ---
+
+### Export fixed rows to external files
+This feature allows generating values of fixed rows in an external fixed file outside of pilout. It reduces compilation time, because one of the problems was the proto generation from JavaScript. To generate it previously required a JSON with all information, which consumed a lot of memory and CPU. For example, compilation of zisk files was reduced from more than one hour to one-two minutes.
+
+To use this feature, you can use the options `[-u|--outputdir] <output_directory> -O fixed-to-file` or option `[-f|--fixed] <fixed_files_output_directory>`.
+
+Inside the `output_directory` or `fixed_files_output_directory` you can use variables such as AIRGROUP, AIRGROUP_ID, AIR_ID, AIR_NAME, AIRTEMPLATE with format `${<varname>}` for example `build/provingKey/${AIRGROUP}/${AIRNAME}`
+
+### Loading fixed data from external files
+Used to load data from external files. The external file contains metadata about the column name, index, and airgroup. To define this file, use the `pragma extern_fixed_file`. The scope of this pragma is the air. When a new fixed column is declared, if external files are defined, it tries to find the column inside and initialize the fixed column.
+
+The syntax is `#pragma extern_fixed_file <filename>` where filename can be a template string. The pragma arguments are considered as space-separated literals; you cannot use variables because they are considered as text.
+
+Example of use:
+```
+#pragma extern_fixed_file "../src/keccakf_fixed.bin"
+```
 
 ### Packages
 This feature allows you to group functions within a package, which also frees up the global namespace. This functionality was added because the number of built-ins is growing.
@@ -81,15 +100,15 @@ The following functions are available:
     ```
     int rows = Tables.num_rows(my_fixed_col);
     ```
-- **copy(src_col, src_offset, dst_col, dst_offset, count)**: Copy `<count>` rows starting from row `<src_offset>` of `<src_col>` to '<dst_offset>` from `<dst_col>`.
+- **copy(src_col, src_offset, dst_col, dst_offset, count)**: Copy `<count>` rows starting from row `<src_offset>` of `<src_col>` to `<dst_offset>` in `<dst_col>`.
     ```
     Tables.copy(big_fixed_col, 0, small_fixed_col, 16, 32);
     ```
-- **fill(value, dst_col, offset, count)**: Fill with value `<value>`, `<count>` rows starting from row `<offset>`.
+- **fill(value, dst_col, offset, count)**: Fill `<count>` rows starting from row `<offset>` with value `<value>`.
     ```
     Tables.fill(0xFFFF, my_fixed_col, 0, 32);
     ```
-- **print(col, offset, count)**: Used by debugging proposal, print `<count>` rows of `<col>` starting from row `<offset>`.
+- **print(col, offset, count)**: Used for debugging purposes, print `<count>` rows of `<col>` starting from row `<offset>`.
     ```
-    Tables.copy(my_fixed_col, 16, 32);
+    Tables.print(my_fixed_col, 16, 32);
     ```

@@ -110,6 +110,11 @@ module.exports = class Context {
     static get outputDir() {
         return Context.applyTemplates(Context._instance.config.outputDir ?? '');
     }
+    static get fixedOutputDir() {
+
+        return Context.applyTemplates(Context._instance.config.fixedOutputDir ?? 
+                Context._instance.config.outputDir ?? '');
+    }
     static get inputDir() {
         return Context.applyTemplates(Context._instance.config.inputDir ?? '');
     }

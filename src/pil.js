@@ -45,6 +45,7 @@ const yargs = require("yargs").version(version)
     .wrap(160)
     .option('e', { alias: 'exec', describe: 'Only execute the pil file' })
     .option('u', { alias: 'outputdir', describe: 'output directory, if directory not exists it will created'})
+    .option('f', { alias: 'fixed', describe: 'output fixed file directory (template), if directory not exists it will created'})
     .option('i', { alias: 'inputdir', describe: 'input base directory'})
     .option('o', { alias: 'output', describe: 'output pilout file. if filename is none, no pilout will be generated'})
     .option('n', { alias: 'name', describe: 'name of pilout (protobuf)'})
@@ -134,6 +135,10 @@ async function run() {
     }
     if (argv.outputdir) {
         config.outputDir = argv.outputdir.trim();
+    }
+    if (argv.fixed) {
+        config.fixedOutputDir = argv.fixed.trim();
+        config.fixedToFile = true;
     }
     if (argv.inputdir) {
         config.inputDir = argv.inputdir.trim();

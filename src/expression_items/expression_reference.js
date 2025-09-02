@@ -40,7 +40,7 @@ module.exports = class ExpressionReference extends ProofItem {
         if (value.isBaseType) return value;
 
         if (options && options.unroll) {
-            // if constant expressio it's a alone item, so clone it directly.
+            // If the constant expression is a standalone item, clone it directly.
             if (value && value instanceof ProofItem) {
                 return value.clone();
             }

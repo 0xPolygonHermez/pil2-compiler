@@ -144,7 +144,6 @@ module.exports = class FixedCol extends ProofItem {
         }
         if (!this.loaded) {
             throw new Error(`Data of fixed column ${this.label} not loaded/found`);
-            // this.loadFromFile();
         }
         if (this.values === false) {
             if (this.rows === 0) {

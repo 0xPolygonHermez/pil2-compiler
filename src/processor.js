@@ -512,6 +512,7 @@ module.exports = class Processor {
             }
             case 'extern_fixed_file': {
                 this.currentAir.loadExternFixedFile(this.getPragmaStringTemplateParam(params[1], true));
+                break;
             } 
             case 'fixed_load': {
                 if (typeof params[1] === 'undefined') {
@@ -1413,7 +1414,6 @@ module.exports = class Processor {
             this.clearAirScope(air.name);
         }
         this.scope.popInstanceType(['witness', 'fixed', 'customcol', 'im', 'airvalue']);
-        // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
         if (hasAlias) {
             this.context.pop();
@@ -1688,7 +1688,6 @@ module.exports = class Processor {
         const features = Features.extractFeatures('fixed', s.features);
         for (const col of s.items) {
             const colname = Context.getFullName(col.name);
-            // console.log(`COL_FIXED_DECLARATION(${colname})`);
             const lengths = this.decodeLengths(col);
             let init = s.sequence ?? null;
             let initValue = null;
@@ -1697,8 +1696,6 @@ module.exports = class Processor {
                 if (Context.config.fixed !== false) initValue.extend();
             } else if (s.init) {
                 initValue = s.init.instance();
-                // if (initValue.dump) initValue.dump();
-                // else console.log(initValue);
             }
             let data = {...features, global};
             if (this.pragmas.nextFixed.bytes !== false) {
@@ -2084,9 +2081,7 @@ module.exports = class Processor {
         return evaluatedTemplate;
     }
     evaluateExpression(e){
-        // TODO
-        TODO_STOP
-        return 0n;
+        throw new Error('Not implemented');
     }
     execReturn(s) {
         const sourceRef = this.sourceRef;

@@ -609,8 +609,8 @@ class AirOut {
             case 'neg': {
                 const value = this.operandToString(ctx, id, data.value, cls);
                 if (typeof value === 'undefined') {
-                    console.log(util.inspect(expression, true, null, true));
-                    EXIT_HERE;
+                    console.log(util.inspect(data, true, null, true));
+                    throw new Error(`${_ctxpath} @${idx} invalid negation operand`);
                 }
                 return `-(${value})`;
             }

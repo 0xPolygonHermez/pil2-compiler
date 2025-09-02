@@ -27,23 +27,9 @@ module.exports = class Indexable {
     }
     clone() {
         throw new Error('Clone method is not implemented for Indexable');
-        // let cloned = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
-        // cloned.values = [];
-        // for (const value of this.values) {
-        //     let clonedValue = value;
-        //     if (typeof value.clone === 'function') {
-        //        clonedValue = value.clone();
-        //     } else if (value instanceof Object) {
-        //        clonedValue = Object.assign(Object.create(Object.getPrototypeOf(value)), value);
-        //     }
-        //     cloned.values.push(clonedValue);
-        // }
-        // cloned.labelRanges = this.labelRanges.clone();
-
-        // return cloned;
     }
     clear(label = '') {
-        if (true || Debug.active) console.log(`CLEARING ${label} (${this.type})`);
+        if (Debug.active) console.log(`CLEARING ${label} (${this.type})`);
         this.globalValues = [];
         this.labelRanges = new LabelRanges();
     }

@@ -109,10 +109,6 @@ module.exports = class GlobalIndexable extends Indexable {
         console.log(`DUMP ${this.type} #:${this.globalValues.length}`);
         for (let index = 0; index < this.globalValues.length; ++index) {
             const value = this.globalValues[index];
-/*            if (value && typeof value.dump === 'function') {
-                console.log(`#### ${this.type} ${index} ####`);
-                value.dump();
-            }*/
             console.log(`${index}: ${this.globalValues[index]}`);
         }
     }

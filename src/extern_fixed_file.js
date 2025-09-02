@@ -74,7 +74,7 @@ module.exports = class ExternFixedFile {
             indexes.push(this.readULE32());
         }  
         const size = this.rows * 8;
-        if (true || this.config.logFixedFile) {
+        if (this.config.logFixedFile) {
             console.log(`    • loading ${name}${dim === 0?'':('['+indexes.join('][')+']')}`);
         }
         

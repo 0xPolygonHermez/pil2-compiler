@@ -345,9 +345,6 @@ module.exports = class FixedCol extends ProofItem {
         const srcBuffer = Buffer.from(srcValues.buffer);
         const dstBuffer = Buffer.from(dstValues.buffer);
         
-        // O si ya tienes un Buffer, usa directamente:
-        // const srcBuffer = srcValues.buffer; // si srcValues.buffer ya es un Buffer
-        
         // Copy bytes (convert 64bits index to bytes)
         const srcByteOffset = Number(src_offset) * 8;
         const dstByteOffset = Number(dst_offset) * 8;

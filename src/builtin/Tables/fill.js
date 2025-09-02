@@ -5,6 +5,9 @@ const IntValue = require('../../expression_items/int_value.js');
 const ExpressionItem = require('../../expression_items/expression_item.js');
 const FixedCol = require('../../expression_items/fixed_col.js');
 const assert = require('../../assert.js');
+
+// Tables.fill(value, dst, offset, count)
+
 module.exports = class Fill extends Function {
     constructor (parent) {
         super(parent, {name: 'Tables.fill'});

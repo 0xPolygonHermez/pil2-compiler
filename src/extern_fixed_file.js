@@ -137,10 +137,8 @@ module.exports = class ExternFixedFile {
                     let sindex = indexes.join('_');
                     if (this.colsByName[name] === undefined) {
                         this.colsByName[name] = this.initValuesArray(indexes, {values, loaded: true});
-                    // } else if (this.colsByName[name].indexes[sindex] === undefined) {
                     } else {
                         this.updateValuesArray(this.colsByName[name], indexes, {values, loaded: true});
-                        // throw new Error(`Duplicate column index ${name}[${indexes.join(',')}] in file ${this.filename}`);
                     }
                 }
                 ++colsRead;

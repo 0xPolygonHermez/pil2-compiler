@@ -5,6 +5,9 @@ const IntValue = require('../../expression_items/int_value.js');
 const FixedCol = require('../../expression_items/fixed_col.js');
 const ExpressionItem = require('../../expression_items/expression_item.js');
 const assert = require('../../assert.js');
+
+// Tables.num_rows(src)
+
 module.exports = class NumRows extends Function {
     constructor (parent) {
         super(parent, {name: 'Tables.num_rows'});

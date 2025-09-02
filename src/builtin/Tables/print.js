@@ -6,6 +6,7 @@ const ExpressionItem = require('../../expression_items/expression_item.js');
 const assert = require('../../assert.js');
 
 // Tables.print_rows(src, from, count)
+
 module.exports = class Print extends Function {
     constructor (parent) {
         super(parent, {name: 'Tables.print'});

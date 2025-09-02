@@ -85,9 +85,6 @@ module.exports = class Assign {
             return;
         }
         value = value.instance(true);
-        if (Context.sourceRef === 'std_sum.pil:195') {
-            if (Debug.active) console.log('XXX');
-        }
         if (Debug.active) console.log(`ASSIGN ${Context.sourceRef} ${value}`);
         Context.references.set(name, indexes, value);
     }

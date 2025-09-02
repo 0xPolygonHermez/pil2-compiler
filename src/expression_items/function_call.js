@@ -9,7 +9,7 @@ module.exports = class FunctionCall extends RuntimeItem {
         super(options);
         this.name = name;
         if (args instanceof ExpressionList) {
-            if (Debug.active) console.log(util.inspect(args, false, 10, true));
+            if (Debug.active) console.log(util.inspect([name, args], false, 10, true));
             this.namedargs = args.names ?? false;
             args = args.items;
         }        
@@ -23,7 +23,6 @@ module.exports = class FunctionCall extends RuntimeItem {
             console.log(util.inspect(args, false, 10, true));
             this.dumpArgs(this.args, 'FCALL');
         }
-    
     }
     setFunction(funcdef) {
         this.funcdef = funcdef;
@@ -61,8 +60,7 @@ module.exports = class FunctionCall extends RuntimeItem {
             console.log([`#FCALL.EVAL #${this.name} ${Context.sourceTag}`, this.args]);
             this.dumpArgs(this.args, `CALL ${this.name}`);
         }        
-        const definition = Context.references.get(this.name, options);
-        const res = Context.processor.executeFunctionCall(this.name, this, options);
+        const res = Context.processor.executeFunctionCall(this.name, this, {...options, virtual: this.virtual});
         if (Debug.active) console.log(this.name, res);
         return res;
     }

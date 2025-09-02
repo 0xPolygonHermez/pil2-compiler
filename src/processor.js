@@ -36,10 +36,10 @@ const Context = require("./context.js");
 const Runtime = require("./runtime.js");
 const Exceptions = require('./exceptions.js');
 const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js")
-
 const ExpressionItems = require("./expression_items.js");
 const ExpressionItem = ExpressionItems.ExpressionItem;
 const DefinitionItems = require("./definition_items.js");
+const Features = require("./features.js");
 const fs = require('fs');
 const { log2, getKs, getRoots } = require("./utils.js");
 const Hints = require('./hints.js');
@@ -81,6 +81,7 @@ module.exports = class Processor {
         this.lastAirGroupId = -1;
         this.lastAirId = -1;
         this.airGroupId = 0;
+        this.package = false;
 
         this.ints = new Variables('int', DefinitionItems.IntVariable, ExpressionItems.IntValue);
         this.references.register('int', this.ints);
@@ -154,6 +155,7 @@ module.exports = class Processor {
         this.loadConfigDefines();
         this.loadBuiltInClass();
         this.scopeType = 'proof';
+        this.currentAir = false;
 
         this.currentAirGroup = false;
         this.airGroupStack = [];
@@ -189,7 +191,7 @@ module.exports = class Processor {
         }
     }
     loadBuiltInClass() {
-        const filenames = fs.readdirSync(__dirname + '/builtin');
+        const filenames = fs.readdirSync(__dirname + '/builtin', {recursive: true});
         this.builtIn = {};
         for (const filename of filenames) {
             if (!filename.endsWith('.js')) continue;
@@ -213,6 +215,9 @@ module.exports = class Processor {
         this.references.declare('AIRGROUP', 'string', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('AIRGROUP_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
         this.references.declare('AIR_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
+        this.references.declare('AIR_NAME', 'string', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.StringValue(''));
+        this.references.declare('AIRTEMPLATE', 'string', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.StringValue(''));
+        this.references.declare('VIRTUAL', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(0));
     }
     startExecution(program) {
         const t1 = performance.now();
@@ -272,12 +277,16 @@ module.exports = class Processor {
         this.proto.setChallenges(this.challenges);
         let packed = new PackedExpressions();
         this.globalExpressions.pack(packed);
+        const imSymbols = packed.expressionLabels.map((label, index) => typeof label === 'undefined' ? value : {label, from:index}).filter(x => typeof x !== 'undefined')
+        this.proto.setSymbolsFromLabels(imSymbols, 'im');
+        console.log(`  > Proto intermediates: ${imSymbols.length}`);
         this.proto.setGlobalConstraints(this.globalConstraints, packed);
         this.proto.addHints(this.globalHints, packed, {airGroupId: false });
         this.proto.setGlobalExpressions(packed);
         this.proto.setGlobalSymbols(this.references);
         this.proto.encode();
         this.memoryUpdate();
+        console.log(`  > Saving fixed to file ${Context.config.outputFile} ...`);
         this.proto.saveToFile(Context.config.outputFile);
         this.memoryUpdate();
     }
@@ -378,7 +387,13 @@ module.exports = class Processor {
     dumpExceptionInfo(info) {
         let deep = this.callstack.length;
         let index = deep - 1;
-        let lines = ['   0 '+info.e.message+` at ${Context.sourceTag}`];
+        let tag = Context.sourceTag;
+        let lines = [];
+        if (info.e.message.includes(tag)) {
+            lines.push('   0 '+info.e.message);
+        } else {
+            lines.push('   0 '+info.e.message+` at ${Context.sourceTag}`);
+        }
         while (index >= 0) {
             const cinfo = this.callstack[index];
             lines.push(`  ${String(deep-index).padStart(2)} ${cinfo.call.padEnd(80)} [${cinfo.source}]` );
@@ -390,7 +405,23 @@ module.exports = class Processor {
         }
         process.exit(1);
     }
-
+    getPragmaStringTemplateParam(param, defaultValue) {
+        if (typeof param === 'undefined') {
+            return defaultValue ?? false;
+        }
+        param = typeof param === 'string' ? param.trim() : String(param);
+        if (param.startsWith('"') || param.startsWith("'") || param.startsWith('`')) {
+            if (param.length < 2 || param[0] !== param[param.length-1]) {
+                throw new Error(`Invalid string template param parameter ${param} at ${Context.sourceRef}`);
+            }
+            const isTemplate = param[0] === '`';
+            param = param.slice(1, -1);
+            if (isTemplate) {
+                param = this.expandTemplates(param);
+            }
+        }
+        return param;
+    }
     execPragma(st) {
         let params = st.value.split(/\s+/);
         const instr = params[0] ?? false;
@@ -476,7 +507,32 @@ module.exports = class Processor {
                 break;
             }
             case 'fixed_external': {
-                this.pragmas.nextFixed.external = true;
+                this.pragmas.nextFixed.external = this.getPragmaStringTemplateParam(params[1], true);
+                break;
+            }
+            case 'extern_fixed_file': {
+                this.currentAir.loadExternFixedFile(this.getPragmaStringTemplateParam(params[1], true));
+                break;
+            } 
+            case 'fixed_load': {
+                if (typeof params[1] === 'undefined') {
+                    if (typeof this.currentAir.fixedLoadFromFile === 'undefined') {
+                        throw new Error(`Pragma fixed_load without filename at ${Context.sourceRef}`);
+                    } 
+                    params[1] = this.currentAir.fixedLoadFromFile.filename;
+                    ++this.currentAir.fixedLoadFromFile.col;
+                    params[2] = this.currentAir.fixedLoadFromFile.col;
+                } else if (typeof params[2] === 'undefined' && typeof this.currentAir.fixedLoadFromFile !== 'undefined') {
+                    ++this.currentAir.fixedLoadFromFile.col;
+                    params[2] = this.currentAir.fixedLoadFromFile.col;
+                } else {
+                    this.currentAir.fixedLoadFromFile = {filename: params[1], col: this.value2num(params[2] ?? 0)};
+                }
+                this.pragmas.nextFixed.loadFromFile = {filename: this.getPragmaStringTemplateParam(params[1], true), col: this.value2num(params[2] ?? 0)};
+                break;
+            }
+            case 'output_fixed_file': {
+                Context.air.setOutputFixedFile(this.getPragmaStringTemplateParam(params[1], Context.airName+'.fixed'));
                 break;
             }
             case 'debugger':
@@ -543,27 +599,55 @@ module.exports = class Processor {
         this.callstack.pop();
         if (Debug.active) console.log(`END CALL ${func.name}`);
     }
+    checkNoVirtual(callinfo) {
+        if (callinfo.virtual) {
+            throw new Error(`[${Context.sourceRef}] Invalid use of virtual, only to create virtual instances`);
+        }
+    }
     executeFunctionCall(name, callinfo, options = {}) {
-        const func = this.builtIn[name] ?? this.references.get(name);
-        if (Debug.active) {
-            console.log(`CALL ${name}`);
-            console.log(callinfo);
-        }
+        const previousPackage = this.package;
+        let res = false;
+        try {
+            let func;
+            if (this.builtIn[name] !== undefined) {
+                this.checkNoVirtual(callinfo);
+                func = this.builtIn[name];
+            } else if (this.package !== false) {
+                func = this.references.get(name, [], {insideName: `${this.package}.${name}`});
+            } else {
+                func = this.references.get(name);
+            }
+            
+            if (Debug.active) {
+                console.log(`CALL ${name}`);
+                console.log(callinfo);
+            }
 
-        if (!func) {
-            this.error({}, `Undefined function ${name}`);
-        }
-        if (func.isBridge) {
-            return func.exec(callinfo, {}, options);
-        } else if (options.alias) {
-            throw new Error(`Alias can not be used on function calls at ${Context.sourceRef}`);
-        }
+            if (!func) {
+                this.error({}, `Undefined function ${name}`);
+            }
+            if (func.package) {
+                this.package = func.package;
+            }
+            if (func.isBridge) {
+                if (callinfo.virtual) {
+                    func.virtual = true;
+                }
+                return func.exec(callinfo, {}, options);
+            } else if (options.alias) {
+                throw new Error(`Alias can not be used on function calls at ${Context.sourceRef}`);
+            }
+            this.checkNoVirtual(callinfo);
 
-        const mapInfo = this.prepareFunctionCall(func, callinfo);
-        this.references.pushVisibilityScope(func.creationScope);
-        let res = func.exec(callinfo, mapInfo);
-        this.references.popVisibilityScope();
-        this.finishFunctionCall(func);
+
+            const mapInfo = this.prepareFunctionCall(func, callinfo);
+            this.references.pushVisibilityScope(func.creationScope);
+            res = func.exec(callinfo, mapInfo);
+            this.references.popVisibilityScope();
+            this.finishFunctionCall(func);
+        } finally {
+            this.package = previousPackage;
+        }
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
     }
     execCall(st) {
@@ -752,7 +836,8 @@ module.exports = class Processor {
     }
     execUse(s) {
         const name = this.expandTemplates(s.name);
-        this.references.addUse(name);
+        const alias = s.alias ? this.expandTemplates(s.alias) : false;
+        this.references.addUse(name, alias);
     }
     execContainer(s) {
         const name = this.expandTemplates(s.name);
@@ -761,18 +846,17 @@ module.exports = class Processor {
             this.references.closeContainer();
         }
     }
-    // TODO: remove - obsolete
     execScopeDefinition(s) {
         this.scope.push();
         const result = this.execute(s.statements, `SCOPE ${this.sourceRef}`);
         this.scope.pop(this.globalScopeTypes);
         return result;
     }
-    // TODO: remove - obsolete
-    execNamedScopeDefinition(s) {
+    execPackageBlock(s) {
         this.scope.push();
-        const result = this.execute(s.statements, `SCOPE ${this.sourceRef}`);
-        this.scope.pop();
+        this.scope.setValue('package', s.name);
+        const result = this.execute(s.statements, `PACKAGE  ${this.name} ${this.sourceRef}`);
+        this.scope.pop(this.globalScopeTypes);
         return result;
     }
     execFor(s) {
@@ -782,21 +866,22 @@ module.exports = class Processor {
         this.execute(s.init, `FOR ${this.sourceRef} INIT`);
         let index = 0;
         // while (this.expressions.e2bool(s.condition)) {
-        let tmark = performance.now();
         let ttotal = 0;
         let tcount = 0;
         let mesure = true;
         let t = [0,0,0,0];
         let large = false;
+        const tmark = performance.now();
+        let loop_mark = tmark;
         while (true) {
             if (index % 10000 === 0 && index) {
                 large = true;
-                let tmark2 = performance.now();
-                const ms = tmark2 - tmark;
+                let loop_mark2 = performance.now();
+                const ms = loop_mark2 - tmark;
                 ttotal += ms;
                 tcount += 1;
-                console.log(`> inside loop ${this.sourceTag} index:${index} time(ms):${Math.trunc(tmark2-tmark)} avg(ms):${Math.trunc(ttotal/tcount)} total(s):${Math.trunc(ttotal/1000)}`);
-                tmark = tmark2;
+                console.log(`  > inside loop ${Context.sourceTag} index:${index} time(ms):${Math.trunc(loop_mark2-loop_mark)} avg(ms):${Math.trunc(ttotal/tcount)} total(s):${Math.trunc(ttotal/1000)}`);
+                loop_mark = loop_mark2;
             }
             const loopCond = s.condition.eval().asBool();
             if (Debug.active) console.log('FOR.CONDITION', loopCond, s.condition.toString(), s.condition);
@@ -821,7 +906,7 @@ module.exports = class Processor {
         }
         if (large) {
             const tend = performance.now();
-            console.log(`> total loop ${this.sourceTag} ${Math.round((tmark-tend) * 100)/100.0} ms`);
+            console.log(`  > total loop ${Context.sourceTag} ${Math.round((tend-tmark) * 100)/100.0} ms`);
         }
         this.scope.pop();
         const tmark2 = performance.now();
@@ -1006,12 +1091,24 @@ module.exports = class Processor {
     }
     execFunctionDefinition(s) {
         if (Debug.active) console.log('FUNCTION '+s.name);
-        const name = Context.air ? `${Context.air.name}.${s.name}`: s.name;
-        this.defineFunction(name, s);
+        let name = s.name;
+        let options = {};
+        if (Context.air) {
+            name = `${Context.air.name}.${name}`;
+        } else {
+            const _package = Context.scope.getValue('package');
+            if (_package !== false) {
+                options = {declare: {globalReference: `${_package}.${name}`}, func: {package: _package}};
+            }
+        }
+        this.defineFunction(name, s, options);
     }
-    defineFunction(name, s) {
-        const id = this.references.declare(name, 'function', [], {sourceRef: Context.sourceRef});
-        let func = new Function(id, {...s, name, creationScope: Context.scope.deep});
+    defineFunction(name, s, options = {}) {
+        const doptions = {...(options.declare ?? {}), sourceRef: Context.sourceRef};
+        const id = this.references.declare(name, 'function', [], doptions);
+
+        const foptions = {...s, ...(options.func ?? {}), name, creationScope: Context.scope.deep};
+        let func = new Function(id, foptions);
         this.references.set(func.name, [], func);
         return func;
     }
@@ -1032,20 +1129,6 @@ module.exports = class Processor {
     }
     resolveExpr(expr, s, title) {
         return this.expressions.eval(expr);
-    }
-    execNamespace(s) {
-        const airGroup = s.airgroup ?? false;
-        const namespace = s.namespace;
-        if (airGroup !== false && !this.airGroups.isDefined(airGroup)) {
-            this.error(s, `airgroup ${s.airgroup} hasn't been defined`);
-        }
-
-        // TODO: verify if namespace just was declared in this case airgroup must be the same
-        this.context.push(namespace);
-        this.scope.push();
-        this.execute(s.statements, `NAMESPACE ${namespace}`);
-        this.scope.pop(['witness', 'fixed', 'customcol', 'im', 'airvalue']);
-        this.context.pop();
     }
     evalExpressionList(e) {
         assert.strictEqual(e.type, 'expression_list');
@@ -1216,17 +1299,24 @@ module.exports = class Processor {
             throw new Error(`an int parameter N must be declared as airGroup argument`);
         }
         const rows = item.asInt();
-        this.checkRows(rows);
+        if (!options.virtual) {
+            this.checkRows(rows);
+        }
         const air = airGroup.createAir(airTemplate, rows, options);
         this.airStack.push(air);
         this.updateAir();
 
-        if (this.proto) this.proto.pushAir(air.id, air.name, air.rows);
+        if (!air.virtual) {
+            if (this.proto) this.proto.pushAir(air.id, air.name, air.rows);
+        }
         return air;
     }
     closeAir() {
-        this.airStack.pop();
-        if (this.proto) this.proto.popAir();
+        const air = this.airStack.pop();
+        if (!air.virtual) {
+            if (this.proto) this.proto.popAir();
+        }
+
         this.commits.clearAir();
         this.updateAir();
     }
@@ -1240,8 +1330,10 @@ module.exports = class Processor {
     }
     setAirBuiltInConstants(air) {
         this.references.set('BITS', [], air.bits ?? 0);
-        // TODO: alert to AIR_ID because really was undefined
         this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? -1));
+        this.references.set('AIR_NAME', [], new ExpressionItems.StringValue(air.name ?? ''));
+        this.references.set('VIRTUAL', [], new ExpressionItems.IntValue(air.virtual ? 1 : 0));
+        this.references.set('AIRTEMPLATE', [], new ExpressionItems.StringValue(air.airTemplate ? (air.airTemplate.name.name ?? ''):''));
     }
     executeAirTemplate(airTemplate, airTemplateFunc, callinfo, options = {}) {
         const name = options.alias ? options.alias : airTemplate.name;
@@ -1250,13 +1342,15 @@ module.exports = class Processor {
             throw new Exceptions.Runtime(`Instance airtemplate ${name} out of airgroup`);
         }
         const template = name === airTemplate.name ? '' : `(${airGroup.name})`
-        console.log(`\nAIR instance \x1B[38;5;208m${name}${template}\x1B[0m in airgroup \x1B[38;5;208m${airGroup.name}\x1B[0m`);
+        const title = 'AIR ' + (callinfo.virtual ? 'virtual ' : '') + 'instance';
+        console.log(`\n${title} \x1B[38;5;208m${name}${template}\x1B[0m in airgroup \x1B[38;5;208m${airGroup.name}\x1B[0m`);
         const ti1 = performance.now();
         // airgroup was a function derivated class
         const mapinfo = this.prepareFunctionCall(airTemplateFunc, callinfo);
         airTemplateFunc.prepare(callinfo, mapinfo);
 
         const air = this.createAir(this.currentAirGroup, airTemplate, {...options, name});
+        const nestedAir = this.currentAir !== false;
         this.currentAir = air;
 
         const hasAlias = name != airTemplate.name;
@@ -1264,7 +1358,11 @@ module.exports = class Processor {
             this.context.push(airTemplate.name);
         }
         this.context.push(name);
+        if (nestedAir) {            
+            this.pushAirScope();
+        }
         this.scope.pushInstanceType('air');
+
         airGroup.airStart(air.id);
         this.memoryUpdate();
         const bdir = airTemplate.getBaseDir();
@@ -1281,7 +1379,7 @@ module.exports = class Processor {
         const customCols = this.customCols.length
         const constraints = this.constraints.length;
         const N = this.rows;
-        airGroup.airEnd(air.id);
+        airGroup.airEnd(air.id, air.virtual ?? false);
         const ti2 = performance.now();
         console.log('  > Witness cols: ' + witnessCols + ' from stage 1 (' + this.witness.countByStage(1).join() + ')');
         console.log('  > Fixed cols: ' + fixedCols);
@@ -1292,8 +1390,7 @@ module.exports = class Processor {
         console.log('  > Constraints: ' + constraints);
         console.log('  > Execution time: ' + units.getHumanTime(ti2-ti1));
 
-
-        if (this.proto) {
+        if (this.proto && !air.virtual) {
             const t1 = performance.now();
             this.memoryUpdate();
             this.airGroupProtoOut(this.currentAirGroup.id, air.id);
@@ -1303,18 +1400,26 @@ module.exports = class Processor {
             console.log('  > Proto time: ' + units.getHumanTime(t2-t1));
         }
 
+        if (air.virtual && this.constraints.length > 0) {
+            throw new Exceptions.Runtime(`Virtual air ${air.name} has constraints, this is not allowed`);
+        }
+
         this.debugAirInfo();
         this.constraints = new Constraints();
 
         const t1 = performance.now();
-        this.clearAirScope(air.name);
+        if (nestedAir) {
+            this.popAirScope();
+        } else {
+            this.clearAirScope(air.name);
+        }
         this.scope.popInstanceType(['witness', 'fixed', 'customcol', 'im', 'airvalue']);
-        // this.scope.popInstanceType(['witness', 'fixed', 'im', 'function']);
         this.context.pop();
         if (hasAlias) {
             this.context.pop();
         }
         this.closeAir(air);
+        this.currentAir = false;
 
         // closing airgroup but no closing final
         // this.suspendCurrentAirGroup(false);
@@ -1402,12 +1507,20 @@ module.exports = class Processor {
 
         chrono.start();
 
-        this.proto.setFixedCols(this.fixeds);
-        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
+        if (Context.air.outputFixedFile) {
+            const t1 = performance.now();
 
-        this.proto.setPeriodicCols(this.fixeds);
-        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-PERIODIC-COLS');
+            const filename = this.proto.setFixedColsToFile(this.fixeds, Context.air.outputFixedFile);
+            chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
+            const t2 = performance.now();
+            console.log(`  > Fixed File time: ${units.getHumanTime(t2-t1)} (${filename})`);
+        } else {
+            this.proto.setFixedCols(this.fixeds);
+            chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
 
+            this.proto.setPeriodicCols(this.fixeds);
+            chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-PERIODIC-COLS');
+        }
         this.proto.setWitnessCols(this.witness);
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-WITNESS-COLS');
 
@@ -1418,7 +1531,7 @@ module.exports = class Processor {
         this.proto.setAirGroupValues(this.airGroupValues.getDataByAirGroupId(this.airGroupId),
                                      this.airGroupValues.getAggreationTypesByAirGroupId(this.airGroupId));
 
-        this.proto.setAirValues(this.airValues.values);
+        this.proto.setAirValues(this.airValues.getValues());
 
         // this.expressions.pack(packed, {instances: [air.fixeds, air.witness]});
         this.expressions.pack(packed, {instances: [this.fixeds, this.witness, this.customCols]});
@@ -1437,9 +1550,10 @@ module.exports = class Processor {
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-CONSTRAINTS');
 
         const info = {airId, airGroupId};
-        this.proto.setSymbolsFromLabels(this.witness.labelRanges, 'witness', info);
+        this.proto.setSymbolsFromLabels(this.witness.getLabelRanges(), 'witness', info);
         this.proto.setSymbolsFromLabels(this.fixeds.getNonTemporalLabelRanges(), 'fixed', info);
-        this.proto.setSymbolsFromLabels(this.customCols.labelRanges, 'customcol', info);
+        this.proto.setSymbolsFromLabels(this.customCols.getLabelRanges(), 'customcol', info);
+
         if (airId == 0) {
             this.airGroupValues.clearOnceLabels(airGroupId);
         }
@@ -1447,6 +1561,11 @@ module.exports = class Processor {
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS');
 
         this.proto.setSymbolsFromLabels(this.airValues.getLabels(['stage']), 'airvalue', info);
+
+        const imSymbols = packed.expressionLabels.map((label, index) => typeof label === 'undefined' ? value : {label, from:index}).filter(x => typeof x !== 'undefined')
+        this.proto.setSymbolsFromLabels(imSymbols, 'im', {...info, namePrefix: Context.airName + '.'});
+        console.log(`  > Proto intermediates: ${imSymbols.length}`);
+
         this.proto.addHints(this.hints, packed, {
                 airGroupId,
                 airId
@@ -1467,6 +1586,24 @@ module.exports = class Processor {
         this.references.clearScope('air');
         this.expressions.clear(label);
         this.hints.clear();
+    }
+    pushAirScope(label = '') {
+        this.references.pushType('fixed', label);
+        this.references.pushType('witness', label);
+        this.references.pushType('customcol', label);
+        this.references.pushType('airvalue', label);
+        this.references.pushScope('air');
+        this.expressions.push(label);
+        this.hints.push();
+    }
+    popAirScope(label = '') {
+        this.references.popType('fixed', label);
+        this.references.popType('witness', label);
+        this.references.popType('customcol', label);
+        this.references.popType('airvalue', label);
+        this.references.popScope('air');
+        this.expressions.pop(label);
+        this.hints.pop();
     }
     finalAirGroupScope() {
         this.callDeferredFunctions('airgroup', 'final');
@@ -1532,7 +1669,8 @@ module.exports = class Processor {
         }
     }
     execWitnessColDeclaration(s) {
-        this.declare(s, 'witness', false, true, {stage: s.stage ? Number(s.stage):0 });
+        const features = Features.extractFeatures('witness', s.features, {stage: true});
+        this.declare(s, 'witness', false, true, features);
     }
     execCustomColDeclaration(s) {
         let commit = this.commits.get(s.commit);
@@ -1547,21 +1685,19 @@ module.exports = class Processor {
     }
     execFixedColDeclaration(s) {
         const global = s.global ?? false;
+        const features = Features.extractFeatures('fixed', s.features);
         for (const col of s.items) {
             const colname = Context.getFullName(col.name);
-            // console.log(`COL_FIXED_DECLARATION(${colname})`);
             const lengths = this.decodeLengths(col);
             let init = s.sequence ?? null;
-            let seq = null;
+            let initValue = null;
             if (init) {
-                seq = new Sequence(init, {maxSize: ExpressionItems.IntValue.castTo(this.references.get('N'))});
-                if (Context.config.fixed !== false) seq.extend();
+                initValue = new Sequence(init, {maxSize: ExpressionItems.IntValue.castTo(this.references.get('N'))});
+                if (Context.config.fixed !== false) initValue.extend();
             } else if (s.init) {
-                seq = s.init.instance();
-                if (seq.dump) seq.dump();
-                else console.log(seq);
+                initValue = s.init.instance();
             }
-            let data = {global};
+            let data = {...features, global};
             if (this.pragmas.nextFixed.bytes !== false) {
                 data.bytes = this.pragmas.nextFixed.bytes;
                 this.pragmas.nextFixed.bytes = false;
@@ -1574,7 +1710,17 @@ module.exports = class Processor {
                 data.external = true;
                 this.pragmas.nextFixed.external = false;
             }
-            this.declareFullReference(colname, 'fixed', lengths, data, seq);
+            if (this.pragmas.nextFixed.loadFromFile) {
+                data.loadFromFile = this.pragmas.nextFixed.loadFromFile;
+                this.pragmas.nextFixed.loadFromFile = false;
+            }
+            if (initValue === null) {
+                const loadData = this.currentAir.findExternFixedCol(colname);
+                if (loadData !== false) {
+                    initValue = loadData;
+                }
+            }
+            this.declareFullReference(colname, 'fixed', lengths, data, initValue);
         }
     }
     execDebugger(s) {
@@ -1661,16 +1807,18 @@ module.exports = class Processor {
         }
     }
     value2num(value, label) {
-        if (typeof value === 'number') return value;
-        if (typeof value === 'bigint' || typeof value === 'string') return Number(value);
-        if (typeof value.asInt === 'function') return Number(value.asInt());
-        throw new Error(`Invalid value ${value} for ${label} on ${Context.sourceRef}`);
+        const res = ExpressionItem.value2num(value);
+        if (res === false) {
+            throw new Error(`Invalid value ${value} for ${label} on ${Context.sourceRef}`);
+        }
+        return res; 
     }
     value2bint(value, label) {
-        if (typeof value === 'bigint') return value;
-        if (typeof value === 'number' || typeof value === 'string') return BigInt(value);
-        if (typeof value.asInt === 'function') return value.asInt();
-        throw new Error(`Invalid value ${value} for ${label} on ${Context.sourceRef}`);
+        const res = ExpressionItem.value2bint(value);
+        if (res === false) {
+            throw new Error(`Invalid value ${value} for ${label} on ${Context.sourceRef}`);
+        }
+        return res; 
     }
     execAirValueDeclaration(s) {
         const name = s.items[0].name ?? '';
@@ -1724,8 +1872,21 @@ module.exports = class Processor {
             this.deferredCalls[_scope][event][fname].priority = priority;
         }
     }
+    checkVirtual(s) {
+        if (!s.virtual) return;
+        if (!s.expr.isAlone()) {
+            throw new Error(`[${Context.sourceTag}] Invalid use of virtual, only to create virtual instances`);
+        }
+        const fcall = s.expr.getAloneOperand();
+        if (!fcall instanceof ExpressionItems.FunctionCall) {
+            throw new Error(`[${Context.sourceTag}]  Invalid use of virtual, only to create virtual instances`);
+        }
+        fcall.virtual = true;
+        // check if function call is virtual is done his evaluation
+    }
     execExpr(s) {
         let options = {};
+        this.checkVirtual(s);
         if (s.alias) {
             options.alias = this.getAsString(s.alias);
         }
@@ -1818,13 +1979,13 @@ module.exports = class Processor {
             const prompt = global ? '> ': '  > ';
             const color = global ? '\x1B[38;2;93;240;0m': '\x1B[38;2;192;255;2m';
             const expr = constraints.getExpr(id);
-            const prefix = global ? 'Global ' : '';
             // draw constraint +1 to match with verify constraints message
+            const prefix = `${prompt}${global ? 'Global ' : ''}Constraint #${constraintId+1} [${Context.proofLevel}]`;
             if (Context.config.bothConstraintsFormat || !Context.config.rawConstraintsFormat) {
-                console.log(`${prompt}${prefix}Constraint #${constraintId+1} [${Context.proofLevel}] > ${color}${expr.toString({hideClass:true, hideLabel:false})} === 0\x1B[0m (${sourceTag})`);
+                console.log(`${prefix} > ${color}${expr.toString({hideClass:true, hideLabel:false})} === 0\x1B[0m (${sourceTag})`);
             }
             if (Context.config.bothConstraintsFormat || Context.config.rawConstraintsFormat) {
-                console.log(`${prompt}${prefix}Constraint #${constraintId+1} [${Context.proofLevel}] (RAW) > ${color}${expr.toString({hideClass:true, hideLabel:true})} === 0\x1B[0m (${sourceTag})`);
+                console.log(`${prefix} (RAW) > ${color}${expr.toString({hideClass:true, hideLabel:true})} === 0\x1B[0m (${sourceTag})`);
             }
         }
     }
@@ -1850,7 +2011,8 @@ module.exports = class Processor {
                     if (Debug.active) console.log(name, s.vtype, Context.sourceRef);
                     switch (s.vtype) {
                         case 'expr':
-                            initValue = init.eval();
+                            initValue = init.instance().eval();
+                            // initValue = init.eval();
                             break;
                         case 'int':
                             initValue = (s.multiple ? init.eval() : init.instance()).asIntItem();
@@ -1859,11 +2021,13 @@ module.exports = class Processor {
                         case 'string':
                             initValue = init.eval().asStringItem();
                             break;
+                        default:
+                            throw new Error(`Invalid variable type ${s.vtype} on ${Context.sourceRef}`);
                     }
                     if (Debug.active) console.log(name, s.vtype, initValue.toString ? initValue.toString() : initValue);
                 }
-            }
-            this.references.declare(name, s.vtype, lengths, { scope, sourceRef, const: s.const ?? false }, initValue);
+            }            
+            this.references.declare(name, s.vtype, lengths, { scope, sourceRef, const: s.const ?? false}, initValue);
             if (initValue !== null) {
                 const initValueText = typeof initValue.toString === 'function' ? initValue.toString() : initValue;
                 if (Debug.active) console.log(`ASSIGN(DECL) ${name} = ${initValueText} \x1B[0;90m[${Context.sourceTag}]\x1B[0m`);
@@ -1917,9 +2081,7 @@ module.exports = class Processor {
         return evaluatedTemplate;
     }
     evaluateExpression(e){
-        // TODO
-        TODO_STOP
-        return 0n;
+        throw new Error('Not implemented');
     }
     execReturn(s) {
         const sourceRef = this.sourceRef;

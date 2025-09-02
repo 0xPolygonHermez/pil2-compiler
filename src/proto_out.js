@@ -7,6 +7,7 @@ const assert = require('./assert.js');
 const Context = require('./context.js');
 const StringValue = require('./expression_items/string_value.js');
 const IntValue = require('./expression_items/int_value.js');
+const FixedFile = require('./fixed_file.js');
 
 const MAX_CHALLENGE = 200;
 const MAX_STAGE = 20;
@@ -32,6 +33,7 @@ const REF_TYPE_AIR_VALUE = 9;
 const REF_TYPE_CUSTOM_COL = 10;
 
 const SPV_AGGREGATIONS = ['sum', 'prod'];
+
 module.exports = class ProtoOut {
     constructor (Fr, options = {}) {
         this.version = 2;
@@ -194,19 +196,34 @@ module.exports = class ProtoOut {
     }
     setAirValues(airValues) {
         this.currentAir.airValues = [];
+        this.airValueId2ProtoId = [];
+        this.getRelative(airValues, this.airValueId2ProtoId, [this.currentAirGroup.airGroupId, this.currentAir.airId]);
         for (let index = 0; index < airValues.length; ++index) {
-            const airValue = airValues[index];
-            const stage = airValue.stage;
+            const stage = airValues[index].stage;
             this.currentAir.airValues.push({stage});
         }
     }
     setGlobalSymbols(symbols) {
         this._setSymbols(symbols.keyValuesOfTypes(['public', 'proofvalue', 'challenge', 'publictable']));
     }
+    // if a prefix should be applied to the name, if original name has a negative row offset, move the row offset before the prefix.
+    applyPrefixNameToSymbol(name, prefix = false) {
+        if (prefix === false || typeof prefix === 'undefined' || prefix === '') {
+            return name;
+        }
+        const primaRegExp = new RegExp('[0-9]*\'(?=[A-Za-z_])', 'gm');
+        const matches = primaRegExp.exec(name)??false;
+        if (matches === false) {
+            return prefix + name;
+        } else {
+            return matches[0] + prefix + name.substring(matches[0].length);
+        }
+    }
     setSymbolsFromLabels(labels, type, data = {}) {
         let symbols = [];
         for (const label of labels) {
-            symbols.push([label.label, {type, locator: label.from, array: label.multiarray, data: {}, ...(label.data ?? {})}]);
+            const name = this.applyPrefixNameToSymbol(label.label, data.namePrefix);
+            symbols.push([name, {type, locator: label.from, array: label.multiarray, data: {}, ...(label.data ?? {})}]);
         }
         this._setSymbols(symbols, data);
     }
@@ -257,10 +274,8 @@ module.exports = class ProtoOut {
                 return {type: REF_TYPE_AIR_GROUP_VALUE, id: relativeId, airGroupId, stage};
             }
             case 'airvalue': {
-                const stage = assert.returnTypeOf(ref.stage, 'number');
-                const airGroupId = assert.returnTypeOf(ref.data.airGroupId, 'number');
-                const airId = assert.returnTypeOf(ref.data.airId, 'number');
-                return {type: REF_TYPE_AIR_VALUE, id, airId, airGroupId, stage};
+                const [stage, protoId, airGroupId, airId] = this.airValueId2ProtoId[id];
+                return {type: REF_TYPE_AIR_VALUE, id: protoId, airId, airGroupId, stage};
             }
             case 'proofvalue':
                 const def = ref.instance.getDefinition(id);
@@ -304,6 +319,9 @@ module.exports = class ProtoOut {
     setPeriodicCols(periodicCols) {
         this.setConstantCols(periodicCols, this.currentAir.numRows, true);
     }
+    setFixedColsToFile(fixedCols, filename) {
+        return this.saveFixedColsToFile(fixedCols, this.currentAir.numRows, filename);
+    }
     setChallenges(challenges) {
         this.pilOut.numChallenges = this.getNumByStage(challenges);
     }
@@ -333,6 +351,24 @@ module.exports = class ProtoOut {
             airCols.push({values});
         }
     }
+    saveFixedColsToFile(cols, rows, filename) {
+        const airCols = this.setupAirProperty('fixedCols');
+        for (const col of cols) {
+            if (col.temporal) continue; // ignore temporal columns, only use to help to create other fixed columns
+            this.fixedId2ProtoId[col.id] = ['F', airCols.length];
+            let values = [];
+            airCols.push({values});
+        }
+        let values = [];
+        let colnames = [];
+        for (const col of cols) {
+            if (col.temporal || col.external) continue; // ignore temporal and external columns
+            values.push(col.getValues());
+            colnames.push(col.label);
+        }
+        const fixedFile = new FixedFile(values, rows, colnames);
+        return fixedFile.saveToFile(filename);
+    }
     setRegularConstantsCols(col, rows) {
         let values = [];
         for (let irow = 0; irow < rows; ++irow) {
@@ -346,14 +382,21 @@ module.exports = class ProtoOut {
         return values;
     }
     setCompressedConstantsCols(col) {
+        throw new Error('UNIMPLEMENTED: setCompressedConstantsCols');
     }
     setWitnessCols(cols) {
         const stageWidths = this.setupAirProperty('stageWidths');
         this.witnessId2ProtoId = [];
-        this.getGetRelativeStageWidths(cols, this.witnessId2ProtoId, stageWidths, 1);
+        this.getRelativeStageWidths(cols, this.witnessId2ProtoId, stageWidths, 1);
         // sort by stage
     }
-    getGetRelativeStageWidths(cols, translationTable, stageWidths, initialStage, extraCols = []) {
+    getRelative(cols, translationTable, extraCols = []) {
+        let index = 0;
+        for (const col of cols) {
+            translationTable[col.id] = [col.stage ?? 0, index++, ...extraCols];
+        }
+    }
+    getRelativeStageWidths(cols, translationTable, stageWidths, initialStage, extraCols = []) {
         let stages = [];
         for (const col of cols) {
             if (col.stage < initialStage) {
@@ -394,7 +437,7 @@ module.exports = class ProtoOut {
             const commitCols = cols.getColsByCommit(commit);
             let stageWidths = [];
             const commitId = customCommits.length;
-            this.getGetRelativeStageWidths(commitCols, this.customId2ProtoId, stageWidths, 0, [commitId]);
+            this.getRelativeStageWidths(commitCols, this.customId2ProtoId, stageWidths, 0, [commitId]);
             customCommits.push(this.setCustomCommit(commit, stageWidths, commit.publics.map(x => { return {idx: x.id} })));
         }
     }
@@ -424,6 +467,7 @@ module.exports = class ProtoOut {
             }
             expressions.push(e);
         }
+        console.log(`  > Proto expressions: ${expressions.length}`);
     }
     translate(ope) {
         const [key] = Object.keys(ope);
@@ -433,10 +477,9 @@ module.exports = class ProtoOut {
                     // and it implies change index number and type if finally is a periodic col.
                     const [type, protoId] = this.fixedId2ProtoId[ope.fixedCol.idx] ?? [false,false];
                     if (protoId === false) {
-                        console.log(ope);
                         throw new Error(`Translate: Found invalid fixedColId ${ope.fixedCol.idx}`);
                     }
-                    ope.fixedCol.colIdx = protoId;
+                    ope.fixedCol.idx = protoId;
                     if (type === 'P') {
                         ope.periodicCol = ope.fixedCol;
                         delete(ope.fixedCol);
@@ -470,7 +513,16 @@ module.exports = class ProtoOut {
                 }
                 break;
             // airGroupValue not need to translate or to add extra information
-            // airValue not need to translate or to add extra information
+            case 'airValue': {
+                    // translate index of airvalue because compiler use global ids
+                    const [stage, protoId, airGroupId, airId] = this.airValueId2ProtoId[ope.airValue.idx] ?? [false, false, false, false];
+                    // // console.log(`TRANSLATE witnessCol colIdx:${ope.witnessCol.colIdx}=>${protoId} rowOffset:${ope.witnessCol.rowOffset} stage:${ope.witnessCol.stage}=>${stage}`);
+                    if (protoId === false) {
+                        throw new Error(`Translate: Found invalid airValueId ${ope.airValue.idx}`);
+                    }
+                    ope.airValue.idx = protoId;
+                }
+                break;
             // challenge not need to translate or to add extra information
             case 'constant':
                 ope.constant.value = this.toBaseField(ope.constant.value);

@@ -15,6 +15,7 @@ module.exports = class References {
         this.visibilityScope = [0,false];
         this.visibilityStack = [];
         this.containers = new Containers(this);
+        this.referencesStack = [];
     }
     isContainerDefined(name) {
         return this.containers.isDefined(name);
@@ -108,8 +109,43 @@ module.exports = class References {
             delete this.references[name];
         }
     }
+    pushType(type, label) {
+        const typeInfo = this.types[type];
+        if (typeof typeInfo === 'undefined') {
+            throw new Error(`type ${type} not registered`);
+        }
+        typeInfo.instance.push(label);
+
+        let stackReferences = {};
+        for (const name in this.references) {
+            if (this.references[name].type !== type) continue;
+            stackReferences[name] = this.references[name];
+            delete this.references[name];
+        }
+        this.referencesStack.push(stackReferences);
+    }
+    popType(type, label) {
+        const typeInfo = this.types[type];
+        if (typeof typeInfo === 'undefined') {
+            throw new Error(`type ${type} not registered`);
+        }
+        typeInfo.instance.pop(label);
+        let stackReferences = this.referencesStack.pop();
+        for (const name in stackReferences) {
+            if (this.references[name]!== undefined) {
+                throw new Error(`Reference ${name} already defined when restoring references at ${Context.sourceRef}`);
+            }
+            this.references[name] = stackReferences[name];
+        }
+    }
     clearScope(proofScope) {
         this.containers.clearScope(proofScope);
+    }
+    pushScope(proofScope) {
+        this.containers.pushScope(proofScope);
+    }
+    popScope() {
+        this.containers.popScope();
     }
     isReferencedType(type) {
         return type.at(0) === '&'
@@ -262,6 +298,12 @@ module.exports = class References {
         } else {
             this.references[nameInfo.name] = reference;
         }
+        if (typeof options.globalReference === 'string') {
+            if (typeof this.references[options.globalReference] !== 'undefined') {
+                throw new Error(`Global reference ${options.globalReference} already defined at ${Context.sourceRef}`);
+            }
+            this.references[options.globalReference] = reference;
+        }
 
         if (initValue !== null) {
             if (Debug.active) {
@@ -282,12 +324,12 @@ module.exports = class References {
         return ['public', 'proofvalue', 'challenge', 'airgroupvalue', 'publictable'].includes(type) === false;
     }
 
-    get (name, indexes = []) {
+    get (name, indexes = [], options = {}) {
         assert.typeOf(name, 'string');
         if (Debug.active) console.log('GET', name, indexes);
 
         // getReference produce an exception if name not found
-        return this.getReference(name).get(indexes);
+        return this.getReference(name, undefined, options).get(indexes);
     }
     getIdRefValue(type, id) {
         return this.getTypeDefinition(type).instance.getItem(id);
@@ -309,7 +351,6 @@ module.exports = class References {
         options = options ?? {};
 
         const reference = this.getReference(name);
-        // TODO: if reference is a 'reference' check if name is correct
         const item = reference.getItem(indexes, {...options, label: reference.label ? reference.label : reference.name });
 
         if (options.preDelta) {
@@ -325,54 +366,6 @@ module.exports = class References {
             instance.set(info.locator + info.offset, tvalue.value + options.postDelta);
         }
         return item;
-
-        const [instance, info, def] = this._getInstanceAndLocator(name, indexes);
-        let tvalue;
-        if (info.array) {
-            // array info, could not be resolved
-            console.log('***** ARRAY ******');
-            tvalue = new ArrayOf(instance.cls, info.locator + info.offset, info.type ?? def.type, instance);
-        } else {
-            // no array could be resolved
-            console.log([instance.constructor.name, info.type]);
-            tvalue = instance.getTypedValue(info.locator + info.offset, 0, info.type);
-        }
-        // TODO: review
-        if (info.type !== 'function') {
-            assert.instanceOf(tvalue, ExpressionItem, {name, infotype: info.type, tvalue});
-        }
-        if (typeof info.row !== 'undefined') {
-            tvalue.row = info.row;
-        }
-        if (!info.array) {
-            tvalue.id = info.locator;
-        }
-        if (options.full) {
-            tvalue.locator = info.locator;
-            tvalue.instance = instance;
-            tvalue.offset = info.offset;
-        }
-        if (info.dim) {
-            tvalue.dim = info.dim;
-//            tvalue.arrayType = info.arrayType;
-            tvalue.lengths = info.lengths;
-        }
-        if (info.array) {
-            tvalue.dim = 'DEPRECATED';
-            tvalue.lengths = 'DEPRECATED';
-            tvalue.array = info.array;
-        }
-        if (options.preDelta) {
-            console.log(typeof tvalue.value);
-            if (assert.isEnabled) assert.ok(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
-            tvalue.value += options.preDelta;
-            instance.set(info.locator + info.offset, tvalue.value);
-        }
-        if (options.postDelta) {
-            if (assert.isEnabled) assert.ok(typeof tvalue.value === 'number' || typeof tvalue.value === 'bigint');
-            instance.set(info.locator + info.offset, tvalue.value + options.postDelta);
-        }
-        return tvalue;
     }
     _getTypedValue (name, indexes, options) {
         indexes = indexes ?? [];
@@ -431,8 +424,8 @@ module.exports = class References {
     getTypeInfo (name, indexes = []) {
         return this._getInstanceAndLocator(name, indexes);
     }
-    addUse(name) {
-        this.containers.addUse(name);
+    addUse(name, alias = false) {
+        this.containers.addUse(name, alias);
     }
     searchDefinition(name) {
         const subnames = name.split('.');
@@ -481,10 +474,7 @@ module.exports = class References {
         if (Debug.active) console.log('ISVISIBLE', (def.constructor ?? {name: '_'}).name, def);
         const res = !def.scopeId || def.scopeId === 1 || !this.hasScope(def.type) || def.type === 'function' ||
                     def.scopeId >= this.visibilityScope[0] || (this.visibilityScope[1] !== false && def.scopeId <= this.visibilityScope[1]);
-                    // this.visibilityScopes.some((x,i) => def.scopeId >= x && (i === 0 || def.scopeId < this.getNextVisibilityScope(x)));
-        // console.log('**** IS_VISIBLE', def.name, def.scopeId, this.visibilityScope, this.visibilityStack/*, Context.scope*/);
         return res;
-                // def.scopeId >= this.visibilityScopes;
     }
     /**
      *
@@ -493,7 +483,7 @@ module.exports = class References {
      * @param {Object} debug
      * @returns {Reference}
      */
-    getReference(name, defaultValue, debug = {}) {
+    getReference(name, defaultValue, options = {}) {
         // if more than one name is sent, use the first one (mainName). Always first name it's directly
         // name defined on source code, second optionally could be name with airgroup, because as symbol is
         // stored with full name.
@@ -518,7 +508,10 @@ module.exports = class References {
         if (!names) {
             names = Context.current.getNames(name);
         }
-
+        
+        if (nameInfo.scope === false && options.insideName && !names.includes(options.insideName)) {
+            names.unshift(options.insideName);
+        }
         if (Debug.active) console.log(names);
         // console.log(`getReference(${name}) on ${this.context.sourceRef} = [${names.join(', ')}]`);
         let reference = false;
@@ -636,7 +629,6 @@ module.exports = class References {
     *keyValuesOfTypes(types) {
         for (let index in this.references) {
             const def = this.references[index];
-            // console.log({index, ...def});
             if (!types.includes(def.type)) continue;
             yield [index, def];
         }
@@ -657,7 +649,6 @@ module.exports = class References {
         for (let name in this.references) {
             const def = this.references[index];
             const indexes = def.array === false ? '': def.multiarray.getLengths().join(',');
-            // console.log(`${name.padEnd(30)}|${def.type.padEnd(10)}|${indexes}`);
         }
     }
 }

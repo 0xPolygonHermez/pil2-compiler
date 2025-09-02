@@ -12,7 +12,11 @@ module.exports = class Expressions {
         this.expressions = [];
         this.packedIds = [];
         this.labelRanges = new LabelRanges();
+        this.expressionsStack = [];
+        this.packedIdsStack = [];
+        this.labelRangesStack = [];
     }
+
     clone() {
         let cloned = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
         cloned.expressions = this.expressions.map(x => x.clone());
@@ -50,17 +54,14 @@ module.exports = class Expressions {
         if (this.isDefined(id)) {
             throw new Error(`${id} already defined on ....`);
         }
-        if (id === 600) debugger;
         this.expressions[id] = expr;
     }
 
     set(id, expr) {
-        if (id === 600) debugger;
         this.expressions[id] = expr;
     }
 
     update(id, expr) {
-        if (id === 600) debugger;
         this.expressions[id] = expr;
     }
 
@@ -203,9 +204,13 @@ module.exports = class Expressions {
         const packer = new ExpressionPacker();
         for (let id = 0; id < this.expressions.length; ++id) {
             if (typeof this.packedIds[id] !== 'undefined') continue;    // already packed
-            // this.expressions[id].dump('PACK-EXPRESSION ');
             packer.set(container, this.expressions[id]);
-            this.packedIds[id] = assert.returnTypeOf(packer.pack(options), 'number');
+            try {
+                this.packedIds[id] = assert.returnTypeOf(packer.pack(options), 'number');
+            } catch (error) {
+                console.error(`Error packing expression ${id}:`, error);
+                this.expressions[id].dump(`EXPRESSION ${id} # ${this.name}`, 3);
+            }
             // packedId === false, means directly was a alone term.
         }
     }
@@ -232,6 +237,17 @@ module.exports = class Expressions {
         this.expressions = [];
         this.packedIds = [];
         this.labelRanges = new LabelRanges();
+    }
+    push(label = '') {
+        this.expressionsStack.push(this.expressions);
+        this.packedIdsStack.push(this.packedIds);
+        this.labelRangesStack.push(this.labelRanges);
+        this.clear(label);
+    }
+    pop(label = '') {
+        this.expressions = this.expressionsStack.pop();
+        this.packedIds = this.packedIdsStack.pop();
+        this.labelRanges = this.labelRangesStack.pop();
     }
 
     *[Symbol.iterator]() {

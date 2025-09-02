@@ -19,13 +19,25 @@ function callme() {
 function testme() {
     int opid = 10;
     int L2 = 23;
+
+    assert_eq(L2, 23);
+
     use air.myfirstcon.`id${opid}`;
 
-    println("HELLO");
-    println(L2, air.myfirstcon.`id${opid}`.L2, air.myfirstcon.id10.L2);
-    println(L, air.myfirstcon.`id${opid}`.L, air.myfirstcon.id10.L, air.myfirstcon.L);
-    println(l2);
-    // println(air.myfirstcon.L2);
+    assert_eq(L2, 23);
+    assert_eq(air.myfirstcon.`id${opid}`.L2, 20);
+    assert_eq(air.myfirstcon.id10.L2, 20);
+
+    assert_eq(L, 1030);
+    assert_eq(air.myfirstcon.`id${opid}`.L, 1030);
+    assert_eq(air.myfirstcon.id10.L, 1030);
+    assert_eq(air.myfirstcon.L, 30);
+    assert_eq(string(l2), "FoundInvalidContainerWithUse.l2");
+
+    {
+        use air.myfirstcon;
+        assert_eq(L, 30);
+    }
 }
 
 airgroup FoundInvalidContainerWithUse {

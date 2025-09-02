@@ -1,3 +1,4 @@
+const util = require('util');
 const LabelRanges = require("../label_ranges.js");
 const RuntimeItem = require("./runtime_item.js");
 const MultiArray = require('../multi_array.js');
@@ -12,8 +13,10 @@ module.exports = class ArrayOf extends RuntimeItem {
         this._array = array.clone();
         this.unrollLevels = unrollLevels;
 //        console.log(`ARRAYOF(${instanceType})[${array.lengths.map(x => x.toString(10)).join('],[')}] D${this.dim}`);
-
         this.instanceType = instanceType;
+    }
+    set rowOffset(value) {
+        throw new Error('rowOffset is not supported in ArrayOf');
     }
     get isArray() {
         return true;
@@ -38,8 +41,12 @@ module.exports = class ArrayOf extends RuntimeItem {
         return Context.references.getTypeInstance(this.instanceType);
     }
     cloneInstance() {
-        return new ArrayOf(this.instanceType, this._array, this.unrollLevels);
-    }
+        let cloned =  new ArrayOf(this.instanceType, this._array, this.unrollLevels, this.row);
+        if (typeof this.rowOffset !== 'undefined' && this.rowOffset !== false) {
+            cloned.rowOffset = this.rowOffset.clone();
+        }
+        return cloned;
+   }
     evalInside() {
         return this.clone();
     }

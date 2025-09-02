@@ -1,7 +1,7 @@
-const Indexable = require("./indexable.js");
+const GlobalIndexable = require("./global_indexable.js");
 const CustomColItem = require("./expression_items/custom_col.js");
 const CustomCol = require("./definition_items/custom_col.js");
-module.exports = class CustomCols extends Indexable {
+module.exports = class CustomCols extends GlobalIndexable {
     constructor () {
         super('customcol', CustomCol, CustomColItem);
     }
@@ -13,9 +13,9 @@ module.exports = class CustomCols extends Indexable {
         return this.getCommits().map(x => x.name);
     }
     getCommits() {
-        return this.values.map(x => x.commit).filter((commit, index, commits) => commits.indexOf(commit) === index);
+        return this.getValues().map(x => x.commit).filter((commit, index, commits) => commits.indexOf(commit) === index);
     }
     getColsByCommit(commit) {
-        return this.values.filter(x => x.commit === commit);
+        return this.getValues().filter(x => x.commit === commit);
     }
 }

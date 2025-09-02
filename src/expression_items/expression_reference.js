@@ -7,6 +7,8 @@ module.exports = class ExpressionReference extends ProofItem {
         super(options);
         this.id = id;
         this.instance = instance;
+        this.rowOffsetApply = true;
+        this.const = true;
     }
     get degree() {
         const value = this.instance.get(this.id).getValue();
@@ -31,15 +33,18 @@ module.exports = class ExpressionReference extends ProofItem {
     cloneInstance(options) {
         return new ExpressionReference(this.id, this.instance, this.options);
     }
+
     eval(options) {
         // check if is baseType, in this case return it.
         const value = this.instance.get(this.id).getValue();
         if (value.isBaseType) return value;
 
-        // if not clone
         if (options && options.unroll) {
-            return value.clone();
-        }
+            // If the constant expression is a standalone item, clone it directly.
+            if (value && value instanceof ProofItem) {
+                return value.clone();
+            }
+        } 
         return this.clone();
     }
     evalInside(options) {

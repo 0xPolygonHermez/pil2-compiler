@@ -117,7 +117,6 @@ class Reference {
         }
         const [row, id] = this.getRowAndId(indexes);
         if (this.const) {
-            // TODO: more info
             throw new Error(`setting ${this.name} a const element on ${Context.sourceRef}`);
         }
         if (row !== false) this.instance.setRowValue(id, row, value);
@@ -251,7 +250,7 @@ class Reference {
                 }
             }
         } else if (evaluatedIndexes.length === 1 && this.instance.runtimeRows) {
-            res = this.instance.getRowValue(locator, evaluatedIndexes[0], options);
+            res = this.instance.getRowValue(locator, evaluatedIndexes[0], options.rowOffset ?? 0);
             if (typeof res === 'undefined') {
                 throw Error(`ERROR: Row ${evaluatedIndexes[0]} of ${options.label} isn't initialized`);
             }
@@ -273,7 +272,7 @@ class Reference {
         } else res.setLabel('___');
 
         if (runtimeRow !== false) {
-            return res.getRowItem(runtimeRow);
+            return res.getRowItem(runtimeRow, options.rowOffset ?? 0);
         }
         return res;
     }

@@ -89,6 +89,15 @@ module.exports = class Context {
     static get references() {
         return this._instance._processor.references;
     }
+    static get fileDir() {
+        return this.processor.compiler.fileDir;
+    }
+    static get basePath() {
+        return this.processor.compiler.basePath;
+    }
+    static get fullFilename() {
+        return this.processor.compiler.getFullFilename(this._instance._processor.sourceRef.split(':')[0]);
+    }
     static get proofLevel() {
         if (this.airName) {
             return `AIR:${this.airName}`;
@@ -97,6 +106,17 @@ module.exports = class Context {
             return `AIRGROUP:${this._airGroupName}`;
         }
         return 'PROOF';
+    }
+    static get outputDir() {
+        return Context.applyTemplates(Context._instance.config.outputDir ?? '');
+    }
+    static get fixedOutputDir() {
+
+        return Context.applyTemplates(Context._instance.config.fixedOutputDir ?? 
+                Context._instance.config.outputDir ?? '');
+    }
+    static get inputDir() {
+        return Context.applyTemplates(Context._instance.config.inputDir ?? '');
     }
     static applyTemplates(value) {
         return this._instance.applyTemplates(value);

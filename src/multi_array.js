@@ -169,10 +169,10 @@ class MultiArray {
     getIndexesTypedOffset(indexes) {
         const [offset,dims] = this.getIndexesOffset(indexes);
         if (offset === false) {
-            throw new ErrorIndexOutOfRange(`Internal error on variable index access index:${indexes[dims]} valid range:[0-${this.lengths[dims]-1}]`);
+            throw new MultiArray.ErrorIndexOutOfRange(`Internal error on variable index access index:${indexes[dims]} valid range:[0-${this.lengths[dims]-1}]`);
         }
         if (offset >= this.size) {
-            throw new ErrorIndexOutOfRange(`Internal error on variable index access index:${offset} valid range:[0-${this.size-1}]`);
+            throw new MultiArray.ErrorIndexOutOfRange(`Internal error on variable index access index:${offset} valid range:[0-${this.size-1}]`);
         }
         const dim = this.offsets.length - dims;
         if (dim === 0) {

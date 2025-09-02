@@ -59,7 +59,6 @@ const { result } = require('lodash');
 const assert = require('../assert.js');
 class ExpressionItem {
     static _classToManager = {};
-    #rowOffset;
     constructor(options = {}) {
         this.options = options;
         this.indexes = false;
@@ -135,21 +134,13 @@ class ExpressionItem {
             throw e;
         }
     }
-    get rowOffset() {
-        return this.#rowOffset;
-    }
-    set rowOffset(value) {
-        if (Debug.active) {
-            if (!value.isZero()) console.log(['ROWOFFSET.SET', value]);
-        }
-        this.#rowOffset = value;
-    }
     clone() {
         let cloned = this.cloneInstance();
         cloned.cloneUpdate(this);
         return cloned;
     }
     cloneUpdate(source) {
+        if (typeof super.cloneUpdate === 'function') super.cloneUpdate(source);
         if (source.indexes) {
             this.indexes = source.indexes.map(index => (typeof index === 'object' && typeof index.clone === 'function') ? index.clone() : index);
         }
@@ -183,9 +174,9 @@ class ExpressionItem {
             this.rowOffset = this.rowOffset.cloneInstance();
         }
         const prior = this.evalPrior(options);
-        const inside = this.evalInsideExtra({...options, asItem: true});
         const next = this.evalNext(options);
         const rowOffset = (next ? next : 0) + (prior ? prior : 0);
+        const inside = this.evalInsideExtra({...options, asItem: true, ignoreRowOffset: true});
         if (rowOffset === 0 || !inside.isExpression) {
             return inside.result;
         }
@@ -220,6 +211,9 @@ class ExpressionItem {
     isAlone() {
         return true;
     }
+    getAlone() {
+        return this;
+    }
     getAloneOperand() {
         return this;
     }
@@ -229,6 +223,18 @@ class ExpressionItem {
     evalInsideExtra(options = {}) {
         return {result: this.evalInside(options)};
     }
+    static value2num(value) {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'bigint' || typeof value === 'string') return Number(value);
+        if (typeof value.asInt === 'function') return Number(value.asInt());
+        return false;
+    }
+    static value2bint(value) {
+        if (typeof value === 'bigint') return value;
+        if (typeof value === 'number' || typeof value === 'string') return BigInt(value);
+        if (typeof value.asInt === 'function') return value.asInt();
+        return false;
+    }    
 }
 
 module.exports = ExpressionItem;

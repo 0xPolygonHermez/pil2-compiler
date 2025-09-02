@@ -11,6 +11,7 @@ module.exports = class AirTemplateFunction extends Function {
         super(id, data);
         this.airTemplate = data.instance;
         this.isBridge = true;
+        this.isVirtualizable = false;
     }
     prepare(callInfo, mapInfo) {
         this.declareAndInitializeArguments(mapInfo.eargs);

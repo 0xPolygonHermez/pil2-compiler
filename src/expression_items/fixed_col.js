@@ -26,8 +26,14 @@ module.exports = class FixedCol extends ProofItem {
     getValueItem(row) {
         return this.definition.getValueItem(row);
     }
-    getRowItem(row) {
-        return new FixedRow(this,row);
+    getValues() {
+        return this.definition.getValues();
+    }
+    getRowItem(row, rowOffset) {
+        return new FixedRow(this,row, rowOffset);
+    }
+    getRowCount() {
+        return this.definition.getRowCount();
     }
     set(value) {
         this.definition.setValue(value);
@@ -41,5 +47,25 @@ module.exports = class FixedCol extends ProofItem {
     }
     operatorEqAirValue() {
         return new IntValue(0);
+    }
+    eval(options) {
+        if (options && typeof options.evaluateRow !== 'undefined') {
+            let row = Number(options.evaluateRow);
+            if (this.rowOffset) {
+                const rowOffset = this.rowOffset.getValue();
+                row += rowOffset; 
+            }
+            return this.getValueItem(row);
+        }
+        return this.clone();
+    }
+    printRowsFrom(offset, count) {
+        this.definition.printRowsFrom(offset, count);
+    }
+    copyRowsFrom(src, src_offset, dst_offset, count) {
+        this.definition.copyRowsFrom(src, src_offset, dst_offset, count);
+    }
+    fillRowsFrom(value, offset, count) {
+        this.definition.fillRowsFrom(value, offset, count);
     }
 }

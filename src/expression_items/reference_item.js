@@ -5,6 +5,7 @@ const ExpressionItem = require('./expression_item.js');
 const ExpressionReference = require('./expression_reference.js');
 const Debug = require('../debug.js');
 const util = require('util');
+const assert = require('../assert.js');
 module.exports = class ReferenceItem extends RuntimeItem {
     constructor (name, indexes = [], rowOffset) {
         super();
@@ -15,7 +16,6 @@ module.exports = class ReferenceItem extends RuntimeItem {
             console.log(indexes);
             throw e;
         }
-        // TODO: next as expression
         this.rowOffset = RowOffset.factory(rowOffset);
     }
     get isReferencedType() {
@@ -46,24 +46,25 @@ module.exports = class ReferenceItem extends RuntimeItem {
     }
 
     evalInsideExtra(options = {}) {
-        if (Debug.active) {
-            console.log(['EVALINSIDE '+this.name, options]);
-            console.log(this.rowOffset);
-            console.log(this);
-        }
-        const item = Context.references.getItem(this.name, this.indexes);
+        const rowOffset = (this.rowOffset ? this.rowOffset.getValue() : 0) + (options.rowOffset ?? 0);
+        const item = Context.references.getItem(this.name, this.indexes, {rowOffset});
         if (item.isEmpty()) {
             throw new Error(`accessing to ${item.label} before his initialization at ${Context.sourceRef}`);
         }
+        // ExpressionItems also evaluate rowOffset, we need to ignore if previously the rowOffset was applied.
+        const isExpression = item instanceof ExpressionItem || item instanceof ExpressionReference;
         if (this.rowOffset && !this.rowOffset.isZero()) {
-            item.rowOffset = this.rowOffset.clone();
+            if (!options.ignoreRowOffset  || !isExpression) {
+                assert.ok(this.isClone(options));
+                const rowOffset = this.rowOffset.getValue();
+                item.applyNext(rowOffset, options);
+            }
         }
-        // TODO: next
         if (Debug.active) {
             console.log(`REFERENCE ${this.name} [${this.indexes.join('][')}]`)
             console.log(item);
-            console.log(item.eval());
         }
-        return {result: item.eval(options), isExpression: item.isExpression || item instanceof ExpressionReference};
+        const result = item.eval(options);
+        return {result, isExpression};
     }
 }

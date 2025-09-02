@@ -35,7 +35,8 @@ const OPTIONS = {
     'debug-witness-cols': { describe: 'debug witness columns' },
     'debug-fixed-cols-match': { describe: 'debug fixed columns match with pattern' },
     'debug-witness-cols-match': { describe: 'debug witness columns match with pattern' },
-    'debug-constraints-match': { describe: 'debug constraints match with pattern' }
+    'debug-constraints-match': { describe: 'debug constraints match with pattern' },
+    'fixed-to-file': { describe: 'save fixed columns to file' },
     // TODO: option to force witness name as snake_case and air, airtemplate, airgroup in CamelCase
 }
 
@@ -43,6 +44,9 @@ const yargs = require("yargs").version(version)
     .usage("$0 <source.pil> <options>")
     .wrap(160)
     .option('e', { alias: 'exec', describe: 'Only execute the pil file' })
+    .option('u', { alias: 'outputdir', describe: 'output directory, if directory not exists it will created'})
+    .option('f', { alias: 'fixed', describe: 'output fixed file directory (template), if directory not exists it will created'})
+    .option('i', { alias: 'inputdir', describe: 'input base directory'})
     .option('o', { alias: 'output', describe: 'output pilout file. if filename is none, no pilout will be generated'})
     .option('n', { alias: 'name', describe: 'name of pilout (protobuf)'})
     .option('P', { alias: 'config', describe: 'pil configuration file (json format)'})
@@ -128,6 +132,16 @@ async function run() {
     }
     if (argv.include) {
         config.includePaths = argv.include.split(',');
+    }
+    if (argv.outputdir) {
+        config.outputDir = argv.outputdir.trim();
+    }
+    if (argv.fixed) {
+        config.fixedOutputDir = argv.fixed.trim();
+        config.fixedToFile = true;
+    }
+    if (argv.inputdir) {
+        config.inputDir = argv.inputdir.trim();
     }
     if (argv.asserts) {
         assert.enable(true);

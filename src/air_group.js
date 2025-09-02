@@ -6,11 +6,13 @@ const {FlowAbortCmd, BreakCmd, ContinueCmd, ReturnCmd} = require("./flow_cmd.js"
 const ExpressionItems = require('./expression_items.js');
 const assert = require('./assert.js');
 
+const BASE_VIRTUAL_ID = 10000;
 module.exports = class AirGroup {
     constructor (name, statements, aggregate) {
         // TODO: when instance a airgroup return an integer (as a handler id)
         this.id = false;
         this.airs = [];
+        this.virtualAirs = [];
         this.aggregate = aggregate;
         this.name = name;
         this.airGroupValues = {};
@@ -25,6 +27,9 @@ module.exports = class AirGroup {
             this.checkAirGroupValues(airId);
         }
     }
+    getAir(id) {
+        return id >= BASE_VIRTUAL_ID ? this.virtualAirs[id - BASE_VIRTUAL_ID] : this.airs[id];
+    }
     getId(id) {
         return this.id;
     }
@@ -32,6 +37,12 @@ module.exports = class AirGroup {
         this.id = id;
     }
     createAir(airTemplate, rows, options = {}) {
+        if (options.virtual) {            
+            const id = BASE_VIRTUAL_ID + this.virtualAirs.length;
+            const air = airTemplate.instance(id, this, rows, options);
+            this.virtualAirs.push(air);
+            return air;
+        }
         const id = this.airs.length;
         const air = airTemplate.instance(id, this, rows, options);
         this.airs.push(air);
@@ -40,9 +51,9 @@ module.exports = class AirGroup {
     airStart(airId) {
         ++this.openedAirIds;
     }
-    airEnd(airId) {
+    airEnd(airId, virtual = false) {
         assert.typeOf(airId, 'number');
-        this.checkAirGroupValues(airId);
+        if (!virtual) this.checkAirGroupValues(airId);
         --this.openedAirIds;
     }
     checkAirGroupValues(airId) {
@@ -89,7 +100,7 @@ module.exports = class AirGroup {
         }
 
         const airGroupValue = this.airGroupValues[name] ?? false;
-        console.log(`\x1B[36m[AIRGROUP] DECLARE ${name} (${fullname}) ${this.name} ${airId} ${airGroupValue === false ? '(new)':''}\x1B[0m`);
+        console.log(`\x1B[36m  > Declare airgroupval ${name} (${fullname}) ${airGroupValue === false ? '(new)':''}\x1B[0m`);
         if (airGroupValue === false) {
             const res = Context.references.declare(fullname, 'airgroupvalue', lengths, data);
             const definition = Context.references.get(fullname);

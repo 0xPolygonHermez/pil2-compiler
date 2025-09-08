@@ -59,9 +59,6 @@ module.exports = class Sequence {
         };
         this.engines.typeOf.execute(this.expression);
         this.sizeOf(this.expression);
-        if (this.size > Context.rows) {
-            throw new Error(`Invalid sequence size, sequence is too large, it has size of ${this.size} but number of rows is ${Context.rows}, size exceeds in ${this.size - Context.rows}`);
-        }
         this.#values = new Values(this.bytes, this.size);
     }
     get isSequence () {

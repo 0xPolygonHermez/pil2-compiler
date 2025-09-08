@@ -230,6 +230,10 @@ module.exports = class FixedCol extends ProofItem {
             throw new Error('Assign a sequence when has values');
         }
         if (value.isSequence) {
+            const max_rows = this.rows ? this.rows : Context.rows;
+            if (value.size > max_rows) {
+                throw new Error(`Invalid sequence size, sequence is too large, it has size of ${value.size} but number of rows is ${max_rows}, size exceeds in ${value.size - max_rows}`);
+            }
             this.sequence = value;
             this.rows = this.sequence.size;
             return;

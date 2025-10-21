@@ -53,9 +53,9 @@ module.exports = class Features {
         }
         return {...defaultFeatures,...featuresExtracted};
     }
-    static extractArguments(featureCls, feature) {
+    static extractArguments(featureCls, feature) {        
         const config = featureCls.config;
-        const args = feature.args.eval({clone: true}).items;
+        const args = feature.args.items;
         if (args.length < config.minArgs || args.length > config.maxArgs) {
             throw new Error(`Invalid number of arguments for feature ${feature.name} at ${Context.sourceTag}`);
         }
@@ -96,11 +96,11 @@ module.exports = class Features {
         return res;
     }   
     static getOptionArgument(arg, feature, index, argConfig) {
-        const value = ExpressionItem.value2string(arg);
+        let value = (arg.getAlone() ?? false).name ?? false;
         if (value === false) {
             throw new Error(`Invalid argument type for feature ${feature.name} at index ${index}, expected string but found ${typeof arg} at ${Context.sourceTag}`);
         }
-        if (!argConfig.values.includes(arg)) {
+        if (!argConfig.values.includes(value)) {
             throw new Error(`Invalid argument value for feature ${feature.name} at index ${index}, expected one of ${argConfig.values.join(', ')} but found ${arg} at ${Context.sourceTag}`);
         }
         return value;

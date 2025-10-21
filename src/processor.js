@@ -1673,7 +1673,20 @@ module.exports = class Processor {
     }
     execWitnessColDeclaration(s) {
         const features = Features.extractFeatures('witness', s.features, {stage: true});
-        this.declare(s, 'witness', false, true, features);
+        let res = this.declare(s, 'witness', false, true, features);
+        if (features.bits !== undefined) {            
+            for (let [name, id] of res) {
+                let lastNameIndex = name.lastIndexOf('.');
+                if (lastNameIndex !== -1) {
+                    name = name.substring(lastNameIndex + 1);
+                }
+                let hint ={name, bits: features.bits[0]};
+                if (features.bits[1] == 'signed') {
+                    hint.signed = 1;
+                }
+                this.hints.define('witness_bits', hint);
+            }
+        }
     }
     execCustomColDeclaration(s) {
         let commit = this.commits.get(s.commit);
@@ -1912,16 +1925,21 @@ module.exports = class Processor {
         return this.decodeIndexes(s.lengths);
     }
     declare(s, type, ignoreInit, fullName = true, data = {}) {
+        let res = [];
         for (const col of s.items) {
             const lengths = this.decodeLengths(col);
             let init = s.init;
             if (init && init && typeof init.instance === 'function') {
                 init = init.instance();
             }
-            if (fullName) this.declareFullReference(col.name, type, lengths, data, ignoreInit ? null : init);
-            else this.declareReference(col.name, type, lengths, data, ignoreInit ? null : init);
-            /// TODO: INIT / SEQUENCE
+            let name = col.name;
+            if (fullName) {
+                name = Context.getFullName(col.name);
+            }
+            let id = this.declareReference(col.name, type, lengths, data, ignoreInit ? null : init);
+            res.push([name, id]);
         }
+        return res;
     }
     declareFullReference(name, type, lengths = [], data = {}, initValue = null) {
         const _name = Context.getFullName(name);

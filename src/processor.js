@@ -1674,7 +1674,7 @@ module.exports = class Processor {
     execWitnessColDeclaration(s) {
         const features = Features.extractFeatures('witness', s.features, {stage: true});
         let res = this.declare(s, 'witness', false, true, features);
-        if (Array.isArray(features.bits) && features.bits.length > 1) {          
+        if (features.bits !== undefined) {          
             for (let [name, id] of res) {
                 let lastNameIndex = name.lastIndexOf('.');
                 if (lastNameIndex !== -1) {

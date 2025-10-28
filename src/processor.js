@@ -688,15 +688,18 @@ module.exports = class Processor {
         if (Debug.active) console.log(util.inspect(s.data, false, null, true));
         const res = this.processHintData(s.data);
         if (Debug.active) console.log(util.inspect(res, false, null, true));
-        if (this.scope.getInstanceType() === 'proof') {
+        const scopeType = this.scope.getInstanceType();
+        if (scopeType === 'proof') {
             if (Context.config.logHints) console.log(`  > define global hint \x1B[38;5;208m${name}\x1B[0m`)
             this.globalHints.define(name, res);
         }
-        else {
+        else if (scopeType === 'air') {
             if (Context.config.logHints || Context.config.logGlobalHints) {
                 console.log(`  > define hint \x1B[38;5;208m${name}\x1B[0m`)
             }
             this.hints.define(name, res);
+        } else {
+            throw new Error(`Hint definition on invalid scope (${scopeType}) ${Context.sourceTag}`);
         }
     }
     processHintData(hdata) {
@@ -1670,7 +1673,20 @@ module.exports = class Processor {
     }
     execWitnessColDeclaration(s) {
         const features = Features.extractFeatures('witness', s.features, {stage: true});
-        this.declare(s, 'witness', false, true, features);
+        let res = this.declare(s, 'witness', false, true, features);
+        if (Array.isArray(features.bits) && features.bits.length > 1) {          
+            for (let [name, id] of res) {
+                let lastNameIndex = name.lastIndexOf('.');
+                if (lastNameIndex !== -1) {
+                    name = name.substring(lastNameIndex + 1);
+                }
+                let hint ={name, bits: features.bits[0]};
+                if (features.bits[1] == 'signed') {
+                    hint.signed = 1;
+                }
+                this.hints.define('witness_bits', hint);
+            }
+        }
     }
     execCustomColDeclaration(s) {
         let commit = this.commits.get(s.commit);
@@ -1909,16 +1925,21 @@ module.exports = class Processor {
         return this.decodeIndexes(s.lengths);
     }
     declare(s, type, ignoreInit, fullName = true, data = {}) {
+        let res = [];
         for (const col of s.items) {
             const lengths = this.decodeLengths(col);
             let init = s.init;
-            if (init && init && typeof init.instance === 'function') {
+            if (init && typeof init.instance === 'function') {
                 init = init.instance();
             }
-            if (fullName) this.declareFullReference(col.name, type, lengths, data, ignoreInit ? null : init);
-            else this.declareReference(col.name, type, lengths, data, ignoreInit ? null : init);
-            /// TODO: INIT / SEQUENCE
+            let name = col.name;
+            if (fullName) {
+                name = Context.getFullName(col.name);
+            }
+            let id = this.declareReference(col.name, type, lengths, data, ignoreInit ? null : init);
+            res.push([name, id]);
         }
+        return res;
     }
     declareFullReference(name, type, lengths = [], data = {}, initValue = null) {
         const _name = Context.getFullName(name);

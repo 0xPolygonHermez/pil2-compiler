@@ -250,8 +250,7 @@ module.exports = class References {
             assert.ok(!name.includes('.object'));
         }
 
-        const nameInfo = this.decodeName(name);
-        // if (type === 'airgroupvalue') console.log(`DECLARE_REFERENCE ${name} ==> ${nameInfo.name} ${type} ${lengths.length ? '[' + lengths.join(',') + '] ': ''}scope:${nameInfo.scope} #${Context.scope.deep} ${initValue}[type: ${initValue instanceof Object ? initValue.constructor.name : typeof initValue}]`);
+        let nameInfo = this.decodeName(name);
 
         let [array, size] = Reference.getArrayAndSize(lengths);
         if (Debug.active) console.log(name, lengths, array, size);

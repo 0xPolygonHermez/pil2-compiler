@@ -693,7 +693,7 @@ module.exports = class Processor {
             if (Context.config.logHints) console.log(`  > define global hint \x1B[38;5;208m${name}\x1B[0m`)
             this.globalHints.define(name, res);
         }
-        else if (scopeType == 'air') {
+        else if (scopeType === 'air') {
             if (Context.config.logHints || Context.config.logGlobalHints) {
                 console.log(`  > define hint \x1B[38;5;208m${name}\x1B[0m`)
             }
@@ -1674,7 +1674,7 @@ module.exports = class Processor {
     execWitnessColDeclaration(s) {
         const features = Features.extractFeatures('witness', s.features, {stage: true});
         let res = this.declare(s, 'witness', false, true, features);
-        if (features.bits !== undefined) {            
+        if (Array.isArray(features.bits) && features.bits.length > 1) {          
             for (let [name, id] of res) {
                 let lastNameIndex = name.lastIndexOf('.');
                 if (lastNameIndex !== -1) {
@@ -1929,7 +1929,7 @@ module.exports = class Processor {
         for (const col of s.items) {
             const lengths = this.decodeLengths(col);
             let init = s.init;
-            if (init && init && typeof init.instance === 'function') {
+            if (init && typeof init.instance === 'function') {
                 init = init.instance();
             }
             let name = col.name;

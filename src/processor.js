@@ -1062,7 +1062,7 @@ module.exports = class Processor {
     executeIncludeRequire(s, isInclude = true) {
         const requireId = s.file.asString();
         let res = true;
-        if (!s.contents && (isInclude  || !this.loadedRequire[requireId])) {
+        if ((!s.contents || !s.contents[requireId]) && (isInclude  || !this.loadedRequire[requireId])) {
             // to support dynamic includes, add some internal statements need to compile inside airgroup
             // but after take compiled statements. TODO: analyze use current airgroup name
             const lastPath = this.getLastInclude();
@@ -1073,13 +1073,16 @@ module.exports = class Processor {
             }
             // take only statements inside preSrc/postSrc
             sts.statements = sts.statements[0].statements;
-            s.contents = sts;
+            if (s.contents === undefined) {
+                s.contents = [];
+            }
+            s.contents[requireId] = sts;
         }
         if (isInclude || !this.loadedRequire[requireId]) {
             this.loadedRequire[requireId] = true;
-            if (s.contents !== true) {
-                this.pushInclude(s.contents.fileDir);
-                const res = this.execute(s.contents.statements);
+            if (s.contents[requireId] !== true) {
+                this.pushInclude(s.contents[requireId].fileDir);
+                const res = this.execute(s.contents[requireId].statements);
                 this.popInclude();
                 return res;
             }

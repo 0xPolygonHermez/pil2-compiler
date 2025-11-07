@@ -2036,11 +2036,15 @@ module.exports = class Processor {
                     switch (s.vtype) {
                         case 'expr':
                             initValue = init.instance().eval();
-                            // initValue = init.eval();
                             break;
                         case 'int':
-                            initValue = (s.multiple ? init.eval() : init.instance()).asIntItem();
-                            // if (initValue.dump) initValue.dump(); else console.log(initValue);
+                            initValue = (s.multiple ? init.eval() : init.instance());
+                            if (initValue.isArray) {
+                                initValue = init.eval();   
+                            }
+                            else {
+                                initValue = initValue.asIntItem();
+                            }
                             break;
                         case 'string':
                             initValue = init.eval().asStringItem();

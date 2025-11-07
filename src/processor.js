@@ -2038,12 +2038,15 @@ module.exports = class Processor {
                             initValue = init.instance().eval();
                             break;
                         case 'int':
-                            initValue = (s.multiple ? init.eval() : init.instance());
-                            if (initValue.isArray) {
-                                initValue = init.eval();   
-                            }
-                            else {
-                                initValue = initValue.asIntItem();
+                            if (s.multiple) {
+                                initValue = init.eval();
+                            } else {
+                                initValue = init.instance();
+                                if (initValue.isArray) {
+                                    initValue = init.eval();
+                                } else {
+                                    initValue = initValue.asIntItem();
+                                }
                             }
                             break;
                         case 'string':

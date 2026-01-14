@@ -154,6 +154,7 @@ module.exports = class Function {
     declareAndInitializeArguments(eargs) {        
         // Context.processor.sourceRef = this.sourceRef;
         let iarg = 0;
+        Context.initializingFunctionCall = true;
         for (const name in this.args) {
             if (typeof eargs[iarg] === 'undefined') {
                 if (typeof this.args[name].defaultValue === 'undefined') { 
@@ -165,6 +166,7 @@ module.exports = class Function {
             }
             ++iarg;
         }
+        Context.initializingFunctionCall = false;
     }
     setDefaultArgument(name) {
         this.setArgument(name, this.args[name].defaultValue);

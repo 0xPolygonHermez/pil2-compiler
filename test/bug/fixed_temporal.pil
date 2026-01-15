@@ -1,6 +1,8 @@
 airtemplate Temporals(int N = 2**10) {
-    col fixed virtual(2**20) tRANGE = [0..N,N...];
-    col fixed temporal(30) tRANGE2;
+    const int max_range_size = 131072;
+    const int min = 60;
+    const int max = 65535;
+    col fixed virtual(max_range_size) tRANGE = [min..max-1,N...];
 
 }
 

@@ -1716,7 +1716,7 @@ module.exports = class Processor {
             let init = s.sequence ?? null;
             let initValue = null;
             if (init) {
-                initValue = new Sequence(init, {maxSize: ExpressionItems.IntValue.castTo(this.references.get('N'))});
+                initValue = new Sequence(init, {maxSize: features.virtual ?? ExpressionItems.IntValue.castTo(this.references.get('N'))});
                 if (Context.config.fixed !== false) initValue.extend();
             } else if (s.init) {
                 initValue = s.init.instance();

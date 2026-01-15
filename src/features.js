@@ -69,21 +69,23 @@ module.exports = class Features {
         for (let i = 0; i < args.length; i++) {
             const arg = args[i];
             let value = false;
-            switch (featureCls.config.args[i].type) {
-                case 'option':
-                    value = Features.getOptionArgument(arg, feature, i, config.args[i]);
-                    break;
-                case 'num':
-                    value = Features.getNumArgument(arg, feature, i, config.args[i]);
-                    break;
-                case 'bigint':
-                    value = Features.getBigIntArgument(arg, feature, i, config.args[i]);
-                    break;
-                default:
-                    throw new Error(`Unknown argument type ${argConfig.type} for feature ${feature.name} at ${Context.sourceTag}`);
-            } 
-            if (typeof featureCls.validateArg === 'function') {
-                value = featureCls.validateArg(value, i, arg);
+            if (featureCls.config.args[i] !== undefined) {
+                switch (featureCls.config.args[i].type) {
+                    case 'option':
+                        value = Features.getOptionArgument(arg, feature, i, config.args[i]);
+                        break;
+                    case 'num':
+                        value = Features.getNumArgument(arg, feature, i, config.args[i]);
+                        break;
+                    case 'bigint':
+                        value = Features.getBigIntArgument(arg, feature, i, config.args[i]);
+                        break;
+                    default:
+                        throw new Error(`Unknown argument type ${argConfig.type} for feature ${feature.name} at ${Context.sourceTag}`);
+                } 
+                if (typeof featureCls.validateArg === 'function') {
+                    value = featureCls.validateArg(value, i, arg);
+                }
             }
             if (value === false) {
                 throw new Error(`Invalid argument for feature ${feature.name} at index ${i} at ${Context.sourceTag}`);

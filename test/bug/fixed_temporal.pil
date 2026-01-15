@@ -1,0 +1,9 @@
+airtemplate Temporals(int N = 2**10) {
+    col fixed virtual(2**20) tRANGE = [0..N,N...];
+    col fixed temporal(30) tRANGE2;
+
+}
+
+airgroup Temporals {
+    Temporals();
+}

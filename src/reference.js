@@ -62,6 +62,9 @@ class Reference {
         if (Debug.active) console.log(`set(${this.name}, [${indexes.join(',')}]`);
         assert.notStrictEqual(value, null); // to detect obsolete legacy uses
         // console.log(indexes.length, this.array.dim);
+        if (this.callback) {
+            this.callback(value, indexes, options);
+        }
         if (!this.array || this.array.isFullIndexed(indexes) || this.array.isOverIndexed(indexes)) {
             return this.setOneItem(value, indexes, options);
         }

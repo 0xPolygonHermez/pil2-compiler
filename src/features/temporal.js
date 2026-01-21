@@ -3,7 +3,7 @@ module.exports = class Temporal {
         minArgs: 1,
         maxArgs: 1,
         types: ['fixed'],
-        args: [{type: 'num', minValue: 0, maxValue: 2**32-1, defaultValue: 0 }],
+        args: [],
         directArg: true,
     }
 }

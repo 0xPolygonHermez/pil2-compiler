@@ -208,9 +208,14 @@ module.exports = class Processor {
     insideFunction() {
         return this.functionDeep > 0;
     }
+    callbackUpdateRows(value, indexes, options) {
+        if (!Context.initializingFunctionCall) {
+            Context.air.updateRows(value.asInt());
+        }
+    }
     declareBuiltInConstants() {
         this.references.declare('PRIME', 'int', [], { global: true, sourceRef: this.sourceRef, const: true }, this.prime);
-        this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef, callback: this.callbackUpdateRows });
         this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('AIRGROUP', 'string', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('AIRGROUP_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
@@ -1339,7 +1344,7 @@ module.exports = class Processor {
         this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? -1));
         this.references.set('AIR_NAME', [], new ExpressionItems.StringValue(air.name ?? ''));
         this.references.set('VIRTUAL', [], new ExpressionItems.IntValue(air.virtual ? 1 : 0));
-        this.references.set('AIRTEMPLATE', [], new ExpressionItems.StringValue(air.airTemplate ? (air.airTemplate.name.name ?? ''):''));
+        this.references.set('AIRTEMPLATE', [], new ExpressionItems.StringValue(air.airTemplate ? (air.airTemplate.name ?? ''):''));
     }
     executeAirTemplate(airTemplate, airTemplateFunc, callinfo, options = {}) {
         const name = options.alias ? options.alias : airTemplate.name;
@@ -1711,7 +1716,7 @@ module.exports = class Processor {
             let init = s.sequence ?? null;
             let initValue = null;
             if (init) {
-                initValue = new Sequence(init, {maxSize: ExpressionItems.IntValue.castTo(this.references.get('N'))});
+                initValue = new Sequence(init, {maxSize: features.virtual ?? ExpressionItems.IntValue.castTo(this.references.get('N'))});
                 if (Context.config.fixed !== false) initValue.extend();
             } else if (s.init) {
                 initValue = s.init.instance();

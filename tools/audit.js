@@ -368,6 +368,7 @@ class AirOut {
         this.verifyGlobalConstraints();
     }
     verifyHints() {
+        console.log('#### HINTS ####');
         for (let hintId = 0; hintId < this.hints.length; ++hintId) {
             const hint = this.hints[hintId];
             const name = hint.name;
@@ -376,9 +377,15 @@ class AirOut {
             const expressions = airGroupId === false && airId === false ? this.expressions : this.airGroups[airGroupId].airs[airId].expressions;
             let referenced = new Array(expressions.length).fill(false);
             let ctx = {path: '', airGroupId, airId, expressions, referenced};
+            let res = [];
             for (let hintFieldId = 0; hintFieldId < hint.hintFields.length; ++hintFieldId) {
-                ctx.path = `[S:${airGroupId} A:${airId}] ${name} [${hintFieldId}]`;
-                this.verifyHintField(ctx, hintFieldId, hint.hintFields[hintFieldId]);
+                ctx.path = `[S:${airGroupId} A:${airId}] ${name} [${hintFieldId}]`;                
+                res.push(this.verifyHintField(ctx, hintFieldId, hint.hintFields[hintFieldId]));
+            }
+            if (res.length == 1) {
+                console.log(`@${name}${res[0]}`);
+            } else {
+                console.log(`@${name}{${res.join(", ")}}`);
             }
         }
     }
@@ -387,24 +394,30 @@ class AirOut {
         const cls = Object.keys(hintField).filter(x => x !== 'name')[0];
         const data = hintField[cls];
         const _ctxpath = ctx.path;
+        let res = (hintField.name === undefined ? '' : hintField.name + ':');
         switch (cls) {
             case 'stringValue':
+                res += `"${data}"`;
                 break;
             case 'operand':
                 ctx.path = `${_ctxpath}${name}`;
-                const res = this.verifyExpressionOperand(ctx, data);
+                this.verifyExpressionOperand(ctx, data);
+                res += this.operandToString(ctx, false, data).trim();
                 break;
             case 'hintFieldArray': {
+                let lres = [];
                 for (let hintFieldIndex = 0; hintFieldIndex < data.hintFields.length; ++hintFieldIndex) {
                     ctx.path = `${_ctxpath}${name}[${hintFieldIndex}]`;
-                    this.verifyHintField(ctx, hintFieldIndex, data.hintFields[hintFieldIndex]);
+                    lres.push(this.verifyHintField(ctx, hintFieldIndex, data.hintFields[hintFieldIndex]).trim());
                 }
+                res += '{' + lres.join(', ') + '}';
                 break;
             }
             default:
                 throw new Error(`${_ctxpath} @${name} invalid cls:${cls}`);
         }
         ctx.path = _ctxpath;
+        return res;
     }
     colorString(text, color) {
         if (this.color) {

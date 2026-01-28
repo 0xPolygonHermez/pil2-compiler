@@ -2000,9 +2000,20 @@ module.exports = class Processor {
         if (!global && scopeType !== 'air') {
             throw new Error(`Constraint definition on invalid scope (${scopeType}) ${sourceTag}`);
         }
+
+        if (s.witness) {
+            let alone = _left.getAlone();
+            if (alone === false || !(alone instanceof ExpressionItems.WitnessCol || alone instanceof ExpressionItems.AirValue)) {
+                throw new Error(`Constraint with witness generation only could be used with witness or airval on the left side ${sourceTag}`);
+            }            
+            // @witness_calc{ reference: test, expression: 2a + b + fibo1[0] + 54'line + L1 * in1 }
+            this.hints.define('witness_bits', {reference: _left, expression: _right});
+        }
+
         const constraints = global ? this.globalConstraints : this.constraints;
         const constraintId = constraints.getLastConstraintId();
         const id = constraints.define(_left, _right,false, sourceTag);
+
 
         if (Context.config.outputConstraints || (Context.config.outputGlobalConstraints && scopeType === 'proof')) {
             const prompt = global ? '> ': '  > ';

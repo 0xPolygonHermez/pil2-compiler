@@ -2007,7 +2007,7 @@ module.exports = class Processor {
                 throw new Error(`Constraint with witness generation only could be used with witness or airval on the left side ${sourceTag}`);
             }            
             // @witness_calc{ reference: test, expression: 2a + b + fibo1[0] + 54'line + L1 * in1 }
-            this.hints.define('witness_bits', {reference: _left, expression: _right});
+            this.hints.define('witness_calc', {reference: _left, expression: _right});
         }
 
         const constraints = global ? this.globalConstraints : this.constraints;

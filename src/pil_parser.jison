@@ -422,7 +422,10 @@ argument
         { $$ = { type: $1.type, name: $2, reference: false, defaultValue: $5, dim: $3.dim } }
 
     | basic_type IDENTIFIER type_array '=' '[' expression_list ']'
-        { $$ = { type: $1.type, name: $2, reference: false, defaultValue: $6, dim: $3.dim } }
+        { $$ = { type: $1.type, name: $2, reference: false, defaultValue: ExpressionFactory.fromObject({...$6}), dim: $3.dim } }
+
+    | basic_type IDENTIFIER type_array '=' '[' ']'
+        { $$ = { type: $1.type, name: $2, reference: false, defaultValue: ExpressionFactory.fromObject({type: 'expression_list', values: []}), dim: $3.dim } }
 
     ;
 
@@ -1120,6 +1123,9 @@ multiple_expression_list
     | multiple_expression_list ',' expression %prec ','
         { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($3)); }
 
+    | multiple_expression_list ',' IDENTIFIER ':' %prec ','
+        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject({ type: 'reference', name: $3 }), $3); }
+
     | multiple_expression_list ',' IDENTIFIER ':' expression %prec ','
         { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($5), $3); }
 
@@ -1143,6 +1149,9 @@ multiple_expression_list
 
     | IDENTIFIER ':' expression
         { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$3], names: [$1], __debug: 3 }); }
+
+    | IDENTIFIER ':'
+        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [ExpressionFactory.fromObject({ type: 'reference', name: $1 })], names: [$1], __debug: 3 }); }
     ;
 
 expression_list

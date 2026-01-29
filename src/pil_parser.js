@@ -674,7 +674,7 @@ case 261:
  this.$ = $$[$0-3]; this.$.pushItem(ExpressionFactory.fromObject({ type: 'reference', name: $$[$0-1] }), $$[$0-1]); 
 break;
 case 262:
- this.$ = $$[$0-4]; this.$.pushItem(ExpressionFactory.fromObject($$[$0]), $$[$0-2]); console.log($$[$0]) 
+ this.$ = $$[$0-4]; this.$.pushItem(ExpressionFactory.fromObject($$[$0]), $$[$0-2]); 
 break;
 case 263:
  this.$ = $$[$0-4]; this.$.pushItem(ExpressionFactory.fromObject($$[$0-1])); 

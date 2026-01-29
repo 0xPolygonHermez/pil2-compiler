@@ -382,7 +382,7 @@ class AirOut {
                 ctx.path = `[S:${airGroupId} A:${airId}] ${name} [${hintFieldId}]`;                
                 res.push(this.verifyHintField(ctx, hintFieldId, hint.hintFields[hintFieldId]));
             }
-            if (res.length == 1) {
+            if (res.length === 1) {
                 console.log(`@${name}${res[0]}`);
             } else {
                 console.log(`@${name}{${res.join(", ")}}`);

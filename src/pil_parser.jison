@@ -1127,7 +1127,7 @@ multiple_expression_list
         { $$ = $1; $$.pushItem(ExpressionFactory.fromObject({ type: 'reference', name: $3 }), $3); }
 
     | multiple_expression_list ',' IDENTIFIER ':' expression %prec ','
-        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($5), $3); console.log($5) }
+        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($5), $3); }
 
     | multiple_expression_list ',' '[' expression_list ']' %prec ','
         { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($4)); }

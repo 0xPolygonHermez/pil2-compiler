@@ -98,13 +98,14 @@ return                                      { return 'RETURN' }
 \&                                          { return 'B_AND'; }
 \|                                          { return 'B_OR'; }
 \^                                          { return 'B_XOR'; }
+\=\=\=                                      { return '==='; }
+\<\=\=                                      { return '<=='; }
 \<\<                                        { return 'SHL'; }
 \>\>                                        { return 'SHR'; }
 \<\=                                        { return 'LE'; }
 \>\=                                        { return 'GE'; }
 \<                                          { return 'LT'; }
 \>                                          { return 'GT'; }
-\=\=\=                                      { return '==='; }
 \!\=                                        { return 'NE'; }
 \=\=                                        { return 'EQ'; }
 \=                                          { return '='; }
@@ -574,7 +575,10 @@ statement_no_closed
         { $$ = {type: 'expr', expr: $2, virtual: true} }
 
     | expression '===' expression
-        { $$ = { type: 'constraint', left: $1, right: $3 } }
+        { $$ = { type: 'constraint', left: $1, right: $3, witness: false } }
+
+    | expression '<==' expression
+        { $$ = { type: 'constraint', left: $1, right: $3, witness: true } }
 
     | deferred_function_call
         { $$ = $1 }

@@ -15,8 +15,6 @@ const { mainModule } = require("process");
 const assert = require('./assert.js');
 const debugConsole = require('./debug_console.js');
 
-const oldParseError = pil_parser.Parser.prototype.parseError;
-
 class SkipNamespace extends Error {
     constructor(namespace, name = false) {
         super(name ? `Pol ${namespace}.${name} must be skipped` : `Namespace ${namespace} must be skipped`);
@@ -63,33 +61,29 @@ class Compiler {
         }
         return result;
     }
-    instanceParser(src, fullFileName) {
+    instanceParser(src, fullFileName, deltaLines = 0) {
         this.srcLines = src.split(/(?:\r\n|\n|\r)/);
 
-        const myErr = function (str, hash) {
-            str = fullFileName + " -> " + str;
-            oldParseError(str, hash);
-        };
-        pil_parser.Parser.prototype.parseError = myErr;
+        let compiler = this;
         let parser = new pil_parser.Parser();
         const parserPerformAction = parser.performAction;
         const parserStateInfo = parser.productions_;
-        let compiler = this;
         let processor = this.processor;
 
         parser.performAction = function (yytext, yyleng, yylineno, yy, yystate, $$, _$ ) {
+            this.source = compiler.relativeFileName;
+            this.deltaLines = deltaLines;
             const result = parserPerformAction.apply(this, arguments);
             const first = _$[$$.length - 1 - parserStateInfo[yystate][1]];
             const last = _$[$$.length - 1];
-            const sourceRef = `${compiler.relativeFileName}:${last.last_line}`;
+            const line = last.last_line - deltaLines;
+            const sourceRef = `${compiler.relativeFileName}:${line}:${last.first_column}:`;
             processor.sourceRef = sourceRef ?? '';
             if (typeof this.$ !== 'object')  {
                 return result;
             }
 
-            this.$.debug = `${compiler.relativeFileName}:${last.last_line}`; // ${first.first_column}:${last.last_line}:${last.last_column}`;
-            // this.$.__debug = `${compiler.relativeFileName} (${first.first_line}, ${first.first_column}) (${last.last_line}, ${last.last_column})`;
-            // this.$.__contents = compiler.srcLines[first.first_line - 1].substring(first.first_column + 1, last.last_column);
+            this.$.debug = sourceRef;
             this.$.__yystate = `${yystate} ${yylineno}`
             return result;
         }
@@ -109,11 +103,12 @@ class Compiler {
 
         const preSrc = options.preSrc ?? '';
         const postSrc = options.postSrc ?? '';
+        const countLn = preSrc.split('\n').length - 1;
         const src = preSrc + _src + postSrc;
         this.relativeFileName = relativeFileName;
         this.fileDir = fileDir;
 
-        const parser = this.instanceParser(src, fullFileName);
+        const parser = this.instanceParser(src, fullFileName, countLn);
         let sts;
         try {
             sts = parser.parse(src);
@@ -121,15 +116,19 @@ class Compiler {
                 sts.statements.unshift(library);
             }
         } catch (e) {
-            console.log('ERROR ON '+Context.processor.sourceRef);
+            let _msg = e.message;
+            e.message = e.message.replace(/Parse error on line \d+:/g, "ERROR Parsing at " + Context.processor.sourceRef);
+            if (e.message === _msg) {
+                e.message = 'ERROR at '+Context.processor.sourceRef + '\n' + e.message;
+            }
             throw e;
         }
         sts.fileDir = fileDir;
         sts.fullFileName = fullFileName;
         return sts;
     }
-    parseExpression(expression) {
-        const parser = this.instanceParser(expression, "template expression");
+    parseExpression(expression, deltaLines = 0) {
+        const parser = this.instanceParser(expression, "template expression", deltaLines);
         return parser.parse(expression).statements;
     }
     loadInclude(filename, options = {}) {

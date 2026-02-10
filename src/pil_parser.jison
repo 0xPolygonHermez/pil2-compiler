@@ -176,6 +176,9 @@ const util = require('util');
 const Expression = require('../src/expression.js');
 const ExpressionFactory = require('../src/expression_factory.js');
 
+function getSrcRef(scope, item) {
+    return scope.source + ':' + (item.first_line - scope.deltaLines) + ':' + (item.first_column + 1) + ':';
+}
 function showcode(title, info) {
     console.log(title+` ${info.last_line}:${info.last_column}`);
 }
@@ -422,7 +425,7 @@ argument
         { $$ = { type: $1.type, name: $2, reference: false, defaultValue: $5, dim: $3.dim } }
 
     | basic_type IDENTIFIER type_array '=' '[' expression_list ']'
-        { $$ = { type: $1.type, name: $2, reference: false, defaultValue: ExpressionFactory.fromObject({...$6}), dim: $3.dim } }
+        { $$ = { type: $1.type, name: $2, reference: false, defaultValue: ExpressionFactory.fromObject({...$6}, getSrcRef(this, @6)), dim: $3.dim } }
 
     | basic_type IDENTIFIER type_array '=' '[' ']'
         { $$ = { type: $1.type, name: $2, reference: false, defaultValue: ExpressionFactory.fromObject({type: 'expression_list', values: []}), dim: $3.dim } }
@@ -611,16 +614,15 @@ statement_no_closed
         { $$ = $1 }
 
     | function_call ALIAS IDENTIFIER
-        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$1}), alias: $3, virtual: false} }
-
+        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$1}, getSrcRef(this, @1)), alias: $3, virtual: false} }
     | function_call ALIAS flexible_string
-        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$1}), alias: $3, virtual: false} }
+        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$1}, getSrcRef(this, @1)), alias: $3, virtual: false} }
 
     | VIRTUAL function_call ALIAS IDENTIFIER
-        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$2}), alias: $4, virtual: true} }
+        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$2}, getSrcRef(this, @1)), alias: $4, virtual: true} }
 
     | VIRTUAL function_call ALIAS flexible_string
-        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$2}), alias: $4, virtual: true} }
+        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$2}, getSrcRef(this, @1)), alias: $4, virtual: true} }
     ;
 
 
@@ -640,13 +642,13 @@ data_object
         { $$ = $1; $$.data[$3] = $5 }
 
     | data_object ',' IDENTIFIER
-        { $$ = $1; $$.data[$3] = ExpressionFactory.fromObject({type: 'reference', name: $3 }) }
+        { $$ = $1; $$.data[$3] = ExpressionFactory.fromObject({type: 'reference', name: $3}, getSrcRef(this, @3)) }
 
     | IDENTIFIER ':' data_value
         { $$ = { type: 'object', data: {}}; $$.data[$1] = $3 }
 
     | IDENTIFIER
-        { $$ = { type: 'object', data: {}}; $$.data[$1] = ExpressionFactory.fromObject({type: 'reference', name: $1 }) }
+        { $$ = { type: 'object', data: {}}; $$.data[$1] = ExpressionFactory.fromObject({type: 'reference', name: $1} , getSrcRef(this, @1)) }
     ;
 
 data_array
@@ -819,25 +821,25 @@ variable_type_declaration
         { $$ = { type: 'variable_declaration', vtype: 'int', items: [$2], init: $4 } }
 
     | INT variable_declaration_item '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'int', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5) } }
+        { $$ = { type: 'variable_declaration', vtype: 'int', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5, getSrcRef(this, @5)) } }
 
     | FE variable_declaration_item '=' expression
         { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: false, items: [$2], init: $4 } }
 
     | FE variable_declaration_item '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5) } }
+        { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5, getSrcRef(this, @5)) } }
 
     | EXPR variable_declaration_item '=' expression
         { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: false, items: [$2], init: $4 } }
 
     | EXPR variable_declaration_item '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5) } }
+        { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5, getSrcRef(this, @5)) } }
 
     | T_STRING variable_declaration_item '=' expression
         { $$ = { type: 'variable_declaration', vtype: 'string', multiple: false, items: [$2], init: $4 } }
 
     | T_STRING variable_declaration_item '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'string', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5) } }
+        { $$ = { type: 'variable_declaration', vtype: 'string', multiple: false, items: [$2], init: ExpressionFactory.fromObject($5, getSrcRef(this, @5)) } }
 
     | FUNCTION variable_declaration_item '=' expression
         { $$ = { type: 'variable_declaration', vtype: 'function', multiple: false, items: [$2], init: $4 } }
@@ -846,19 +848,19 @@ variable_type_declaration
         { $$ = { type: 'variable_declaration', vtype: 'container', multiple: false, items: [$2], init: $4 } }
 
     | INT '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'int', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
+        { $$ = { type: 'variable_declaration', vtype: 'int', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7, getSrcRef(this, @7)) } }
 
     | FE '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
+        { $$ = { type: 'variable_declaration', vtype: 'fe', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7, getSrcRef(this, @7)) } }
 
     | EXPR '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
+        { $$ = { type: 'variable_declaration', vtype: 'expr', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7, getSrcRef(this, @7)) } }
 
     | T_STRING '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'string', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
+        { $$ = { type: 'variable_declaration', vtype: 'string', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7, getSrcRef(this, @7)) } }
 
     | CONTAINER '[' variable_declaration_list ']' '=' '[' expression_list ']'
-        { $$ = { type: 'variable_declaration', vtype: 'container', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7) } }
+        { $$ = { type: 'variable_declaration', vtype: 'container', multiple: true, items: $3.items, init: ExpressionFactory.fromObject($7, getSrcRef(this, @7)) } }
     ;
 
 variable_declaration_array
@@ -946,22 +948,22 @@ variable_assignment
         { $$ = { type: 'assign', name: $1, value: $3 } }
 
     | name_id assign_operation expression %prec EMPTY
-        { $$ = { type: 'assign', name: $1, value: ExpressionFactory.fromObject({ type: 'reference', ...$1 }).insert($2.type, ExpressionFactory.fromObject($3))} }
+        { $$ = { type: 'assign', name: $1, value: ExpressionFactory.fromObject({ type: 'reference', ...$1}, getSrcRef(this, @1)).insert($2.type, ExpressionFactory.fromObject($3, getSrcRef(this, @3)))} }
 
     | name_id '=' sequence_definition
         { $$ = { type: 'assign', name: $1, sequence: $3 } }
 
     | INC name_id
-        { $$ = { type: 'assign', name: $2, value: ExpressionFactory.fromObject({ type: 'reference', ...$2 }).insert('add', ExpressionFactory.fromObject({type: 'number', value: 1n}))} }
+        { $$ = { type: 'assign', name: $2, value: ExpressionFactory.fromObject({ type: 'reference', ...$2}, getSrcRef(this, @2)).insert('add', ExpressionFactory.fromObject({type: 'number', value: 1n}))} }
 
     | DEC name_id
-        { $$ = { type: 'assign', name: $2, value: ExpressionFactory.fromObject({ type: 'reference', ...$2 }).insert('sub', ExpressionFactory.fromObject({type: 'number', value: 1n}))} }
+        { $$ = { type: 'assign', name: $2, value: ExpressionFactory.fromObject({ type: 'reference', ...$2}, getSrcRef(this, @2)).insert('sub', ExpressionFactory.fromObject({type: 'number', value: 1n}))} }
 
     | name_id INC
-        { $$ = { type: 'assign', name: $1, value: ExpressionFactory.fromObject({ type: 'reference', ...$1 }).insert('add', ExpressionFactory.fromObject({type: 'number', value: 1n}))} }
+        { $$ = { type: 'assign', name: $1, value: ExpressionFactory.fromObject({ type: 'reference', ...$1}, getSrcRef(this, @1)).insert('add', ExpressionFactory.fromObject({type: 'number', value: 1n}))} }
 
     | name_id DEC
-        { $$ = { type: 'assign', name: $1, value: ExpressionFactory.fromObject({ type: 'reference', ...$1 }).insert('sub', ExpressionFactory.fromObject({type: 'number', value: 1n}))} }
+        { $$ = { type: 'assign', name: $1, value: ExpressionFactory.fromObject({ type: 'reference', ...$1}, getSrcRef(this, @1)).insert('sub', ExpressionFactory.fromObject({type: 'number', value: 1n}))} }
 
     ;
 
@@ -976,17 +978,17 @@ variable_assignment_list
 
 include_directive
     : INCLUDE flexible_string
-        { $$ = { type: 'include', private: false, public: true, file: ExpressionFactory.fromObject($2) } }
+        { $$ = { type: 'include', private: false, public: true, file: ExpressionFactory.fromObject($2, getSrcRef(this, @2)) } }
     | REQUIRE flexible_string
-        { $$ = { type: 'require', private: false, public: true, file: ExpressionFactory.fromObject($2) } }
+        { $$ = { type: 'require', private: false, public: true, file: ExpressionFactory.fromObject($2, getSrcRef(this, @2)) } }
     | PRIVATE INCLUDE flexible_string
-        { $$ = { type: 'include', private: true, public: false, file: ExpressionFactory.fromObject($2) } }
+        { $$ = { type: 'include', private: true, public: false, file: ExpressionFactory.fromObject($2, getSrcRef(this, @2)) } }
     | PRIVATE REQUIRE flexible_string
-        { $$ = { type: 'require', private: true, public: false, file: ExpressionFactory.fromObject($2) } }
+        { $$ = { type: 'require', private: true, public: false, file: ExpressionFactory.fromObject($2, getSrcRef(this, @2)) } }
     | PUBLIC INCLUDE flexible_string
-        { $$ = { type: 'include', private: false, public: true, file: ExpressionFactory.fromObject($2) } }
+        { $$ = { type: 'include', private: false, public: true, file: ExpressionFactory.fromObject($2, getSrcRef(this, @2)) } }
     | PUBLIC REQUIRE flexible_string
-        { $$ = { type: 'require', private: false, public: true, file: ExpressionFactory.fromObject($2) } }
+        { $$ = { type: 'require', private: false, public: true, file: ExpressionFactory.fromObject($2, getSrcRef(this, @2)) } }
     ;
 
 optional_stage_definition
@@ -1104,7 +1106,7 @@ sequence
         { $$ = {type: 'range_seq', from: $1, to: $5, times: $3}}
 
     | expression ':' expression DOTS_RANGE expression ':' expression %prec DOTS_REPEAT
-        { $$ = {type: 'range_seq', from: $1, to: $5, times: $3, toTimes: $7}} }
+        { $$ = {type: 'range_seq', from: $1, to: $5, times: $3, toTimes: $7}}
 
     | sequence DOTS_FILL
         { $$ = {type: 'padding_seq', value: $1} }
@@ -1121,37 +1123,37 @@ multiple_expression_list
         { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [], names: [], __debug: 0 }); }
 
     | multiple_expression_list ',' expression %prec ','
-        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($3)); }
+        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($3, getSrcRef(this, @3))); }
 
     | multiple_expression_list ',' IDENTIFIER ':' %prec ','
-        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject({ type: 'reference', name: $3 }), $3); }
+        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject({ type: 'reference', name: $3}, getSrcRef(this, @3)), $3); }
 
     | multiple_expression_list ',' IDENTIFIER ':' expression %prec ','
-        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($5), $3); }
+        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($5, getSrcRef(this, @5)), $3); }
 
     | multiple_expression_list ',' '[' expression_list ']' %prec ','
-        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($4)); }
+        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($4, getSrcRef(this, @4))); }
 
     | multiple_expression_list ',' IDENTIFIER ':' '[' expression_list ']' %prec ','
-        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($6), $3); }
+        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject($6, getSrcRef(this, @6)), $3); }
 //        { $$ = $1; $$.pushItem(ExpressionFactory.fromObject({ type: 'expression_list', values: $4.values, __debug: 1 })); }
 
     | '[' expression_list ']' %prec NO_EMPTY
         { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values:
-                    [ExpressionFactory.fromObject($2)], names: [false], __debug: 4}); }
+                    [ExpressionFactory.fromObject($2, getSrcRef(this, @2))], names: [false], __debug: 4}); }
     | IDENTIFIER ':' '[' expression_list ']' %prec NO_EMPTY
         { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values:
-                    [ExpressionFactory.fromObject($4)], names: [$1], __debug: 4}); }
+                    [ExpressionFactory.fromObject($4, getSrcRef(this, @4))], names: [$1], __debug: 4}); }
 //                    [ExpressionFactory.fromObject({ type: 'expression_list', values: [$2.values], __debug: 2})], __debug: 4}); console.log('A',$$) }
 
     | expression
-        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$1], names: [false], __debug: 3 }); }
+        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$1], names: [false], __debug: 3}, getSrcRef(this, @1)); }
 
     | IDENTIFIER ':' expression
-        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$3], names: [$1], __debug: 3 }); }
+        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$3], names: [$1], __debug: 3}, getSrcRef(this, @1)); }
 
     | IDENTIFIER ':'
-        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [ExpressionFactory.fromObject({ type: 'reference', name: $1 })], names: [$1], __debug: 3 }); }
+        { $$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [ExpressionFactory.fromObject({ type: 'reference', name: $1}, getSrcRef(this, @1))], names: [$1], __debug: 3 }); }
     ;
 
 expression_list
@@ -1370,77 +1372,77 @@ air_group_definition
 
 expression
     : expression EQ expression
-        { $$ = $1.insert('eq', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('eq', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression NE expression
-        { $$ = $1.insert('ne', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('ne', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression LT expression
-        { $$ = $1.insert('lt', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('lt', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression GT expression
-        { $$ = $1.insert('gt', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('gt', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression LE expression
-        { $$ = $1.insert('le', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('le', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression GE expression
-        { $$ = $1.insert('ge', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('ge', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression IN expression %prec IN
-        { $$ = $1.insert('in', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('in', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression IS return_type %prec IS
-        { $$ = $1.insert('is', ExpressionFactory.fromObject({type: 'istype', vtype: $3.type, dim: $3.dim})); }
+        { $$ = $1.insert('is', ExpressionFactory.fromObject({type: 'istype', vtype: $3.type, dim: $3.dim}, getSrcRef(this, @3))); }
 
     | expression AND expression %prec AND
-        { $$ = $1.insert('and', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('and', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression '?' expression ':' expression %prec '?'
-        { $$ = $1.insert('if', [ExpressionFactory.fromObject($3), ExpressionFactory.fromObject($5)]) }
+        { $$ = $1.insert('if', [ExpressionFactory.fromObject($3, getSrcRef(this, @3)), ExpressionFactory.fromObject($5, getSrcRef(this, @5))]) }
 //        { $$ = $1.insert('if', ExpressionFactory.fromObjects($3, $5)) }
 
     | expression B_AND expression %prec AND
-        { $$ = $1.insert('band', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('band', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression B_OR expression %prec AND
-        { $$ = $1.insert('bor', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('bor', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression B_XOR expression %prec AND
-        { $$ = $1.insert('bxor', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('bxor', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression OR expression %prec OR
-        { $$ = $1.insert('or', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('or', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression SHL expression %prec AND
-        { $$ = $1.insert('shl', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('shl', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression SHR expression %prec OR
-        { $$ = $1.insert('shr', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('shr', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | '!' expression %prec '!'
         { $$ = $2.insert('not') })
 
     | expression '+' expression %prec '+'
-        { $$ = $1.insert('add', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('add', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression '-' expression %prec '-'
-        { $$ = $1.insert('sub', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('sub', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression '*' expression %prec '*'
-        { $$ = $1.insert('mul', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('mul', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression '%' expression %prec '%'
-        { $$ = $1.insert('mod', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('mod', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression '/' expression %prec '/'
-        { $$ = $1.insert('div', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('div', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression '\\' expression %prec '\\'
-        { $$ = $1.insert('intdiv', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('intdiv', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | expression POW expression %prec POW
-        { $$ = $1.insert('pow', ExpressionFactory.fromObject($3)) }
+        { $$ = $1.insert('pow', ExpressionFactory.fromObject($3, getSrcRef(this, @3))) }
 
     | '+' expression %prec UPLUS
         { $$ = $2 }
@@ -1449,25 +1451,25 @@ expression
         { $$ = $2.insert('neg') }
 
     | name_id
-        { $$ = ExpressionFactory.fromObject({ type: 'reference', ...$1 }) }
+        { $$ = ExpressionFactory.fromObject({ type: 'reference', ...$1}, getSrcRef(this, @1)) }
 
     | NUMBER %prec EMPTY
-        { $$ = ExpressionFactory.fromObject({ type: 'number', value: BigInt($1)}) }
+        { $$ = ExpressionFactory.fromObject({ type: 'number', value: BigInt($1)}, getSrcRef(this, @1)) }
 
     | flexible_string %prec EMPTY
-        { $$ = ExpressionFactory.fromObject({...$1, type: 'string'}) }
+        { $$ = ExpressionFactory.fromObject({...$1, type: 'string'}, getSrcRef(this, @1)) }
 
     | '(' expression ')'
         { $$ = $2 }
 
     | function_call
-        { $$ = ExpressionFactory.fromObject({...$1}) }
+        { $$ = ExpressionFactory.fromObject({...$1}, getSrcRef(this, @1)) }
 
     | POSITIONAL_PARAM
-        { $$ = ExpressionFactory.fromObject({position: $1, type: 'positional_param'}) }
+        { $$ = ExpressionFactory.fromObject({position: $1, type: 'positional_param'}, getSrcRef(this, @1)) }
 
     | casting
-        { $$ = ExpressionFactory.fromObject({...$1}) }
+        { $$ = ExpressionFactory.fromObject({...$1}, getSrcRef(this, @1)) }
     ;
 
 
@@ -1507,30 +1509,30 @@ casting
 
 name_id
     : name_optional_index "'" %prec NEXT
-        { $$ = { ...$1, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: 1, current: $1 }) } }
+        { $$ = { ...$1, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: 1, current: $1}, getSrcRef(this, @1)) } }
 
     | name_optional_index "'" NUMBER
-        { $$ = { ...$1, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: Number($3), current: $1 }) } }
+        { $$ = { ...$1, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: Number($3), current: $1}, getSrcRef(this, @3)) } }
 
     | name_optional_index "'" '(' expression ')'
-        { $$ = { ...$1, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: $4, current: $1 }) } }
+        { $$ = { ...$1, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: $4, current: $1}, getSrcRef(this, @4)) } }
 
     | name_optional_index "'" POSITIONAL_PARAM
         { $$ = { ...$1, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', current: $1,
-                                        value: ExpressionFactory.fromObject({position: $3, type: 'positional_param'})}) } }
+                                        value: ExpressionFactory.fromObject({position: $3, type: 'positional_param'}, getSrcRef(this, @3))}, getSrcRef(this, @1)) } }
 
     | "'" name_optional_index %prec LOWER_PREC
-        { $$ = { ...$2, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: 1, prior: true, current: $2 }) } }
+        { $$ = { ...$2, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: 1, prior: true, current: $2}, getSrcRef(this, @2)) } }
 
     | NUMBER "'" name_optional_index
-        { $$ = { ...$3, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: Number($1), prior: true, current: $3 }) } }
+        { $$ = { ...$3, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: Number($1), prior: true, current: $3}, getSrcRef(this, @1)) } }
 
     | '(' expression ')' "'" name_optional_index
-        { $$ = { ...$5, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: $2, prior: true, current: $5 }) } }
+        { $$ = { ...$5, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: $2, prior: true, current: $5}, getSrcRef(this, @2)) } }
 
     | POSITIONAL_PARAM "'" name_optional_index
         { $$ = { ...$3, rowOffset: ExpressionFactory.fromObject({type: 'row_offset', current: $3, prior: true,
-                                        value: ExpressionFactory.fromObject({position: $1, type: 'positional_param'})}) } }
+                                        value: ExpressionFactory.fromObject({position: $1, type: 'positional_param'}, getSrcRef(this, @1))}, getSrcRef(this, @3)) } }
 
     | name_optional_index %prec EMPTY
         { $$ = $1 }
@@ -1552,10 +1554,10 @@ expression_index
         { $$ = ExpressionFactory.fromObject({type: 'range_index', from: $1, to: $3}); }
 
     |   expression DOTS_RANGE
-        { $$ = ExpressionFactory.fromObject({type: 'range_index', from: $1}); }
+        { $$ = ExpressionFactory.fromObject({type: 'range_index', from: $1} , getSrcRef(this, @1)); }
 
     |   DOTS_RANGE expression
-        { $$ = ExpressionFactory.fromObject({type: 'range_index', to: $2}); }
+        { $$ = ExpressionFactory.fromObject({type: 'range_index', to: $2}, getSrcRef(this, @2)); }
     ;
 
 array_index

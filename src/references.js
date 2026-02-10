@@ -350,7 +350,7 @@ module.exports = class References {
         indexes = indexes ?? [];
         options = options ?? {};
 
-        const reference = this.getReference(name);
+        const reference = this.getReference(name, undefined, options);
         const item = reference.getItem(indexes, {...options, label: reference.label ? reference.label : reference.name });
 
         if (options.preDelta) {
@@ -522,7 +522,7 @@ module.exports = class References {
         }
         if (!reference) {
             if (typeof defaultValue !== 'undefined') return defaultValue;
-            throw new Exceptions.ReferenceNotFound(names.join(','));
+            throw new Exceptions.ReferenceNotFound(names.join(','), options);
         }
 
         // constants are visible inside functions

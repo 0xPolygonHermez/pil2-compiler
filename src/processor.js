@@ -157,6 +157,8 @@ module.exports = class Processor {
         this.scopeType = 'proof';
         this.currentAir = false;
 
+        this.warningMaxDegreeLimit = config.warningMaxDegreeLimit ?? 3;
+
         this.currentAirGroup = false;
         this.airGroupStack = [];
 
@@ -348,7 +350,8 @@ module.exports = class Processor {
         if (!ignoreStatement) {
             this.traceLog(`[TRACE] #${__executeStatementCounter} ${st.debug ?? ''} (DEEP:${this.scope.deep})`, '38;5;75');
 
-            this.sourceRef = st.debug ? (st.debug.split(':').slice(0,2).join(':') ?? ''):'';
+            // this.sourceRef = st.debug ? (st.debug.split(':').slice(0,2).join(':') ?? ''):'';
+            this.sourceRef = st.debug;
             // if (st instanceof ExpressionItem) {
             //     const res = st.instance();
             //     return res;
@@ -394,7 +397,8 @@ module.exports = class Processor {
         let index = deep - 1;
         let tag = Context.sourceTag;
         let lines = [];
-        if (info.e.message.includes(tag)) {
+        if (info.e.message.includes(tag) || (
+            info.e.message.includes(' at ') && info.e.message.includes('.pil'))) {
             lines.push('   0 '+info.e.message);
         } else {
             lines.push('   0 '+info.e.message+` at ${Context.sourceTag}`);
@@ -1274,7 +1278,7 @@ module.exports = class Processor {
     prepareAirGroupSummary(airGroupId) {
         return {name: this.currentAirGroup.name,
                 agvs: this.airGroupValues.getDataByAirGroupId(airGroupId).map(agv => { return {name: agv.label, aggregateType: agv.aggregateType, stage: agv.stage, default: agv.defaultValue}}),
-                airs: this.currentAirGroup.airs.map(air => { return {name: air.name, template: air.airTemplate.name, bits: air.bits}})};
+                airs: this.currentAirGroup.airs.map(air => { return {name: air.name, template: air.airTemplate.name, bits: air.bits, ...air.info}})};
     }
     showAirGroupSummary(info) {
         const agvNameMaxWidth = info.agvs.reduce((max, agv) => agv.name.length > max ? agv.name.length : max, 0);
@@ -1285,7 +1289,11 @@ module.exports = class Processor {
         }
         console.log(`  > Airs:`);
         for (const air of info.airs) {
-            console.log(`    · \x1B[38;5;208m${air.name.padEnd(airNameMaxWidth)}\x1B[0m rows:\x1B[38;5;208m2^${air.bits.toString().padEnd(2)}\x1B[0m template:\x1B[38;5;208m${air.template}\x1B[0m`);
+            // let degreePrefix = air.maxDegree > this.warningMaxDegreeLimit ? '[31m ⚠ ' : '\x1B[38;5;208m';
+            console.log(`    · \x1B[38;5;208m${air.name.padEnd(airNameMaxWidth)}\x1B[0m rows:\x1B[38;5;208m2^${air.bits.toString().padEnd(2)}`+
+                        `\x1B[0m template:\x1B[38;5;208m${air.template.padEnd(20)}\x1B[0m witness: \x1B[38;5;208m${air.witnessCols.join(',').padEnd(10)} fixed:\x1B[38;5;208m${air.fixedCols.toString().padStart(4)}\x1B[0m`+
+                        ` constraints:\x1B[38;5;208m${air.constraints.toString().padStart(5)}`);
+                        // \x1B[0m maxDegree: \x1B${degreePrefix+air.maxDegree}\x1B[0m`);
         }
     }
     /**
@@ -1390,15 +1398,19 @@ module.exports = class Processor {
         const customCols = this.customCols.length
         const constraints = this.constraints.length;
         const N = this.rows;
+        const witnessByStage = this.witness.countByStage(1);
+        const maxDegree = this.constraints.maxDegree;
+        air.setInfo({witnessCols: witnessByStage, fixedCols, customCols, constraints, maxDegree });
         airGroup.airEnd(air.id, air.virtual ?? false);
         const ti2 = performance.now();
-        console.log('  > Witness cols: ' + witnessCols + ' from stage 1 (' + this.witness.countByStage(1).join() + ')');
+        console.log('  > Witness cols: ' + witnessCols + ' from stage 1 (' + witnessByStage.join() + ')');
         console.log('  > Fixed cols: ' + fixedCols);
         if (customCols) {
             const commitNames = this.customCols.getCommitNames().join(',');
             console.log(`  > Custom cols (${commitNames}): ` + customCols);
         }
         console.log('  > Constraints: ' + constraints);
+        // + ' (max degree: ' + ((maxDegree > this.warningMaxDegreeLimit) ? '\x1b[38;5;196m'+maxDegree+'\x1B[0m' : maxDegree)+')');
         console.log('  > Execution time: ' + units.getHumanTime(ti2-ti1));
 
         if (this.proto && !air.virtual) {

@@ -46,7 +46,7 @@ module.exports = class ArrayOf extends RuntimeItem {
             cloned.rowOffset = this.rowOffset.clone();
         }
         return cloned;
-   }
+    }
     evalInside() {
         return this.clone();
     }

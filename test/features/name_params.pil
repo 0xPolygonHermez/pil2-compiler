@@ -6,6 +6,28 @@ function sum_2 (const int a = 0, const int c = 0):int {
     return 2 * a + c;
 }
 
+function sum_array(const int a[] = [0,0], const int b[] = [0,0]):int {
+    int res = 0;
+    for (int i = 0; i < length(a); ++i) {
+        res += a[i];
+    }
+    for (int i = 0; i < length(b); ++i) {
+        res += b[i];
+    }
+    return res;
+}
+
+function count_array(const int a[] = [], const int b[] = []):int {
+    int count = 0;
+    for (int i = 0; i < length(a); ++i) {
+        ++count;
+    }
+    for (int i = 0; i < length(b); ++i) {
+        ++count;
+    }
+    return count;
+}
+
 airtemplate NamedParams(const int bits = 10,
                         const int N = 2**23) {
 
@@ -46,5 +68,16 @@ airgroup NamedParams {
     // assert_eq(sum_2(c:), 9);
     // assert_eq(sum_2(a:,b:), 23);
     // assert_eq(sum_2(a:,c:), 23);
+    assert_eq(count_array(), 0);
+    assert_eq(sum_array(), 0);
+    assert_eq(count_array(a:[10]), 1);
+    assert_eq(sum_array(a:[10]), 10);
+    assert_eq(count_array(b:[10]), 1);
+    assert_eq(sum_array(b:[10]), 10);
+    assert_eq(count_array(a:[30], b:[10]), 2);
+    assert_eq(count_array(a:[30,5], b:[10]), 3);
+    assert_eq(sum_array(b:[10]), 10);
+    assert_eq(sum_array(a:[30], b:[10]), 40);
+    assert_eq(sum_array(a:[30,5], b:[10]), 45);
 }
 

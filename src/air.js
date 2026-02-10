@@ -22,8 +22,13 @@ module.exports = class Air {
         }
         Air._airnames[this.name] = Context.sourceRef;
         this.outputFixedFile = Context.config.fixedToFile ? this.name + '.fixed' : false;
-        this.externFixedFiles = [];        
+        this.externFixedFiles = []; 
+        this.info = {};
     }    
+    setInfo(info) {
+        this.info = info;
+    }
+
     get rows () {
         if (this.rowsUsed === false) {
             this.rowsUsed = Context.sourceRef;

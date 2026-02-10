@@ -213,7 +213,7 @@ case 61:
  this.$ = { type: $$[$0-4].type, name: $$[$0-3], reference: false, defaultValue: $$[$0], dim: $$[$0-2].dim } 
 break;
 case 62:
- this.$ = { type: $$[$0-6].type, name: $$[$0-5], reference: false, defaultValue: ExpressionFactory.fromObject({...$$[$0-1]}), dim: $$[$0-4].dim } 
+ this.$ = { type: $$[$0-6].type, name: $$[$0-5], reference: false, defaultValue: ExpressionFactory.fromObject({...$$[$0-1]}, getSrcRef(this, _$[$0-1])), dim: $$[$0-4].dim } 
 break;
 case 63:
  this.$ = { type: $$[$0-5].type, name: $$[$0-4], reference: false, defaultValue: ExpressionFactory.fromObject({type: 'expression_list', values: []}), dim: $$[$0-3].dim } 
@@ -321,22 +321,22 @@ case 109:
  this.$ = { type: 'constraint', left: $$[$0-2], right: $$[$0], witness: true } 
 break;
 case 119: case 120:
- this.$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$$[$0-2]}), alias: $$[$0], virtual: false} 
+ this.$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$$[$0-2]}, getSrcRef(this, _$[$0-2])), alias: $$[$0], virtual: false} 
 break;
 case 121: case 122:
- this.$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$$[$0-2]}), alias: $$[$0], virtual: true} 
+ this.$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$$[$0-2]}, getSrcRef(this, _$[$0-3])), alias: $$[$0], virtual: true} 
 break;
 case 126:
  this.$ = $$[$0-4]; this.$.data[$$[$0-2]] = $$[$0] 
 break;
 case 127:
- this.$ = $$[$0-2]; this.$.data[$$[$0]] = ExpressionFactory.fromObject({type: 'reference', name: $$[$0] }) 
+ this.$ = $$[$0-2]; this.$.data[$$[$0]] = ExpressionFactory.fromObject({type: 'reference', name: $$[$0]}, getSrcRef(this, _$[$0])) 
 break;
 case 128:
  this.$ = { type: 'object', data: {}}; this.$.data[$$[$0-2]] = $$[$0] 
 break;
 case 129:
- this.$ = { type: 'object', data: {}}; this.$.data[$$[$0]] = ExpressionFactory.fromObject({type: 'reference', name: $$[$0] }) 
+ this.$ = { type: 'object', data: {}}; this.$.data[$$[$0]] = ExpressionFactory.fromObject({type: 'reference', name: $$[$0]} , getSrcRef(this, _$[$0])) 
 break;
 case 130:
  this.$ = $$[$0-2]; this.$.data.push($$[$0]) 
@@ -432,25 +432,25 @@ case 175:
  this.$ = { type: 'variable_declaration', vtype: 'int', items: [$$[$0-2]], init: $$[$0] } 
 break;
 case 176:
- this.$ = { type: 'variable_declaration', vtype: 'int', multiple: false, items: [$$[$0-4]], init: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'variable_declaration', vtype: 'int', multiple: false, items: [$$[$0-4]], init: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 177:
  this.$ = { type: 'variable_declaration', vtype: 'fe', multiple: false, items: [$$[$0-2]], init: $$[$0] } 
 break;
 case 178:
- this.$ = { type: 'variable_declaration', vtype: 'fe', multiple: false, items: [$$[$0-4]], init: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'variable_declaration', vtype: 'fe', multiple: false, items: [$$[$0-4]], init: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 179:
  this.$ = { type: 'variable_declaration', vtype: 'expr', multiple: false, items: [$$[$0-2]], init: $$[$0] } 
 break;
 case 180:
- this.$ = { type: 'variable_declaration', vtype: 'expr', multiple: false, items: [$$[$0-4]], init: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'variable_declaration', vtype: 'expr', multiple: false, items: [$$[$0-4]], init: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 181:
  this.$ = { type: 'variable_declaration', vtype: 'string', multiple: false, items: [$$[$0-2]], init: $$[$0] } 
 break;
 case 182:
- this.$ = { type: 'variable_declaration', vtype: 'string', multiple: false, items: [$$[$0-4]], init: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'variable_declaration', vtype: 'string', multiple: false, items: [$$[$0-4]], init: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 183:
  this.$ = { type: 'variable_declaration', vtype: 'function', multiple: false, items: [$$[$0-2]], init: $$[$0] } 
@@ -459,19 +459,19 @@ case 184:
  this.$ = { type: 'variable_declaration', vtype: 'container', multiple: false, items: [$$[$0-2]], init: $$[$0] } 
 break;
 case 185:
- this.$ = { type: 'variable_declaration', vtype: 'int', multiple: true, items: $$[$0-5].items, init: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'variable_declaration', vtype: 'int', multiple: true, items: $$[$0-5].items, init: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 186:
- this.$ = { type: 'variable_declaration', vtype: 'fe', multiple: true, items: $$[$0-5].items, init: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'variable_declaration', vtype: 'fe', multiple: true, items: $$[$0-5].items, init: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 187:
- this.$ = { type: 'variable_declaration', vtype: 'expr', multiple: true, items: $$[$0-5].items, init: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'variable_declaration', vtype: 'expr', multiple: true, items: $$[$0-5].items, init: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 188:
- this.$ = { type: 'variable_declaration', vtype: 'string', multiple: true, items: $$[$0-5].items, init: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'variable_declaration', vtype: 'string', multiple: true, items: $$[$0-5].items, init: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 189:
- this.$ = { type: 'variable_declaration', vtype: 'container', multiple: true, items: $$[$0-5].items, init: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'variable_declaration', vtype: 'container', multiple: true, items: $$[$0-5].items, init: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 190:
  this.$ = { dim: 1, lengths: [null]} 
@@ -537,40 +537,40 @@ case 211:
  this.$ = { type: 'assign', name: $$[$0-2], value: $$[$0] } 
 break;
 case 212:
- this.$ = { type: 'assign', name: $$[$0-2], value: ExpressionFactory.fromObject({ type: 'reference', ...$$[$0-2] }).insert($$[$0-1].type, ExpressionFactory.fromObject($$[$0]))} 
+ this.$ = { type: 'assign', name: $$[$0-2], value: ExpressionFactory.fromObject({ type: 'reference', ...$$[$0-2]}, getSrcRef(this, _$[$0-2])).insert($$[$0-1].type, ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0])))} 
 break;
 case 213:
  this.$ = { type: 'assign', name: $$[$0-2], sequence: $$[$0] } 
 break;
 case 214:
- this.$ = { type: 'assign', name: $$[$0], value: ExpressionFactory.fromObject({ type: 'reference', ...$$[$0] }).insert('add', ExpressionFactory.fromObject({type: 'number', value: 1n}))} 
+ this.$ = { type: 'assign', name: $$[$0], value: ExpressionFactory.fromObject({ type: 'reference', ...$$[$0]}, getSrcRef(this, _$[$0])).insert('add', ExpressionFactory.fromObject({type: 'number', value: 1n}))} 
 break;
 case 215:
- this.$ = { type: 'assign', name: $$[$0], value: ExpressionFactory.fromObject({ type: 'reference', ...$$[$0] }).insert('sub', ExpressionFactory.fromObject({type: 'number', value: 1n}))} 
+ this.$ = { type: 'assign', name: $$[$0], value: ExpressionFactory.fromObject({ type: 'reference', ...$$[$0]}, getSrcRef(this, _$[$0])).insert('sub', ExpressionFactory.fromObject({type: 'number', value: 1n}))} 
 break;
 case 216:
- this.$ = { type: 'assign', name: $$[$0-1], value: ExpressionFactory.fromObject({ type: 'reference', ...$$[$0-1] }).insert('add', ExpressionFactory.fromObject({type: 'number', value: 1n}))} 
+ this.$ = { type: 'assign', name: $$[$0-1], value: ExpressionFactory.fromObject({ type: 'reference', ...$$[$0-1]}, getSrcRef(this, _$[$0-1])).insert('add', ExpressionFactory.fromObject({type: 'number', value: 1n}))} 
 break;
 case 217:
- this.$ = { type: 'assign', name: $$[$0-1], value: ExpressionFactory.fromObject({ type: 'reference', ...$$[$0-1] }).insert('sub', ExpressionFactory.fromObject({type: 'number', value: 1n}))} 
+ this.$ = { type: 'assign', name: $$[$0-1], value: ExpressionFactory.fromObject({ type: 'reference', ...$$[$0-1]}, getSrcRef(this, _$[$0-1])).insert('sub', ExpressionFactory.fromObject({type: 'number', value: 1n}))} 
 break;
 case 220:
- this.$ = { type: 'include', private: false, public: true, file: ExpressionFactory.fromObject($$[$0]) } 
+ this.$ = { type: 'include', private: false, public: true, file: ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0])) } 
 break;
 case 221:
- this.$ = { type: 'require', private: false, public: true, file: ExpressionFactory.fromObject($$[$0]) } 
+ this.$ = { type: 'require', private: false, public: true, file: ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0])) } 
 break;
 case 222:
- this.$ = { type: 'include', private: true, public: false, file: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'include', private: true, public: false, file: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 223:
- this.$ = { type: 'require', private: true, public: false, file: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'require', private: true, public: false, file: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 224:
- this.$ = { type: 'include', private: false, public: true, file: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'include', private: false, public: true, file: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 225:
- this.$ = { type: 'require', private: false, public: true, file: ExpressionFactory.fromObject($$[$0-1]) } 
+ this.$ = { type: 'require', private: false, public: true, file: ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])) } 
 break;
 case 227: case 232:
  this.$ = {} 
@@ -668,36 +668,36 @@ case 259:
  this.$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [], names: [], __debug: 0 }); 
 break;
 case 260:
- this.$ = $$[$0-2]; this.$.pushItem(ExpressionFactory.fromObject($$[$0])); 
+ this.$ = $$[$0-2]; this.$.pushItem(ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))); 
 break;
 case 261:
- this.$ = $$[$0-3]; this.$.pushItem(ExpressionFactory.fromObject({ type: 'reference', name: $$[$0-1] }), $$[$0-1]); 
+ this.$ = $$[$0-3]; this.$.pushItem(ExpressionFactory.fromObject({ type: 'reference', name: $$[$0-1]}, getSrcRef(this, _$[$0-1])), $$[$0-1]); 
 break;
 case 262:
- this.$ = $$[$0-4]; this.$.pushItem(ExpressionFactory.fromObject($$[$0]), $$[$0-2]); 
+ this.$ = $$[$0-4]; this.$.pushItem(ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0])), $$[$0-2]); 
 break;
 case 263:
- this.$ = $$[$0-4]; this.$.pushItem(ExpressionFactory.fromObject($$[$0-1])); 
+ this.$ = $$[$0-4]; this.$.pushItem(ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1]))); 
 break;
 case 264:
- this.$ = $$[$0-6]; this.$.pushItem(ExpressionFactory.fromObject($$[$0-1]), $$[$0-4]); 
+ this.$ = $$[$0-6]; this.$.pushItem(ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1])), $$[$0-4]); 
 break;
 case 265:
  this.$ = ExpressionFactory.fromObject({ type: 'expression_list', values:
-                    [ExpressionFactory.fromObject($$[$0-1])], names: [false], __debug: 4}); 
+                    [ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1]))], names: [false], __debug: 4}); 
 break;
 case 266:
  this.$ = ExpressionFactory.fromObject({ type: 'expression_list', values:
-                    [ExpressionFactory.fromObject($$[$0-1])], names: [$$[$0-4]], __debug: 4}); 
+                    [ExpressionFactory.fromObject($$[$0-1], getSrcRef(this, _$[$0-1]))], names: [$$[$0-4]], __debug: 4}); 
 break;
 case 267:
- this.$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$$[$0]], names: [false], __debug: 3 }); 
+ this.$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$$[$0]], names: [false], __debug: 3}, getSrcRef(this, _$[$0])); 
 break;
 case 268:
- this.$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$$[$0]], names: [$$[$0-2]], __debug: 3 }); 
+ this.$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [$$[$0]], names: [$$[$0-2]], __debug: 3}, getSrcRef(this, _$[$0-2])); 
 break;
 case 269:
- this.$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [ExpressionFactory.fromObject({ type: 'reference', name: $$[$0-1] })], names: [$$[$0-1]], __debug: 3 }); 
+ this.$ = ExpressionFactory.fromObject({ type: 'expression_list', values: [ExpressionFactory.fromObject({ type: 'reference', name: $$[$0-1]}, getSrcRef(this, _$[$0-1]))], names: [$$[$0-1]], __debug: 3 }); 
 break;
 case 270:
  this.$ = $$[$0-3]; this.$.values.push($$[$0].insert('spread')) 
@@ -847,94 +847,94 @@ case 321:
  this.$ = { type: 'air_group', aggregate: false, name: $$[$0-3], statements: $$[$0-1].statements } 
 break;
 case 322:
- this.$ = $$[$0-2].insert('eq', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('eq', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 323:
- this.$ = $$[$0-2].insert('ne', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('ne', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 324:
- this.$ = $$[$0-2].insert('lt', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('lt', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 325:
- this.$ = $$[$0-2].insert('gt', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('gt', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 326:
- this.$ = $$[$0-2].insert('le', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('le', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 327:
- this.$ = $$[$0-2].insert('ge', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('ge', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 328:
- this.$ = $$[$0-2].insert('in', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('in', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 329:
- this.$ = $$[$0-2].insert('is', ExpressionFactory.fromObject({type: 'istype', vtype: $$[$0].type, dim: $$[$0].dim})); 
+ this.$ = $$[$0-2].insert('is', ExpressionFactory.fromObject({type: 'istype', vtype: $$[$0].type, dim: $$[$0].dim}, getSrcRef(this, _$[$0]))); 
 break;
 case 330:
- this.$ = $$[$0-2].insert('and', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('and', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 331:
- this.$ = $$[$0-4].insert('if', [ExpressionFactory.fromObject($$[$0-2]), ExpressionFactory.fromObject($$[$0])]) 
+ this.$ = $$[$0-4].insert('if', [ExpressionFactory.fromObject($$[$0-2], getSrcRef(this, _$[$0-2])), ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))]) 
 break;
 case 332:
- this.$ = $$[$0-2].insert('band', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('band', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 333:
- this.$ = $$[$0-2].insert('bor', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('bor', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 334:
- this.$ = $$[$0-2].insert('bxor', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('bxor', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 335:
- this.$ = $$[$0-2].insert('or', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('or', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 336:
- this.$ = $$[$0-2].insert('shl', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('shl', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 337:
- this.$ = $$[$0-2].insert('shr', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('shr', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 338:
  this.$ = $$[$0].insert('not') 
 break;
 case 339:
- this.$ = $$[$0-2].insert('add', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('add', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 340:
- this.$ = $$[$0-2].insert('sub', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('sub', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 341:
- this.$ = $$[$0-2].insert('mul', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('mul', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 342:
- this.$ = $$[$0-2].insert('mod', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('mod', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 343:
- this.$ = $$[$0-2].insert('div', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('div', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 344:
- this.$ = $$[$0-2].insert('intdiv', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('intdiv', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 345:
- this.$ = $$[$0-2].insert('pow', ExpressionFactory.fromObject($$[$0])) 
+ this.$ = $$[$0-2].insert('pow', ExpressionFactory.fromObject($$[$0], getSrcRef(this, _$[$0]))) 
 break;
 case 347:
  this.$ = $$[$0].insert('neg') 
 break;
 case 348:
- this.$ = ExpressionFactory.fromObject({ type: 'reference', ...$$[$0] }) 
+ this.$ = ExpressionFactory.fromObject({ type: 'reference', ...$$[$0]}, getSrcRef(this, _$[$0])) 
 break;
 case 349:
- this.$ = ExpressionFactory.fromObject({ type: 'number', value: BigInt($$[$0])}) 
+ this.$ = ExpressionFactory.fromObject({ type: 'number', value: BigInt($$[$0])}, getSrcRef(this, _$[$0])) 
 break;
 case 350:
- this.$ = ExpressionFactory.fromObject({...$$[$0], type: 'string'}) 
+ this.$ = ExpressionFactory.fromObject({...$$[$0], type: 'string'}, getSrcRef(this, _$[$0])) 
 break;
 case 352: case 354:
- this.$ = ExpressionFactory.fromObject({...$$[$0]}) 
+ this.$ = ExpressionFactory.fromObject({...$$[$0]}, getSrcRef(this, _$[$0])) 
 break;
 case 353:
- this.$ = ExpressionFactory.fromObject({position: $$[$0], type: 'positional_param'}) 
+ this.$ = ExpressionFactory.fromObject({position: $$[$0], type: 'positional_param'}, getSrcRef(this, _$[$0])) 
 break;
 case 355:
  this.$ = { type: 'cast', cast: 'int', value: $$[$0-1]} 
@@ -967,30 +967,30 @@ case 364:
  this.$ = { ...$$[$0-3], type: 'cast', cast: 'string', value: $$[$0-1] } 
 break;
 case 365:
- this.$ = { ...$$[$0-1], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: 1, current: $$[$0-1] }) } 
+ this.$ = { ...$$[$0-1], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: 1, current: $$[$0-1]}, getSrcRef(this, _$[$0-1])) } 
 break;
 case 366:
- this.$ = { ...$$[$0-2], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: Number($$[$0]), current: $$[$0-2] }) } 
+ this.$ = { ...$$[$0-2], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: Number($$[$0]), current: $$[$0-2]}, getSrcRef(this, _$[$0])) } 
 break;
 case 367:
- this.$ = { ...$$[$0-4], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: $$[$0-1], current: $$[$0-4] }) } 
+ this.$ = { ...$$[$0-4], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: $$[$0-1], current: $$[$0-4]}, getSrcRef(this, _$[$0-1])) } 
 break;
 case 368:
  this.$ = { ...$$[$0-2], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', current: $$[$0-2],
-                                        value: ExpressionFactory.fromObject({position: $$[$0], type: 'positional_param'})}) } 
+                                        value: ExpressionFactory.fromObject({position: $$[$0], type: 'positional_param'}, getSrcRef(this, _$[$0]))}, getSrcRef(this, _$[$0-2])) } 
 break;
 case 369:
- this.$ = { ...$$[$0], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: 1, prior: true, current: $$[$0] }) } 
+ this.$ = { ...$$[$0], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: 1, prior: true, current: $$[$0]}, getSrcRef(this, _$[$0])) } 
 break;
 case 370:
- this.$ = { ...$$[$0], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: Number($$[$0-2]), prior: true, current: $$[$0] }) } 
+ this.$ = { ...$$[$0], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: Number($$[$0-2]), prior: true, current: $$[$0]}, getSrcRef(this, _$[$0-2])) } 
 break;
 case 371:
- this.$ = { ...$$[$0], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: $$[$0-3], prior: true, current: $$[$0] }) } 
+ this.$ = { ...$$[$0], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', value: $$[$0-3], prior: true, current: $$[$0]}, getSrcRef(this, _$[$0-3])) } 
 break;
 case 372:
  this.$ = { ...$$[$0], rowOffset: ExpressionFactory.fromObject({type: 'row_offset', current: $$[$0], prior: true,
-                                        value: ExpressionFactory.fromObject({position: $$[$0-2], type: 'positional_param'})}) } 
+                                        value: ExpressionFactory.fromObject({position: $$[$0-2], type: 'positional_param'}, getSrcRef(this, _$[$0-2]))}, getSrcRef(this, _$[$0])) } 
 break;
 case 374:
  this.$ = { ...$$[$0], dim: 0 } 
@@ -999,10 +999,10 @@ case 377:
  this.$ = ExpressionFactory.fromObject({type: 'range_index', from: $$[$0-2], to: $$[$0]}); 
 break;
 case 378:
- this.$ = ExpressionFactory.fromObject({type: 'range_index', from: $$[$0-1]}); 
+ this.$ = ExpressionFactory.fromObject({type: 'range_index', from: $$[$0-1]} , getSrcRef(this, _$[$0-1])); 
 break;
 case 379:
- this.$ = ExpressionFactory.fromObject({type: 'range_index', to: $$[$0]}); 
+ this.$ = ExpressionFactory.fromObject({type: 'range_index', to: $$[$0]}, getSrcRef(this, _$[$0])); 
 break;
 case 380:
  this.$ = { dim: $$[$0-3].dim + 1, indexes: [...$$[$0-3].indexes, $$[$0-1]] } 
@@ -1186,6 +1186,9 @@ const util = require('util');
 const Expression = require('../src/expression.js');
 const ExpressionFactory = require('../src/expression_factory.js');
 
+function getSrcRef(scope, item) {
+    return scope.source + ':' + (item.first_line - scope.deltaLines) + ':' + (item.first_column + 1) + ':';
+}
 function showcode(title, info) {
     console.log(title+` ${info.last_line}:${info.last_column}`);
 }

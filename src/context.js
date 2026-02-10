@@ -75,6 +75,9 @@ module.exports = class Context {
     static get sourceRef() {
         return this._instance._processor.sourceRef;
     }
+    static get simpleSourceRef() {
+        return this.sourceRef.replace(/(:[\d]+):[\d]+:?$/, '$1');
+    }
     static get sourceTag() {
         return this._instance._processor.sourceRef.split('/').slice(-2).join('/');
     }

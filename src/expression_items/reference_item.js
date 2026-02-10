@@ -39,6 +39,7 @@ module.exports = class ReferenceItem extends RuntimeItem {
     }
     cloneInstance() {
         let cloned = new ReferenceItem(this.name, this.indexes, this.rowOffset);
+        cloned.sourceTag = this.sourceTag;
         return cloned;
     }
     evalInside(options = {}) {
@@ -47,7 +48,7 @@ module.exports = class ReferenceItem extends RuntimeItem {
 
     evalInsideExtra(options = {}) {
         const rowOffset = (this.rowOffset ? this.rowOffset.getValue() : 0) + (options.rowOffset ?? 0);
-        const item = Context.references.getItem(this.name, this.indexes, {rowOffset});
+        const item = Context.references.getItem(this.name, this.indexes, {rowOffset, sourceTag: this.sourceTag});
         if (item.isEmpty()) {
             throw new Error(`accessing to ${item.label} before his initialization at ${Context.sourceRef}`);
         }

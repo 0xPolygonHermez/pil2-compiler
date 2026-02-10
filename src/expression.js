@@ -659,7 +659,8 @@ class Expression extends ExpressionItem {
                 ++iarg;
             }
         }
-        throw new Error(`Operation ${operation} not was defined by types ${types.join(',')} [${methods.join(', ')}] at ${Context.sourceRef}`);
+        const labels = _values.map(x => x.label ?? '').join(',');
+        throw new Error(`Operation ${operation} for (${labels}) not was defined by types ${types.join(',')} [${methods.join(', ')}] at ${Context.sourceRef}`);
     }
     applyOperationIf(values) {
         if (values.length !== 3) {
@@ -1209,7 +1210,7 @@ class Expression extends ExpressionItem {
                 return this.operandDegree(st.operands[0], pos);
             }
         }
-        console.log('not found DEGREE for operation', st.op);
+        this.degreeNotFound(st.op);
         return -1;
     }
     operandDegree(operand, pos, options) {
@@ -1220,8 +1221,13 @@ class Expression extends ExpressionItem {
         if (typeof operand.degree === 'number') {
             return operand.degree;
         }
-        console.log('not found DEGREE', operand);
+        this.degreeNotFound(operand);
         return -1;
+    }
+    degreeNotFound(operand) {
+        const typename = ((operand ?? {}).constructor ?? {}).name ?? '¿?';
+        const label = (operand ?? {}).label ?? '';
+        console.log(`degree not defined for ${label} with type ${typename}`);
     }
     stackPosToString(pos, parentOperation, options) {
         const st = this.stack[pos];

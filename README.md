@@ -30,6 +30,10 @@ Generate pilout file specifing paths where search pil files:
 ```sh
 $ node src/pil.js <filename.pil> -o <filename.pilout> -I path1,path2,lib/std
 ```
+## Quick Reference
+In this section you will find a quick reference for the language in [doc/quick_reference.md](doc/quick_reference.md).
+The STD library written in PIL2 is available in [pil2-components](https://github.com/0xPolygonHermez/pil2-proofman/tree/main/pil2-components).
+
 ## License
 
 All crates in this monorepo are licensed under one of the following options:

@@ -90,11 +90,13 @@ module.exports = class Constraints {
     getDebugInfo(index, packed, options) {
         const constraint = this.constraints[index];
         try {
+            let simpleSourceRef = typeof constraint.sourceRef == 'string' ? constraint.sourceRef.replace(/(:[\d]+):[\d]+:?$/, '$1') : constraint.sourceRef;
+            
             if (!packed) {
-                return constraint.sourceRef;
+                return simpleSourceRef;
             }
             const peid = this.getPackedExpressionId(constraint.exprId, packed, options);
-            return constraint.simpleSourceRef + ' '  + packed.exprToString(peid, {...options, labels: this.getExpressions(), hideClass: true});
+            return simpleSourceRef + ' '  + packed.exprToString(peid, {...options, labels: this.getExpressions(), hideClass: true});
         } catch (e) {
             throw new Error(`ERROR generation debug info for constraint ${constraint.sourceRef}: ${e.message}`)
         }

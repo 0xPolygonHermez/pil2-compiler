@@ -13,9 +13,10 @@ module.exports = class ExpressionFactory {
     // pre function to delete property op only used by routing
     static router = new Router(this, 'type', {defaultPrefix: '_from', pre: (method, obj) => delete obj.type});
 
-    static fromObject(obj) {
+    static fromObject(obj, ref) {
         try {
-            return this._fromObject(obj);
+            let options = ref ? {__ref: ref} : {};
+            return this._fromObject(obj, options);
         } catch (e) {
             // console.log(e);
             if (e.message.startsWith(Context.processor.sourceRef + ':') === false) {
@@ -47,7 +48,7 @@ module.exports = class ExpressionFactory {
         if (typeof type === 'undefined') {
             console.log(obj);
         }
-        let item = ExpressionFactory.router.go(obj);
+        let item = ExpressionFactory.router.go(obj, undefined, options);
 
         let unknownProperties = [];
         for (const prop in obj) {
@@ -111,8 +112,11 @@ module.exports = class ExpressionFactory {
         EXIT_HERE;
         return res;
     }
-    static _fromReference(obj) {
+    static _fromReference(obj, options = {}) {
         let res = new ReferenceItem(obj.name, obj.indexes ?? [], obj.rowOffset);
+        if (options.__ref) {
+            res.sourceTag = options.__ref;
+        }
         delete obj.name;
         delete obj.indexes;
         delete obj.dim;

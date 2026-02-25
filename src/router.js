@@ -27,7 +27,7 @@ module.exports = class Router {
         if (this.cache !== false) this.cache[key] = method;
         return method;
     }
-    go(params, prefix) {
+    go(params, prefix, options = {}) {
         params = this.multiParams && Array.isArray(params) ? params : [params];
         const e = params[0];
         const pvalue = this.getPropertyValue(e);
@@ -36,7 +36,7 @@ module.exports = class Router {
             throw new Error(this.message.replace(/\{0\}/gi, pvalue).replace(/\{1\}/gi, method));
         }
         if (this.prefunc) this.prefunc.apply(this.parent, [method, ...params]);
-        let res = this.parent[method].apply(this.parent, params);
+        let res = this.parent[method].apply(this.parent, [...params, options]);
         if (this.postfunc) res = this.prefunc.apply(this.parent, [method, res, ...params]);
         return res;
     }

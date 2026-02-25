@@ -157,6 +157,8 @@ module.exports = class Processor {
         this.scopeType = 'proof';
         this.currentAir = false;
 
+        this.warningMaxDegreeLimit = config.warningMaxDegreeLimit ?? 3;
+
         this.currentAirGroup = false;
         this.airGroupStack = [];
 
@@ -208,9 +210,14 @@ module.exports = class Processor {
     insideFunction() {
         return this.functionDeep > 0;
     }
+    callbackUpdateRows(value, indexes, options) {
+        if (!Context.initializingFunctionCall) {
+            Context.air.updateRows(value.asInt());
+        }
+    }
     declareBuiltInConstants() {
         this.references.declare('PRIME', 'int', [], { global: true, sourceRef: this.sourceRef, const: true }, this.prime);
-        this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef });
+        this.references.declare('N', 'int', [], { global: true, sourceRef: this.sourceRef, callback: this.callbackUpdateRows });
         this.references.declare('BITS', 'int', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('AIRGROUP', 'string', [], { global: true, sourceRef: this.sourceRef });
         this.references.declare('AIRGROUP_ID', 'int', [], { global: true, sourceRef: this.sourceRef }, new ExpressionItems.IntValue(-1));
@@ -343,7 +350,8 @@ module.exports = class Processor {
         if (!ignoreStatement) {
             this.traceLog(`[TRACE] #${__executeStatementCounter} ${st.debug ?? ''} (DEEP:${this.scope.deep})`, '38;5;75');
 
-            this.sourceRef = st.debug ? (st.debug.split(':').slice(0,2).join(':') ?? ''):'';
+            // this.sourceRef = st.debug ? (st.debug.split(':').slice(0,2).join(':') ?? ''):'';
+            this.sourceRef = st.debug;
             // if (st instanceof ExpressionItem) {
             //     const res = st.instance();
             //     return res;
@@ -389,7 +397,8 @@ module.exports = class Processor {
         let index = deep - 1;
         let tag = Context.sourceTag;
         let lines = [];
-        if (info.e.message.includes(tag)) {
+        if (info.e.message.includes(tag) || (
+            info.e.message.includes(' at ') && info.e.message.includes('.pil'))) {
             lines.push('   0 '+info.e.message);
         } else {
             lines.push('   0 '+info.e.message+` at ${Context.sourceTag}`);
@@ -1062,7 +1071,7 @@ module.exports = class Processor {
     executeIncludeRequire(s, isInclude = true) {
         const requireId = s.file.asString();
         let res = true;
-        if (!s.contents && (isInclude  || !this.loadedRequire[requireId])) {
+        if ((!s.contents || !s.contents[requireId]) && (isInclude  || !this.loadedRequire[requireId])) {
             // to support dynamic includes, add some internal statements need to compile inside airgroup
             // but after take compiled statements. TODO: analyze use current airgroup name
             const lastPath = this.getLastInclude();
@@ -1073,13 +1082,16 @@ module.exports = class Processor {
             }
             // take only statements inside preSrc/postSrc
             sts.statements = sts.statements[0].statements;
-            s.contents = sts;
+            if (s.contents === undefined) {
+                s.contents = [];
+            }
+            s.contents[requireId] = sts;
         }
         if (isInclude || !this.loadedRequire[requireId]) {
             this.loadedRequire[requireId] = true;
-            if (s.contents !== true) {
-                this.pushInclude(s.contents.fileDir);
-                const res = this.execute(s.contents.statements);
+            if (s.contents[requireId] !== true) {
+                this.pushInclude(s.contents[requireId].fileDir);
+                const res = this.execute(s.contents[requireId].statements);
                 this.popInclude();
                 return res;
             }
@@ -1266,7 +1278,7 @@ module.exports = class Processor {
     prepareAirGroupSummary(airGroupId) {
         return {name: this.currentAirGroup.name,
                 agvs: this.airGroupValues.getDataByAirGroupId(airGroupId).map(agv => { return {name: agv.label, aggregateType: agv.aggregateType, stage: agv.stage, default: agv.defaultValue}}),
-                airs: this.currentAirGroup.airs.map(air => { return {name: air.name, template: air.airTemplate.name, bits: air.bits}})};
+                airs: this.currentAirGroup.airs.map(air => { return {name: air.name, template: air.airTemplate.name, bits: air.bits, ...air.info}})};
     }
     showAirGroupSummary(info) {
         const agvNameMaxWidth = info.agvs.reduce((max, agv) => agv.name.length > max ? agv.name.length : max, 0);
@@ -1277,7 +1289,11 @@ module.exports = class Processor {
         }
         console.log(`  > Airs:`);
         for (const air of info.airs) {
-            console.log(`    · \x1B[38;5;208m${air.name.padEnd(airNameMaxWidth)}\x1B[0m rows:\x1B[38;5;208m2^${air.bits.toString().padEnd(2)}\x1B[0m template:\x1B[38;5;208m${air.template}\x1B[0m`);
+            // let degreePrefix = air.maxDegree > this.warningMaxDegreeLimit ? '[31m ⚠ ' : '\x1B[38;5;208m';
+            console.log(`    · \x1B[38;5;208m${air.name.padEnd(airNameMaxWidth)}\x1B[0m rows:\x1B[38;5;208m2^${air.bits.toString().padEnd(2)}`+
+                        `\x1B[0m template:\x1B[38;5;208m${air.template.padEnd(20)}\x1B[0m witness: \x1B[38;5;208m${air.witnessCols.join(',').padEnd(10)} fixed:\x1B[38;5;208m${air.fixedCols.toString().padStart(4)}\x1B[0m`+
+                        ` constraints:\x1B[38;5;208m${air.constraints.toString().padStart(5)}`);
+                        // \x1B[0m maxDegree: \x1B${degreePrefix+air.maxDegree}\x1B[0m`);
         }
     }
     /**
@@ -1336,7 +1352,7 @@ module.exports = class Processor {
         this.references.set('AIR_ID', [], new ExpressionItems.IntValue(air.id ?? -1));
         this.references.set('AIR_NAME', [], new ExpressionItems.StringValue(air.name ?? ''));
         this.references.set('VIRTUAL', [], new ExpressionItems.IntValue(air.virtual ? 1 : 0));
-        this.references.set('AIRTEMPLATE', [], new ExpressionItems.StringValue(air.airTemplate ? (air.airTemplate.name.name ?? ''):''));
+        this.references.set('AIRTEMPLATE', [], new ExpressionItems.StringValue(air.airTemplate ? (air.airTemplate.name ?? ''):''));
     }
     executeAirTemplate(airTemplate, airTemplateFunc, callinfo, options = {}) {
         const name = options.alias ? options.alias : airTemplate.name;
@@ -1382,15 +1398,19 @@ module.exports = class Processor {
         const customCols = this.customCols.length
         const constraints = this.constraints.length;
         const N = this.rows;
+        const witnessByStage = this.witness.countByStage(1);
+        const maxDegree = this.constraints.maxDegree;
+        air.setInfo({witnessCols: witnessByStage, fixedCols, customCols, constraints, maxDegree });
         airGroup.airEnd(air.id, air.virtual ?? false);
         const ti2 = performance.now();
-        console.log('  > Witness cols: ' + witnessCols + ' from stage 1 (' + this.witness.countByStage(1).join() + ')');
+        console.log('  > Witness cols: ' + witnessCols + ' from stage 1 (' + witnessByStage.join() + ')');
         console.log('  > Fixed cols: ' + fixedCols);
         if (customCols) {
             const commitNames = this.customCols.getCommitNames().join(',');
             console.log(`  > Custom cols (${commitNames}): ` + customCols);
         }
         console.log('  > Constraints: ' + constraints);
+        // + ' (max degree: ' + ((maxDegree > this.warningMaxDegreeLimit) ? '\x1b[38;5;196m'+maxDegree+'\x1B[0m' : maxDegree)+')');
         console.log('  > Execution time: ' + units.getHumanTime(ti2-ti1));
 
         if (this.proto && !air.virtual) {
@@ -1708,7 +1728,7 @@ module.exports = class Processor {
             let init = s.sequence ?? null;
             let initValue = null;
             if (init) {
-                initValue = new Sequence(init, {maxSize: ExpressionItems.IntValue.castTo(this.references.get('N'))});
+                initValue = new Sequence(init, {maxSize: features.virtual ?? ExpressionItems.IntValue.castTo(this.references.get('N'))});
                 if (Context.config.fixed !== false) initValue.extend();
             } else if (s.init) {
                 initValue = s.init.instance();
@@ -1992,9 +2012,20 @@ module.exports = class Processor {
         if (!global && scopeType !== 'air') {
             throw new Error(`Constraint definition on invalid scope (${scopeType}) ${sourceTag}`);
         }
+
+        if (s.witness) {
+            let alone = _left.getAlone();
+            if (alone === false || !(alone instanceof ExpressionItems.WitnessCol || alone instanceof ExpressionItems.AirValue)) {
+                throw new Error(`Constraint with witness generation only could be used with witness or airval on the left side ${sourceTag}`);
+            }            
+            // @witness_calc{ reference: test, expression: 2a + b + fibo1[0] + 54'line + L1 * in1 }
+            this.hints.define('witness_calc', {reference: _left, expression: _right});
+        }
+
         const constraints = global ? this.globalConstraints : this.constraints;
         const constraintId = constraints.getLastConstraintId();
         const id = constraints.define(_left, _right,false, sourceTag);
+
 
         if (Context.config.outputConstraints || (Context.config.outputGlobalConstraints && scopeType === 'proof')) {
             const prompt = global ? '> ': '  > ';
@@ -2033,11 +2064,18 @@ module.exports = class Processor {
                     switch (s.vtype) {
                         case 'expr':
                             initValue = init.instance().eval();
-                            // initValue = init.eval();
                             break;
                         case 'int':
-                            initValue = (s.multiple ? init.eval() : init.instance()).asIntItem();
-                            // if (initValue.dump) initValue.dump(); else console.log(initValue);
+                            if (s.multiple) {
+                                initValue = init.eval();
+                            } else {
+                                initValue = init.instance();
+                                if (initValue.isArray) {
+                                    initValue = init.eval();
+                                } else {
+                                    initValue = initValue.asIntItem();
+                                }
+                            }
                             break;
                         case 'string':
                             initValue = init.eval().asStringItem();

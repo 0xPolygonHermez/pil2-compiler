@@ -9,9 +9,10 @@ module.exports = class Air {
         this.id = id;
         this.airGroup = airGroup;
         this.airTemplate = airTemplate;
-        this.rows = Number(rows);
-        const bits = log2(this.rows);
-        this.bits = this.rows > (2 ** bits) ? bits + 1 : bits;
+        this._rows = Number(rows);
+        this.rowsUsed = false;
+        const bits = log2(this._rows);
+        this.bits = this._rows > (2 ** bits) ? bits + 1 : bits;
         this.name = (options.name ?? airTemplate.name) ?? '';
         this.loadFixedFiles = {};
         this.virtual = options.virtual ?? false;
@@ -21,7 +22,24 @@ module.exports = class Air {
         }
         Air._airnames[this.name] = Context.sourceRef;
         this.outputFixedFile = Context.config.fixedToFile ? this.name + '.fixed' : false;
-        this.externFixedFiles = [];        
+        this.externFixedFiles = []; 
+        this.info = {};
+    }    
+    setInfo(info) {
+        this.info = info;
+    }
+
+    get rows () {
+        if (this.rowsUsed === false) {
+            this.rowsUsed = Context.sourceRef;
+        }
+        return this._rows;
+    }
+    updateRows(value) {
+        if (this.rowsUsed !== false) {
+            throw new Error(`Cannot update N after it has been used. N was first used at ${this.rowsUsed}, but you're attempting to modify it at ${Context.sourceRef}`);
+        }
+        this._rows = value;
     }
     declareAirValue(name, lengths = [], data = {}) {
         const fullname = Context.getFullName(name);

@@ -1,5 +1,9 @@
 module.exports = class ReferenceNotFound extends Error {
-    constructor (name) {
-        super('Error reference '+name+' not found');
+    constructor (name, options) {
+        if (options.sourceTag) {
+            super('Error reference '+name+' not found at '+options.sourceTag);
+        } else {
+            super('Error reference '+name+' not found');
+        }
     }
 }

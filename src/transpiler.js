@@ -80,6 +80,7 @@ module.exports = class Transpiler {
         switch(st.type) {
             case 'for': return this.#transpileFor(st);
             case 'break': return this.#transpileBreak(st);
+            case 'continue': return this.#transpileContinue(st);
             case 'code': return this.#transpile(st.statements);
             case 'variable_declaration': return this.#transpileVariableDeclaration(st);
             case 'scope_definition': return this.#transpileScopeDefinition(st);
@@ -92,6 +93,9 @@ module.exports = class Transpiler {
     }
     #transpileBreak(st) {
         return 'break;'
+    }
+    #transpileContinue(st) {
+        return 'continue;'
     }
     #transpileIf(st) {
         let code = '';

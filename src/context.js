@@ -21,6 +21,7 @@ module.exports = class Context {
         this.tests = {};
         this.seqCodeType = config.seqCodeType ?? 'fast';
         this._airGroupName = false;
+        this.initializingFunctionCall = false;
         if (typeof this.config.test.onContextInit === 'function') {
             this.config.test.onContextInit(Context, this);
         }
@@ -33,9 +34,6 @@ module.exports = class Context {
     }
     static set SeqCodeType(value) {
         this._instance.seqCodeType = value;
-    }
-    static get rows() {
-        return this._instance._processor.rows;
     }
     static get air() {
         return  this._instance._processor.airStack.at(-1) ?? false;
@@ -77,6 +75,9 @@ module.exports = class Context {
     static get sourceRef() {
         return this._instance._processor.sourceRef;
     }
+    static get simpleSourceRef() {
+        return this.sourceRef.replace(/(:[\d]+):[\d]+:?$/, '$1');
+    }
     static get sourceTag() {
         return this._instance._processor.sourceRef.split('/').slice(-2).join('/');
     }
@@ -117,6 +118,12 @@ module.exports = class Context {
     }
     static get inputDir() {
         return Context.applyTemplates(Context._instance.config.inputDir ?? '');
+    }
+    static get initializingFunctionCall() {
+        return this._instance.initializingFunctionCall;
+    }
+    static set initializingFunctionCall(value) {
+        this._instance.initializingFunctionCall = value;
     }
     static applyTemplates(value) {
         return this._instance.applyTemplates(value);

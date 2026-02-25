@@ -16,7 +16,11 @@ module.exports = class Assign {
         value = this.getValue(value);
         if (Debug.active) console.log(util.inspect(value, false, 200, true));
         assert.notStrictEqual(value, null);
-        return this.#assign(name, indexes, value);
+        try {
+            return this.#assign(name, indexes, value);
+        } catch (error) {
+            throw new Error(`Error on ${name} assignation: ${error.message}`);
+        }
     }
     getValue(value) {
         if (typeof value.eval !== 'function') {

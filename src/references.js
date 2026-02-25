@@ -285,7 +285,8 @@ module.exports = class References {
         delete data.const;
 
         const label = (!container || nameInfo.parts.length > 1) ? nameInfo.name : `${Context.airGroupName}.${nameInfo.name}`;
-        const refProperties = {container, scope, isStatic: nameInfo.isStatic, data, const: constProperty, label};
+        const refProperties = {container, scope, isStatic: nameInfo.isStatic, data, const: constProperty, label, 
+                               callback: typeof options.callback === 'function' ? options.callback : false};
 
         // TODO: reserve need array for labels?
         const id = isReference ? null : instance.reserve(size, label, array, data);
@@ -349,7 +350,7 @@ module.exports = class References {
         indexes = indexes ?? [];
         options = options ?? {};
 
-        const reference = this.getReference(name);
+        const reference = this.getReference(name, undefined, options);
         const item = reference.getItem(indexes, {...options, label: reference.label ? reference.label : reference.name });
 
         if (options.preDelta) {
@@ -521,7 +522,7 @@ module.exports = class References {
         }
         if (!reference) {
             if (typeof defaultValue !== 'undefined') return defaultValue;
-            throw new Exceptions.ReferenceNotFound(names.join(','));
+            throw new Exceptions.ReferenceNotFound(names.join(','), options);
         }
 
         // constants are visible inside functions

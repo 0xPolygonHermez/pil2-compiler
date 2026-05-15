@@ -37,7 +37,7 @@ const OPTIONS = {
     'debug-witness-cols-match': { describe: 'debug witness columns match with pattern' },
     'debug-constraints-match': { describe: 'debug constraints match with pattern' },    
     'fixed-to-file': { describe: 'save fixed columns to file' },
-    'fixed-to-txt': { describe: 'save fixed columns of listed airs (or all) to txt files (one file per air)' },
+    'fixed-to-txt': { describe: 'save fixed columns of listed airs (or all) to txt files (one file per air)', type: 'string-list' },
     // TODO: option to force witness name as snake_case and air, airtemplate, airgroup in CamelCase
 }
 

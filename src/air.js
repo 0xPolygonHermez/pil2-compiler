@@ -1,5 +1,6 @@
 const { log2 } = require("./utils.js");
 const Context = require('./context.js');
+const COLORS = require("./colors.js");
 const FixedFile = require('./fixed_file.js');
 const ExternFixedFile = require('./extern_fixed_file.js');
 const path = require('path');
@@ -22,6 +23,8 @@ module.exports = class Air {
         }
         Air._airnames[this.name] = Context.sourceRef;
         this.outputFixedFile = Context.config.fixedToFile ? this.name + '.fixed' : false;
+        let fixedToTxt = Context.config.fixedToTxt === true || (Array.isArray(Context.config.fixedToTxt) && Context.config.fixedToTxt.includes(this.name))
+        this.outputFixedTxt = fixedToTxt ? this.name + '.txt' : false;
         this.externFixedFiles = []; 
         this.info = {};
     }    
@@ -65,7 +68,7 @@ module.exports = class Air {
     // Unused function to load all fixed file columns together
     loadFiledFiles() {
         for (const [filename, fixedFile] of Object.entries(this.loadFixedFiles)) {            
-            console.log(`  > Loading fixed file ${filename} ...`);
+            console.log(`  > Loading fixed file ${COLORS.filename(filename)} ...`);
             fixedFile.loadFromFile(filename);
         }
     }
@@ -73,7 +76,7 @@ module.exports = class Air {
         if (typeof filename !== 'string') {
             throw new Error(`Invalid extern fixed file name ${filename} on ${Context.sourceRef}`);
         }
-        console.log(`  > Loading extern fixed file ${filename} ...`);
+        console.log(`  > Loading extern fixed file ${COLORS.filename(filename)} ...`);
         this.externFixedFiles.push(new ExternFixedFile(filename, {...Context.config, fileDir: path.dirname(Context.fullFilename), basePath: Context.basePath}));
     }
     findExternFixedCol(colname) {
@@ -83,5 +86,10 @@ module.exports = class Air {
             if (data !== false) break;
         }
         return data;
+    }
+    onEnd() {
+        if (this.outputFixedTxt) {
+            Context.processor.exportFixedToTxt(this.outputFixedTxt);
+        }
     }
 }

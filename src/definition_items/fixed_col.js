@@ -197,7 +197,11 @@ module.exports = class FixedCol extends ProofItem {
                 const rows  = BigInt(this.rows);
                 return this.sequence.getIntValue((BigInt(row) + BigInt(rowOffset) + rows) % rows);
             }
-            return this.sequence.getIntValue(row);
+            try {
+                return this.sequence.getIntValue(row);
+            } catch (e) {
+                throw new Error(`Error getting row ${row} from fixed column ${this.label}(id:${this.id}) assigned to sequence at ${Context.sourceRef}: ${e.message}`);
+            }
         }
         if (!this.loaded) {
             this.loadFromFile();
@@ -212,7 +216,7 @@ module.exports = class FixedCol extends ProofItem {
         try {
             return BigInt(this.values[row]);
         } catch (e) {
-            throw new Error(`Error getting row ${row} from fixed column ${this.id} at ${Context.sourceRef}: ${e.message}`);
+            throw new Error(`Error getting row ${row} from fixed column ${this.label}(id:${this.id}) at ${Context.sourceRef}: ${e.message}`);
         }
     }
     getRowItem(row, rowOffset = 0) {

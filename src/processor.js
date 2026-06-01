@@ -51,6 +51,7 @@ const { performance } = require('perf_hooks');
 const utils = require('./utils.js')
 const Chrono = require('./chrono.js');
 const units = require('./units.js');
+const COLORS = require("./colors.js");
 
 const MAX_SWITCH_CASE_RANGE = 512;
 module.exports = class Processor {
@@ -293,7 +294,7 @@ module.exports = class Processor {
         this.proto.setGlobalSymbols(this.references);
         this.proto.encode();
         this.memoryUpdate();
-        console.log(`  > Saving fixed to file ${Context.config.outputFile} ...`);
+        console.log(`  > Saving fixed to file ${COLORS.filename(Context.config.outputFile)} ...`);
         this.proto.saveToFile(Context.config.outputFile);
         this.memoryUpdate();
     }
@@ -1401,7 +1402,6 @@ module.exports = class Processor {
         const witnessByStage = this.witness.countByStage(1);
         const maxDegree = this.constraints.maxDegree;
         air.setInfo({witnessCols: witnessByStage, fixedCols, customCols, constraints, maxDegree });
-        airGroup.airEnd(air.id, air.virtual ?? false);
         const ti2 = performance.now();
         console.log('  > Witness cols: ' + witnessCols + ' from stage 1 (' + witnessByStage.join() + ')');
         console.log('  > Fixed cols: ' + fixedCols);
@@ -1412,6 +1412,7 @@ module.exports = class Processor {
         console.log('  > Constraints: ' + constraints);
         // + ' (max degree: ' + ((maxDegree > this.warningMaxDegreeLimit) ? '\x1b[38;5;196m'+maxDegree+'\x1B[0m' : maxDegree)+')');
         console.log('  > Execution time: ' + units.getHumanTime(ti2-ti1));
+        airGroup.airEnd(air.id, air.virtual ?? false);
 
         if (this.proto && !air.virtual) {
             const t1 = performance.now();
@@ -1536,7 +1537,7 @@ module.exports = class Processor {
             const filename = this.proto.setFixedColsToFile(this.fixeds, Context.air.outputFixedFile);
             chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
             const t2 = performance.now();
-            console.log(`  > Fixed File time: ${units.getHumanTime(t2-t1)} (${filename})`);
+            console.log(`  > Fixed File time: ${units.getHumanTime(t2-t1)}`);
         } else {
             this.proto.setFixedCols(this.fixeds);
             chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-FIXED-COLS');
@@ -2179,5 +2180,8 @@ module.exports = class Processor {
             }
         }
         return methods;
+    }
+    exportFixedToTxt(filename) {
+        this.fixeds.exportToTxt(filename);
     }
 }

@@ -45,7 +45,7 @@ module.exports = class FixedCol extends ProofItem {
         this.updateSetRowValue(); 
     }
     loadFromFile() {
-        this.rows = Context.rows;
+        this.rows = Number(Context.rows);
         this.initDefaultValues();
         FixedFile.loadColumnFromFile(this.fromFile.filename, this.fromFile.col, this.rows, this.values, this.label);
         this.loaded = true;
@@ -124,7 +124,7 @@ module.exports = class FixedCol extends ProofItem {
     #setRowValue(row, value) {
         value = Context.Fr.e(value);
         if (this.values === false){
-            this.rows = Context.rows;
+            this.rows = Number(Context.rows);
             if (this.bytes === false) {
                 this.bytes = 8;
                 // this.bytes = this.valueToBytes(value);
@@ -147,7 +147,7 @@ module.exports = class FixedCol extends ProofItem {
         }
         if (this.values === false) {
             if (this.rows === 0) {
-                this.rows = Context.rows;   
+                this.rows = Number(Context.rows);   
             }
             this.initDefaultValues();
         }
@@ -197,7 +197,11 @@ module.exports = class FixedCol extends ProofItem {
                 const rows  = BigInt(this.rows);
                 return this.sequence.getIntValue((BigInt(row) + BigInt(rowOffset) + rows) % rows);
             }
-            return this.sequence.getIntValue(row);
+            try {
+                return this.sequence.getIntValue(row);
+            } catch (e) {
+                throw new Error(`Error getting row ${row} from fixed column ${this.label}(id:${this.id}) assigned to sequence at ${Context.sourceRef}: ${e.message}`);
+            }
         }
         if (!this.loaded) {
             this.loadFromFile();
@@ -212,7 +216,7 @@ module.exports = class FixedCol extends ProofItem {
         try {
             return BigInt(this.values[row]);
         } catch (e) {
-            throw new Error(`Error getting row ${row} from fixed column ${this.id} at ${Context.sourceRef}: ${e.message}`);
+            throw new Error(`Error getting row ${row} from fixed column ${this.label}(id:${this.id}) at ${Context.sourceRef}: ${e.message}`);
         }
     }
     getRowItem(row, rowOffset = 0) {
@@ -230,7 +234,7 @@ module.exports = class FixedCol extends ProofItem {
             throw new Error('Assign a sequence when has values');
         }
         if (value.isSequence) {
-            const max_rows = this.rows ? this.rows : Context.rows;
+            const max_rows = this.rows ? this.rows : Number(Context.rows);
             if (value.size > max_rows) {
                 throw new Error(`Invalid sequence size, sequence is too large, it has size of ${value.size} but number of rows is ${max_rows}, size exceeds in ${value.size - max_rows}`);
             }

@@ -83,6 +83,7 @@ module.exports = class Processor {
         this.lastAirId = -1;
         this.airGroupId = 0;
         this.package = false;
+        this.warnings = [];
 
         this.ints = new Variables('int', DefinitionItems.IntVariable, ExpressionItems.IntValue);
         this.references.register('int', this.ints);
@@ -262,6 +263,10 @@ module.exports = class Processor {
         console.log('  > Total proto time ('+(Math.round((this.totalProtoTime * 10000)/compilationTime)/100)+'%): ' + units.getHumanTime(this.totalProtoTime));
         console.log('  > Memory: ' + units.getHumanSize(this.memoryInfo.maxMemory));
         console.log('  > Total compilation: ' + units.getHumanTime(compilationTime));
+        if (this.warnings.length > 0) {
+            console.log(`\n\x1B[1;31mWARNINGS FOUND:\x1B[0m`);
+            this.warnings.forEach(warning => console.log(`  > ${warning}`));
+        }
         return Context.tests.active ? Context.tests.fail === 0 : true;
     }
     testSummary() {
@@ -1928,6 +1933,11 @@ module.exports = class Processor {
             options.alias = this.getAsString(s.alias);
         }
         s.expr.eval(options);
+        if (!s.expr.isAlone()) {
+            let warningText=`expression \x1b[1;31m${s.expr.toString()}\x1b[0m has no effect — missing \x1b[38;2;128;255;0m===\x1b[0m 0 constraint? at ${utils.cleanSourceTag(s.debug)}`;
+            console.log(`\x1B[1;31m  > WARNING:\x1B[0m ${warningText}`);
+            this.warnings.push(warningText);
+        }
         // this.expressions.eval(s.expr);
     }
     decodeNameAndLengths(s) {

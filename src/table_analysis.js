@@ -14,6 +14,29 @@ const MASK64 = (1n << 64n) - 1n;
 const FNV_PRIME = 1099511628211n;
 const FNV_OFFSET = 14695981039346656037n;
 
+const COMPARATIVE_P = (1n << 127n) - 1n;    // Mersenne prime, big aggregation modulus
+
+function modP(x) {
+    const r = x % COMPARATIVE_P;
+    return r < 0n ? r + COMPARATIVE_P : r;
+}
+
+// Comparative signature of a range, built from its minimum and its raw power
+// sums. It is invariant to:
+//   * a value shift (delta): the aggregated values are (v - min);
+//   * a cyclic row rotation (row_offset): the aggregation is commutative.
+//     s1 = Σ (v - min)   = Σv - n·min
+//     s2 = Σ (v - min)^2 = Σv² - 2·min·Σv + n·min²   -> separates multisets
+//                                                       with an equal sum
+// Deriving both from Σv/Σv² is what lets the caller accumulate them in a single
+// pass, before the minimum of the range is known.
+function packComparativeSignature(min, sumV, sumV2, count) {
+    const n = BigInt(count);
+    const s1 = modP(sumV - n * min);
+    const s2 = modP(sumV2 - 2n * min * sumV + n * min * min);
+    return (s1 << 127n) | s2;
+}
+
 function bitLength(x) {
     return x === 0n ? 0 : x.toString(2).length;
 }
@@ -55,6 +78,7 @@ class TableAnalysis {
         this.size = 0;
         this.type = TYPE_NOTHING;
         this.signature = 0n;
+        this.comparativeSignature = 0n;
         this.min = 0n;
         this.max = 0n;
         this.bits = 0n;
@@ -127,6 +151,11 @@ function analyzeValues(values, start, count, label = false) {
     let partitionConst = true;
     const partitionValues = [];
 
+    // exact power sums; reduced modulo COMPARATIVE_P only once, at the end, so
+    // the loop stays free of divisions
+    let sumV = 0n;
+    let sumV2 = 0n;
+
     let prev = first;
     for (let i = start; i < end; ++i) {
         const rel = i - start;
@@ -137,6 +166,9 @@ function analyzeValues(values, start, count, label = false) {
 
         if (v < min) min = v;
         if (v > max) max = v;
+
+        sumV += v;
+        sumV2 += v * v;
 
         // FNV-1a signature, folding 64-bit limbs to cover values wider than 64 bits
         let x = v;
@@ -195,6 +227,7 @@ function analyzeValues(values, start, count, label = false) {
 
     analysis.type = type;
     analysis.signature = sig;
+    analysis.comparativeSignature = packComparativeSignature(min, sumV, sumV2, count);
     analysis.min = min;
     analysis.max = max;
     analysis.bits = computeBits(min, max);
@@ -245,5 +278,6 @@ module.exports = {
     TYPE_NOTHING, TYPE_CONSTANT, TYPE_SEQUENTIAL, TYPE_PARTITIONS, TYPE_CYCLE,
     PARTITION_SIZE,
     TableAnalysis, analyzeValues, compactPartitions, computeBits,
+    packComparativeSignature,
     register, get, intArrayValue,
 };

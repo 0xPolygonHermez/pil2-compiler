@@ -35,6 +35,7 @@ range of it.
   - [analyze](#analyze)
   - [get_analyzed_type](#get_analyzed_type)
   - [get_analyzed_signature](#get_analyzed_signature)
+  - [get_analyzed_comparative_signature](#get_analyzed_comparative_signature)
   - [get_analyzed_size](#get_analyzed_size)
   - [get_analyzed_range_values](#get_analyzed_range_values)
   - [get_analyzed_bits](#get_analyzed_bits)
@@ -237,6 +238,25 @@ patterns match, the lowest-numbered (most specific) one is reported.
 
 **`Tables.get_analyzed_signature(id)`** → the content signature of the analyzed
 range (same non-cryptographic hash as [signature](#signature)).
+
+### get_analyzed_comparative_signature
+
+**`Tables.get_analyzed_comparative_signature(id)`** → the comparative signature of
+the analyzed range: the same value [comparative_signature](#comparative_signature)
+returns for that range, but taken from the single analysis pass. Use it to filter
+compatible-table candidates without scanning the columns again, then confirm with
+[compatible_offset](#compatible_offset).
+
+```
+int ida = Tables.analyze(a);
+int idb = Tables.analyze(b);
+if (Tables.get_analyzed_comparative_signature(ida) == Tables.get_analyzed_comparative_signature(idb)) {
+    int r = Tables.compatible_offset(a, 0, b, 0, N);   // -1 if not compatible
+    if (r >= 0) {
+        int delta = b[0] - a[r];                       // b[i] == a[(i + r) mod N] + delta
+    }
+}
+```
 
 ### get_analyzed_size
 

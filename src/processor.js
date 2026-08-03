@@ -1734,7 +1734,9 @@ module.exports = class Processor {
             let init = s.sequence ?? null;
             let initValue = null;
             if (init) {
-                initValue = new Sequence(init, {maxSize: features.virtual ?? ExpressionItems.IntValue.castTo(this.references.get('N'))});
+                // virtual(n)/temporal(n) bound the sequence to their own row count
+                const featureRows = features.virtual ?? (typeof features.temporal === 'number' && features.temporal > 0 ? features.temporal : null);
+                initValue = new Sequence(init, {maxSize: featureRows ?? ExpressionItems.IntValue.castTo(this.references.get('N'))});
                 if (Context.config.fixed !== false) initValue.extend();
             } else if (s.init) {
                 initValue = s.init.instance();

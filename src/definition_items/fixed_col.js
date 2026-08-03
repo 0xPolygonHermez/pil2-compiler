@@ -20,6 +20,21 @@ function definedRowValue(values, index, label) {
     return value;
 }
 
+// Check, element by element over the raw stored values, that the row offset r
+// really describes one window in terms of the other:
+//     other[otherStart + i] == values[start + ((i + r) mod n)] + delta
+// for every i, with delta fixed by the first row.
+function verifyRowOffset(values, start, otherValues, otherStart, n, r) {
+    const delta = BigInt(otherValues[otherStart]) - BigInt(values[start + r]);
+    for (let i = 0; i < n; ++i) {
+        const expected = BigInt(values[start + ((i + r) % n)]) + delta;
+        if (BigInt(otherValues[otherStart + i]) !== expected) {
+            return false;
+        }
+    }
+    return true;
+}
+
 module.exports = class FixedCol extends ProofItem {
     constructor (id, data) {
         super(id);
@@ -607,7 +622,15 @@ module.exports = class FixedCol extends ProofItem {
             if (a[j % n] === b[k]) {
                 ++j; ++k;
                 if (k === n) {
-                    return BigInt(j - n);    // start position of the match = r
+                    // candidate offset: the start position of the match
+                    const r = j - n;
+                    // KMP matched all n normalized values, but confirm the raw
+                    // relation row by row (the same element-by-element check
+                    // areEquals does) before reporting the offset
+                    if (verifyRowOffset(values, start, otherValues, otherStart, n, r)) {
+                        return BigInt(r);
+                    }
+                    return -1n;
                 }
             } else if (k > 0) {
                 k = lps[k - 1];

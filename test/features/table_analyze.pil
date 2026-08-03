@@ -54,6 +54,43 @@ airtemplate TestAnalyzeBasic(int N = 2**4) {
     assert_eq(sig1 == sig2, 1, "same content -> same signature");
 }
 
+airtemplate TestAnalyzeComparativeSignature(int N = 2**4) {
+    col fixed A = [0..N-1];
+
+    // the analysis carries the comparative signature: same value as the
+    // standalone builtin over the same range
+    int ida = Tables.analyze(A);
+    assert_eq(Tables.get_analyzed_comparative_signature(ida) == Tables.comparative_signature(A), 1,
+              "analyzed comparative signature == comparative_signature");
+
+    // B is A rotated by 3 and shifted by 100 -> same comparative signature
+    col fixed B;
+    int r = 3;
+    int delta = 100;
+    for (int i = 0; i < N; ++i) {
+        B[i] = A[(i + r) % N] + delta;
+    }
+    int idb = Tables.analyze(B);
+    assert_eq(Tables.get_analyzed_comparative_signature(ida) == Tables.get_analyzed_comparative_signature(idb), 1,
+              "comparative signature invariant to rotation + delta");
+
+    // ...while the plain content signature does differ
+    assert_eq(Tables.get_analyzed_signature(ida) == Tables.get_analyzed_signature(idb), 0,
+              "content signature differs");
+
+    // full flow: filter by comparative signature, then recover row_offset + delta
+    if (Tables.get_analyzed_comparative_signature(ida) == Tables.get_analyzed_comparative_signature(idb)) {
+        int off = Tables.compatible_offset(A, 0, B, 0, N);
+        assert_eq(off, r, "compatible_offset returns the row_offset");
+        int d = B[0] - A[off];
+        assert_eq(d, delta, "delta recovered from the row_offset");
+        // the returned row_offset describes every row of B in terms of A
+        for (int i = 0; i < N; ++i) {
+            assert_eq(B[i], A[(i + off) % N] + d, `row ${i} expressed through the row_offset`);
+        }
+    }
+}
+
 airtemplate TestAnalyzeNothing(int N = 2**3) {
     col fixed NO;
     NO[0] = 3; NO[1] = 1; NO[2] = 4; NO[3] = 1;
@@ -79,6 +116,7 @@ airtemplate TestAnalyzePartitions(int N = 2**17) {
 
 airgroup TestTableAnalyze {
     TestAnalyzeBasic();
+    TestAnalyzeComparativeSignature();
     TestAnalyzeNothing();
     TestAnalyzePartitions();
 }

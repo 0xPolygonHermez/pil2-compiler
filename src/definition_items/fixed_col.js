@@ -515,31 +515,25 @@ module.exports = class FixedCol extends ProofItem {
         if (end <= start) {
             return 0n;
         }
-        // A signature invariant to both:
-        //   * a value shift (delta): we subtract the table's own minimum, so a
-        //     table T and T+delta normalize to the very same values.
-        //   * a cyclic row rotation (row_offset): we aggregate with commutative
-        //     power sums, so the row order can't change the result.
-        // Two tables can be "compatible" (equal up to some row_offset and delta)
-        // only if they share this signature; a match still has to be confirmed
-        // row by row and its actual row_offset computed, because the aggregation
-        // is permutation-invariant (looser than rotation-invariant) and sums can
-        // collide.
-        let base = BigInt(definedRowValue(values, start, this.label));
-        for (let index = start + 1; index < end; ++index) {
-            const v = BigInt(definedRowValue(values, index, this.label));
-            if (v < base) base = v;
-        }
-        const P = (1n << 127n) - 1n;    // Mersenne prime, big aggregation modulus
-        let s1 = 0n;                    // Σ (v - base)
-        let s2 = 0n;                    // Σ (v - base)^2  -> separates multisets with equal sum
+        // Signature invariant to a value shift (delta) and to a cyclic row
+        // rotation (row_offset). Two tables can be "compatible" (equal up to
+        // some row_offset and delta) only if they share this signature; a match
+        // still has to be confirmed row by row and its actual row_offset
+        // computed with compatibleOffset(), because the aggregation is
+        // permutation-invariant (looser than rotation-invariant).
+        // Accumulate the minimum and the power sums in one pass, then let
+        // TableAnalysis pack them (same code path Tables.analyze uses, so both
+        // always return the same signature for the same range).
+        let min = BigInt(definedRowValue(values, start, this.label));
+        let sumV = 0n;
+        let sumV2 = 0n;
         for (let index = start; index < end; ++index) {
-            // every index was validated by the min scan above
-            const x = BigInt(values[index]) - base;    // >= 0, base is the minimum
-            s1 = (s1 + x) % P;
-            s2 = (s2 + x * x) % P;
+            const v = BigInt(definedRowValue(values, index, this.label));
+            if (v < min) min = v;
+            sumV += v;
+            sumV2 += v * v;
         }
-        return (s1 << 127n) | s2;
+        return TableAnalysis.packComparativeSignature(min, sumV, sumV2, end - start);
     }
     compatibleOffset(other, offset, otherOffset, count) {
         if (offset < 0 || otherOffset < 0 || count < 0) {

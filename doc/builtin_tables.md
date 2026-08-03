@@ -21,6 +21,7 @@ range of it.
 
 - [Basic operations](#basic-operations)
   - [num_rows](#num_rows)
+  - [get_value](#get_value)
   - [copy](#copy)
   - [fill](#fill)
   - [print](#print)
@@ -54,6 +55,19 @@ range of it.
 ```
 int rows = Tables.num_rows(my_fixed_col);
 ```
+
+### get_value
+
+**`Tables.get_value(col, index)`** → the value stored at row `index`. Reading
+past the last row (or a negative index) is an error.
+
+```
+int v = Tables.get_value(my_fixed_col, 3);
+```
+
+The column can be given in any form that evaluates to a single fixed column: the
+column name, an array element, an `expr` variable holding it, or a `col fixed`
+function argument. Virtual (`temporal(n)`) and non-virtual columns work alike.
 
 ### copy
 

@@ -521,17 +521,33 @@ module.exports = class FixedCol extends ProofItem {
         // still has to be confirmed row by row and its actual row_offset
         // computed with compatibleOffset(), because the aggregation is
         // permutation-invariant (looser than rotation-invariant).
-        // Accumulate the minimum and the power sums in one pass, then let
-        // TableAnalysis pack them (same code path Tables.analyze uses, so both
-        // always return the same signature for the same range).
-        let min = BigInt(definedRowValue(values, start, this.label));
+        // One pass: minimum, constant check and the power sums. Nothing is
+        // aggregated while the range still looks constant (a constant range
+        // needs no aggregation at all); the skipped prefix is backfilled in O(1)
+        // on the first differing value. The packing is shared with
+        // Tables.analyze, so both always return the same signature.
+        const first = BigInt(definedRowValue(values, start, this.label));
+        let min = first;
+        let constant = true;
         let sumV = 0n;
         let sumV2 = 0n;
         for (let index = start; index < end; ++index) {
             const v = BigInt(definedRowValue(values, index, this.label));
             if (v < min) min = v;
-            sumV += v;
-            sumV2 += v * v;
+            if (constant) {
+                if (v !== first) {
+                    constant = false;
+                    const k = BigInt(index - start);
+                    sumV = k * first + v;
+                    sumV2 = k * first * first + v * v;
+                }
+            } else {
+                sumV += v;
+                sumV2 += v * v;
+            }
+        }
+        if (constant) {
+            return TableAnalysis.CONSTANT_COMPARATIVE_SIGNATURE;
         }
         return TableAnalysis.packComparativeSignature(min, sumV, sumV2, end - start);
     }

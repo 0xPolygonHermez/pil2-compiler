@@ -16,25 +16,32 @@ const FNV_OFFSET = 14695981039346656037n;
 
 const COMPARATIVE_P = (1n << 127n) - 1n;    // Mersenne prime, big aggregation modulus
 
-function modP(x) {
-    const r = x % COMPARATIVE_P;
-    return r < 0n ? r + COMPARATIVE_P : r;
-}
+// A constant range aggregates nothing: every (v - min) is 0. Callers detect the
+// constant case in their first pass and skip the aggregation altogether.
+const CONSTANT_COMPARATIVE_SIGNATURE = 0n;
 
-// Comparative signature of a range, built from its minimum and its raw power
-// sums. It is invariant to:
+// Comparative signature of values[start .. start+count), given the minimum of
+// the range. It is invariant to:
 //   * a value shift (delta): the aggregated values are (v - min);
 //   * a cyclic row rotation (row_offset): the aggregation is commutative.
+//     s1 = Σ (v - min)
+//     s2 = Σ (v - min)^2   -> separates multisets with an equal sum
 //     s1 = Σ (v - min)   = Σv - n·min
 //     s2 = Σ (v - min)^2 = Σv² - 2·min·Σv + n·min²   -> separates multisets
 //                                                       with an equal sum
-// Deriving both from Σv/Σv² is what lets the caller accumulate them in a single
-// pass, before the minimum of the range is known.
+// Deriving both from Σv/Σv² is what lets the caller aggregate in the same pass
+// that finds the minimum. The sums are exact and reduced modulo COMPARATIVE_P
+// only here, once: a division per element costs far more than letting them grow.
 function packComparativeSignature(min, sumV, sumV2, count) {
     const n = BigInt(count);
     const s1 = modP(sumV - n * min);
     const s2 = modP(sumV2 - 2n * min * sumV + n * min * min);
     return (s1 << 127n) | s2;
+}
+
+function modP(x) {
+    const r = x % COMPARATIVE_P;
+    return r < 0n ? r + COMPARATIVE_P : r;
 }
 
 function bitLength(x) {
@@ -151,8 +158,9 @@ function analyzeValues(values, start, count, label = false) {
     let partitionConst = true;
     const partitionValues = [];
 
-    // exact power sums; reduced modulo COMPARATIVE_P only once, at the end, so
-    // the loop stays free of divisions
+    // power sums for the comparative signature. Nothing is aggregated while the
+    // range still looks constant (a constant range needs no aggregation at all);
+    // the skipped prefix is backfilled in O(1) on the first differing value.
     let sumV = 0n;
     let sumV2 = 0n;
 
@@ -167,9 +175,6 @@ function analyzeValues(values, start, count, label = false) {
         if (v < min) min = v;
         if (v > max) max = v;
 
-        sumV += v;
-        sumV2 += v * v;
-
         // FNV-1a signature, folding 64-bit limbs to cover values wider than 64 bits
         let x = v;
         do {
@@ -177,7 +182,18 @@ function analyzeValues(values, start, count, label = false) {
             x >>= 64n;
         } while (x > 0n);
 
-        if (v !== first) constant = false;
+        if (constant) {
+            if (v !== first) {
+                constant = false;
+                // backfill the prefix: the rel values before this one were all first
+                const k = BigInt(rel);
+                sumV = k * first + v;
+                sumV2 = k * first * first + v * v;
+            }
+        } else {
+            sumV += v;
+            sumV2 += v * v;
+        }
 
         // partitions: record each 2^16 chunk's value and check the chunk is constant
         if (rel % PARTITION_SIZE === 0) {
@@ -227,7 +243,8 @@ function analyzeValues(values, start, count, label = false) {
 
     analysis.type = type;
     analysis.signature = sig;
-    analysis.comparativeSignature = packComparativeSignature(min, sumV, sumV2, count);
+    analysis.comparativeSignature = constant ? CONSTANT_COMPARATIVE_SIGNATURE
+                                             : packComparativeSignature(min, sumV, sumV2, count);
     analysis.min = min;
     analysis.max = max;
     analysis.bits = computeBits(min, max);
@@ -278,6 +295,6 @@ module.exports = {
     TYPE_NOTHING, TYPE_CONSTANT, TYPE_SEQUENTIAL, TYPE_PARTITIONS, TYPE_CYCLE,
     PARTITION_SIZE,
     TableAnalysis, analyzeValues, compactPartitions, computeBits,
-    packComparativeSignature,
+    packComparativeSignature, CONSTANT_COMPARATIVE_SIGNATURE,
     register, get, intArrayValue,
 };

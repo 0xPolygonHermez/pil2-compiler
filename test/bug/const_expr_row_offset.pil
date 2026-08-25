@@ -1,0 +1,17 @@
+airtemplate A_NoFactor (const int N = 2**8) {
+    col witness a;
+    col witness b;
+    const expr g = a + b;
+    expr r = 0;
+    for (int i = 0; i < 3; ++i) { 
+        r = r + (i)'g * (i + 7); 
+    }
+    r === 0;
+}
+airtemplate B_WithParam (const int N = 2**8, const int PRE = 0) { }
+
+airgroup Bug3 {
+    A_NoFactor();
+    B_WithParam(PRE: 0) alias B0;
+    B_WithParam(PRE: 1) alias B1;
+}

@@ -31,15 +31,21 @@ const REF_TYPE_PUBLIC_TABLE = 7;
 const REF_TYPE_CHALLENGE = 8;
 const REF_TYPE_AIR_VALUE = 9;
 const REF_TYPE_CUSTOM_COL = 10;
+const REF_TYPE_DOMAIN = 11;
 
 const SPV_AGGREGATIONS = ['sum', 'prod'];
 
+const DEFAULT_PILOUT_VERSION = 2;
+// pilout format version => .proto that defines it. Version 1 is the legacy format,
+// without domains, where the row selection of a constraint was its boundary.
+const PILOUT_PROTO_BY_VERSION = { 1: 'pilout_1.proto', 2: 'pilout.proto' };
+
 module.exports = class ProtoOut {
     constructor (Fr, options = {}) {
-        this.version = 2;
+        this.version = ProtoOut.getVersion(options.version ?? (Context.config ?? {}).piloutVersion);
         this.avoidAirsWithSameName = true;
         this.Fr = Fr;
-        this.root = protobuf.loadSync(__dirname + '/pilout.proto');
+        this.root = protobuf.loadSync(__dirname + '/' + PILOUT_PROTO_BY_VERSION[this.version]);
         this.constants = false;
         this.debug = false;
         this.symbols = true;
@@ -50,11 +56,20 @@ module.exports = class ProtoOut {
         this.witnessId2ProtoId = [];
         this.fixedId2ProtoId = [];
         this.customId2ProtoId = [];
+        this.domainId2ProtoId = {};
         this.options = options;
         this.bigIntType = options.bigIntType ?? 'Buffer';
         this.toBaseField = this.mapBigIntType();
         this.airStack = [];
         this.buildTypes();
+    }
+    static getVersion(version) {
+        if (typeof version === 'undefined' || version === false) return DEFAULT_PILOUT_VERSION;
+        const _version = Number(version);
+        if (typeof PILOUT_PROTO_BY_VERSION[_version] === 'undefined') {
+            throw new Error(`Invalid pilout version ${version}, valid versions are ${Object.keys(PILOUT_PROTO_BY_VERSION).join(', ')}`);
+        }
+        return _version;
     }
     mapBigIntType() {
         switch (this.bigIntType) {
@@ -92,10 +107,17 @@ module.exports = class ProtoOut {
         this.Expression = this.root.lookupType('Expression');
         this.Constraint = this.root.lookupType('Constraint');
         this.Operand_Expression = this.root.lookupType('Operand.Expression');
-        this.Constraint_FirstRow = this.root.lookupType('Constraint.FirstRow');
-        this.Constraint_LastRow = this.root.lookupType('Constraint.LastRow');
-        this.Constraint_EveryRow = this.root.lookupType('Constraint.EveryRow');
-        this.Constraint_EveryFrame = this.root.lookupType('Constraint.EveryFrame');
+        if (this.version === 1) {
+            this.Constraint_FirstRow = this.root.lookupType('Constraint.FirstRow');
+            this.Constraint_LastRow = this.root.lookupType('Constraint.LastRow');
+            this.Constraint_EveryRow = this.root.lookupType('Constraint.EveryRow');
+            this.Constraint_EveryFrame = this.root.lookupType('Constraint.EveryFrame');
+        } else {
+            this.Domain = this.root.lookupType('Domain');
+            this.Constraint_AllRows = this.root.lookupType('Constraint.AllRows');
+            this.Constraint_DomainRows = this.root.lookupType('Constraint.DomainRows');
+            this.Constraint_ComplementDomainRows = this.root.lookupType('Constraint.ComplementDomainRows');
+        }
         this.Operand_Constant = this.root.lookupType('Operand.Constant');
         this.Operand_Challenge = this.root.lookupType('Operand.Challenge');
         this.Operand_AirGropValue = this.root.lookupType('Operand.AirGroupValue');
@@ -117,7 +139,7 @@ module.exports = class ProtoOut {
         this.Hint = this.root.lookupType('Hint');
     }
     setupPilOut(name) {
-        console.log('> set pilout name \x1B[38;5;208m' + name + '\x1B[0m');
+        console.log('> set pilout name \x1B[38;5;208m' + name + '\x1B[0m (version \x1B[38;5;208m' + this.version + '\x1B[0m)');
         console.log('> set prime field \x1B[38;5;208m0x' + this.Fr.p.toString(16) + '\x1B[0m');
         this.pilOut = {
             name,
@@ -277,6 +299,9 @@ module.exports = class ProtoOut {
                 const [stage, protoId, airGroupId, airId] = this.airValueId2ProtoId[id];
                 return {type: REF_TYPE_AIR_VALUE, id: protoId, airId, airGroupId, stage};
             }
+            case 'domain':
+                return {type: REF_TYPE_DOMAIN, id: this.getDomainProtoId(id)};
+
             case 'proofvalue':
                 const def = ref.instance.getDefinition(id);
                 const stage = assert.returnTypeOf(def.stage, 'number');
@@ -565,35 +590,61 @@ module.exports = class ProtoOut {
         };
         air.constraints.push(constraintPayload);
     }
+    // domains are row selectors, they must be set before the constraints because
+    // constraints reference them by their proto index. Only domains used by some
+    // constraint of this air are packed.
+    setDomains(domains, constraints) {
+        this.domainId2ProtoId = {};
+        const domainIds = constraints.getDomainIds();
+        if (domainIds.length === 0) return;
+        if (this.version < 2) {
+            const constraint = [...constraints.values()].find(c => (c.domainId ?? false) !== false);
+            throw new Error(`Domain constraints are available from pilout version 2, but version ${this.version} `
+                            + `was requested (constraint with domain ${domains.getLabel(domainIds[0])} at ${constraint.sourceRef})`);
+        }
+        const airDomains = this.setupAirProperty('domains');
+        for (const id of domainIds) {
+            const domain = domains.get(id);
+            this.domainId2ProtoId[id] = airDomains.length;
+            airDomains.push({cycleBits: domain.cycleBits, offsets: [...domain.offsets]});
+        }
+    }
+    // the name of a domain isn't part of its structure, it goes on the symbols
+    setDomainSymbols(domains, data = {}) {
+        if (this.version < 2) return;
+        const labels = domains.getLabelRanges().filter(label => typeof this.domainId2ProtoId[label.from] !== 'undefined');
+        this.setSymbolsFromLabels(labels, 'domain', data);
+    }
+    getDomainProtoId(domainId) {
+        const protoId = this.domainId2ProtoId[domainId];
+        if (typeof protoId === 'undefined') {
+            throw new Error(`Domain ${domainId} used by a constraint isn't defined on air ${this.currentAir.name || 'unnamed'}`);
+        }
+        return protoId;
+    }
     setConstraints(constraints, packed, options = {}) {
         let airConstraints = this.setupAirProperty('constraints');
-        for (const [index, constraint] of constraints.keyValues()) {
-            let payload;
-            const debugLine = constraints.getDebugInfo(index, packed, options);
-            const packedExpressionId = constraints.getPackedExpressionId(constraint.exprId, packed, options);
-            switch (constraint.boundery) {
-                case false:
-                case 'all':
-                    payload = { everyRow: { expressionIdx: { idx: packedExpressionId }, debugLine}};
-                    break;
-
-                case 'first':
-                    payload = { firstRow: { expressionIdx: { idx: packedExpressionId }, debugLine}};
-                    break;
-
-                case 'last':
-                    payload = { lastRow: { expressionIdx: { idx: packedExpressionId }, debugLine}};
-                    break;
-
-                case 'frame':
-                    payload = { everyFrame: { expressionIdx: { idx: packedExpressionId }, offsetMin: 0, offsetMax:0, debugLine}};
-                    break;
-
-                default:
-                    throw new Error(`Invalid constraint boundery '${constraint.boundery}'`);
-
+        // constraints are packed grouped by domain, constraints without domain first
+        for (const [domain, constraintIds] of constraints.getGroupedByDomain()) {
+            const domainIdx = domain === false ? false : this.getDomainProtoId(domain.id);
+            for (const index of constraintIds) {
+                const constraint = constraints.get(index);
+                const debugLine = constraints.getDebugInfo(index, packed, options);
+                const packedExpressionId = constraints.getPackedExpressionId(constraint.exprId, packed, options);
+                const body = { expressionIdx: { idx: packedExpressionId }, debugLine};
+                let payload;
+                if (this.version < 2) {
+                    // legacy format, a constraint without domain applies to every row
+                    payload = { everyRow: body };
+                } else if (domainIdx === false) {
+                    payload = { allRows: body };
+                } else if (domain.complement) {
+                    payload = { complementDomainRows: { domainIdx, ...body }};
+                } else {
+                    payload = { domainRows: { domainIdx, ...body }};
+                }
+                airConstraints.push(payload);
             }
-            airConstraints.push(payload);
         }
     }
     addHints(hints, packed, options) {
@@ -766,4 +817,3 @@ module.exports = class ProtoOut {
     }
 }
 
-let pout = new module.exports();

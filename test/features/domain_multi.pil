@@ -1,0 +1,58 @@
+// two airs, each one with its own domains, to check that the pilout indexes the
+// domains per air and that the constraints reference them by that index.
+
+function boolean(const expr e) {
+    e * (1 - e) === 0;
+}
+
+airtemplate FirstLast(int N = 2**8) {
+
+    col witness a;
+    col witness b;
+
+    domain FIRST = [1,0...];
+    domain LAST = [0...,1];
+    domain UNUSED = [1,1,0,0];      // declared but never used, not packed
+
+    a === 0 domain FIRST;
+    b === 1 domain LAST;
+
+    domain !FIRST {
+        a === b;                    // every row but the first one
+    }
+
+    a * b === 0;                    // whole air
+}
+
+airtemplate Cycles(int N = 2**8) {
+
+    col witness x;
+    col witness y;
+
+    domain LIMITS_16 = [1,0:14,1];
+    domain ODD = [0,1];
+    domain QUARTER = [1,1,0,0];
+    domain WHOLE = [1...];
+
+    domain LIMITS_16 {
+        boolean(x);                 // a constraint created inside a function
+    }
+
+    x === y domain ODD;
+
+    domain QUARTER {
+        {
+            y === 0;                // a plain scope keeps the domain
+        }
+    }
+
+    y <== x * x domain !ODD;        // witness constraint with a complement domain
+
+    x + y === 1 domain WHOLE;
+    x - y === 0;                    // whole air
+}
+
+airgroup Multi {
+    FirstLast();
+    Cycles();
+}

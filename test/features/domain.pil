@@ -1,0 +1,38 @@
+airtemplate DomainAir(int N = 2**8) {
+
+    col witness sel;
+    col witness enable;
+    col witness a;
+    col witness b;
+
+    domain LIMITS_16 = [1,0:14,1];
+    domain FIRST = [1,0...];
+
+    // domain attached to a single constraint
+    sel * (1 - sel) === 0 domain LIMITS_16;
+
+    // domain applied to a group of constraints
+    domain LIMITS_16 {
+        enable * (1 - enable) === 0;
+
+        // domains chain as scopes, on leaving FIRST we are on LIMITS_16 again
+        domain FIRST {
+            a === 0;
+        }
+        b * (1 - b) === 0;
+    }
+
+    // complement: the rows out of the domain
+    a * (1 - a) === 0 domain !LIMITS_16;
+
+    domain !FIRST {
+        b === b' ;
+    }
+
+    // no domain
+    a * enable === b * sel;
+}
+
+airgroup Domains {
+    DomainAir();
+}

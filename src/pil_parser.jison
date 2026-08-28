@@ -53,7 +53,6 @@ switch                                      { return 'SWITCH' }
 case                                        { return 'CASE' }
 default                                     { return 'DEFAULT' }
 
-when                                        { return 'WHEN' }
 aggregate                                   { return 'AGGREGATE' }
 stage                                       { return 'STAGE' }
 
@@ -62,6 +61,7 @@ private                                     { return 'PRIVATE' }
 final                                       { return 'FINAL' }
 function                                    { return 'FUNCTION' }
 return                                      { return 'RETURN' }
+domain                                      { return 'DOMAIN' }
 
 \.\.\+\.\.                                  { return 'DOTS_ARITH_SEQ' }
 \.\.\*\.\.                                  { return 'DOTS_GEOM_SEQ' }
@@ -320,12 +320,6 @@ statement_closed
     : codeblock_closed
         { $$ = { type: 'code', statements: $1 }; }
 
-    | WHEN '(' expression ')' non_delimited_statement
-        { $$ = { type: 'when', statements: $4, expression: $3 } }
-
-    | WHEN IDENTIFIER non_delimited_statement
-        { $$ = { boundary: $2, type: 'when', statements: $3 } }
-
     | HINT '{' data_object '}'
        { $$ = { type: 'hint', name: $1, data: $3 } }
 
@@ -343,6 +337,9 @@ statement_closed
 
     | closed_container_definition
         { $$ = $1 }
+
+    | DOMAIN domain_reference '{' statement_block '}'
+        { $$ = { type: 'domain', ...$2, statements: $4.statements } }
 
     | '{' statement_block '}'
         { $$ = { type: 'scope_definition', ...$2 }; }
@@ -587,10 +584,16 @@ statement_no_closed
         { $$ = {type: 'expr', expr: $2, virtual: true} }
 
     | expression '===' expression
-        { $$ = { type: 'constraint', left: $1, right: $3, witness: false } }
+        { $$ = { type: 'constraint', left: $1, right: $3, witness: false, domain: false } }
+
+    | expression '===' expression DOMAIN domain_reference
+        { $$ = { type: 'constraint', left: $1, right: $3, witness: false, domain: $5 } }
 
     | expression '<==' expression
-        { $$ = { type: 'constraint', left: $1, right: $3, witness: true } }
+        { $$ = { type: 'constraint', left: $1, right: $3, witness: true, domain: false } }
+
+    | expression '<==' expression DOMAIN domain_reference
+        { $$ = { type: 'constraint', left: $1, right: $3, witness: true, domain: $5 } }
 
     | deferred_function_call
         { $$ = $1 }
@@ -608,6 +611,9 @@ statement_no_closed
         { $$ = $1 }
 
     | air_value_declaration
+        { $$ = $1 }
+
+    | domain_declaration
         { $$ = $1 }
 
     | commit_declaration
@@ -752,7 +758,6 @@ codeblock_closed
 
     | PRAGMA
         { $$ = { type: 'pragma', value: $1 }}
-
     ;
 
 case_body
@@ -1284,6 +1289,20 @@ col_declaration
 
     | COL FIXED col_features col_declaration_ident '=' sequence_definition
         { $$ = { type: 'fixed_col_declaration',  items: [$4], sequence: $6, features: $3.features } }
+    ;
+
+domain_declaration
+    : DOMAIN IDENTIFIER '=' sequence_definition
+        { $$ = { type: 'domain_declaration', items: [{ name: $2 }], sequence: $4 } }
+    ;
+
+// a domain use, prefixed with ! to use its complement (the rows out of the domain)
+domain_reference
+    : IDENTIFIER
+        { $$ = { name: $1, complement: false } }
+
+    | '!' IDENTIFIER
+        { $$ = { name: $2, complement: true } }
     ;
 
 air_value_declaration

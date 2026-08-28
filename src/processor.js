@@ -31,6 +31,7 @@ const ProofValues = require("./proof_values.js");
 const Challenges = require("./challenges.js");
 const AirValues = require("./air_values.js");
 const AirGroupValues = require("./air_group_values.js");
+const Domains = require("./domains.js");
 const Iterator = require("./iterator.js");
 const Context = require("./context.js");
 const Runtime = require("./runtime.js");
@@ -129,6 +130,10 @@ module.exports = class Processor {
         this.airValues = new AirValues();
         ExpressionItem.setManager(ExpressionItems.AirValue, this.airValues);
         this.references.register('airvalue', this.airValues);
+
+        this.domains = new Domains();
+        ExpressionItem.setManager(ExpressionItems.Domain, this.domains);
+        this.references.register('domain', this.domains);
 
         this.functions = new Indexable('function', Function, ExpressionItems.FunctionCall, {const: true});
         ExpressionItem.setManager(ExpressionItems.FunctionCall, this.functions);
@@ -1387,6 +1392,8 @@ module.exports = class Processor {
             this.pushAirScope();
         }
         this.scope.pushInstanceType('air');
+        // domain ids are air scoped, an air never inherits the domain of its caller
+        this.scope.setValue('domain', false);
 
         airGroup.airStart(air.id);
         this.memoryUpdate();
@@ -1415,6 +1422,9 @@ module.exports = class Processor {
             console.log(`  > Custom cols (${commitNames}): ` + customCols);
         }
         console.log('  > Constraints: ' + constraints);
+        if (this.domains.length) {
+            console.log('  > Domains: ' + (this.domains.length + 1));
+        }
         // + ' (max degree: ' + ((maxDegree > this.warningMaxDegreeLimit) ? '\x1b[38;5;196m'+maxDegree+'\x1B[0m' : maxDegree)+')');
         console.log('  > Execution time: ' + units.getHumanTime(ti2-ti1));
         airGroup.airEnd(air.id, air.virtual ?? false);
@@ -1442,7 +1452,7 @@ module.exports = class Processor {
         } else {
             this.clearAirScope(air.name);
         }
-        this.scope.popInstanceType(['witness', 'fixed', 'customcol', 'im', 'airvalue']);
+        this.scope.popInstanceType(['witness', 'fixed', 'customcol', 'im', 'airvalue', 'domain']);
         this.context.pop();
         if (hasAlias) {
             this.context.pop();
@@ -1566,6 +1576,9 @@ module.exports = class Processor {
         this.expressions.pack(packed, {instances: [this.fixeds, this.witness, this.customCols]});
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-EXPRESSIONS-PACK');
 
+        this.proto.setDomains(this.domains, this.constraints);
+        chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SET-DOMAINS');
+
         this.proto.setConstraints(this.constraints, packed,
             {
                 labelsByType: {
@@ -1590,6 +1603,7 @@ module.exports = class Processor {
         chrono.step('PROTO-AIRGROUP-OUT-BEGIN-SYMBOLS');
 
         this.proto.setSymbolsFromLabels(this.airValues.getLabels(['stage']), 'airvalue', info);
+        this.proto.setDomainSymbols(this.domains, info);
 
         const imSymbols = packed.expressionLabels.map((label, index) => typeof label === 'undefined' ? value : {label, from:index}).filter(x => typeof x !== 'undefined')
         this.proto.setSymbolsFromLabels(imSymbols, 'im', {...info, namePrefix: Context.airName + '.'});
@@ -1612,6 +1626,7 @@ module.exports = class Processor {
         this.references.clearType('witness', label);
         this.references.clearType('customcol', label);
         this.references.clearType('airvalue', label);
+        this.references.clearType('domain', label);
         this.references.clearScope('air');
         this.expressions.clear(label);
         this.hints.clear();
@@ -1621,6 +1636,7 @@ module.exports = class Processor {
         this.references.pushType('witness', label);
         this.references.pushType('customcol', label);
         this.references.pushType('airvalue', label);
+        this.references.pushType('domain', label);
         this.references.pushScope('air');
         this.expressions.push(label);
         this.hints.push();
@@ -1630,6 +1646,7 @@ module.exports = class Processor {
         this.references.popType('witness', label);
         this.references.popType('customcol', label);
         this.references.popType('airvalue', label);
+        this.references.popType('domain', label);
         this.references.popScope('air');
         this.expressions.pop(label);
         this.hints.pop();
@@ -1876,6 +1893,55 @@ module.exports = class Processor {
             const res = this.currentAir.declareAirValue(value.name, lengths, {sourceRef: this.sourceRef, stage});
         }
     }
+    execDomainDeclaration(s) {
+        const scopeType = this.scope.getInstanceType();
+        for (const value of s.items) {
+            if (scopeType !== 'air') {
+                throw new Error(`domain ${value.name} must be declared inside airtemplate at ${Context.sourceTag}`);
+            }
+            const lengths = this.decodeLengths(value);
+            if (lengths.length > 0) {
+                throw new Error(`domain ${value.name} could not be an array at ${Context.sourceTag}`);
+            }
+            // a domain is structure, not data, its values are always needed to know
+            // the offsets it selects, regardless of the fixed cols configuration.
+            const sequence = new Sequence(s.sequence, {maxSize: ExpressionItems.IntValue.castTo(this.references.get('N'))});
+            sequence.extend();
+            this.declareFullReference(value.name, 'domain', [], {sequence});
+        }
+    }
+    // resolve a domain use (on a constraint or on a domain block) to {id, complement}
+    getDomain(domain) {
+        const name = domain.name;
+        const reference = this.references.getReference(name, false);
+        if (reference === false) {
+            throw new Error(`domain ${name} not found at ${Context.sourceTag}`);
+        }
+        if (reference.type !== 'domain') {
+            throw new Error(`${name} was defined as ${reference.type}, but used as domain at ${Context.sourceTag}`);
+        }
+        return {id: reference.getId(), complement: domain.complement ?? false};
+    }
+    // domain of the enclosing domain block, false when there isn't one
+    get currentDomain() {
+        return this.scope.getValue('domain', false);
+    }
+    getDomainLabel(domain) {
+        return domain === false ? '' : `${domain.complement ? '!' : ''}${this.domains.getLabel(domain.id)}`;
+    }
+    execDomain(s) {
+        const scopeType = this.scope.getInstanceType();
+        if (scopeType !== 'air') {
+            throw new Error(`domain ${s.name} block only could be used inside airtemplate, not on ${scopeType} scope at ${Context.sourceTag}`);
+        }
+        const domain = this.getDomain(s);
+        this.scope.push();
+        // domains chain as scopes, on leaving this block the previous domain is restored
+        this.scope.setValue('domain', domain);
+        const result = this.execute(s.statements, `DOMAIN ${s.name} ${this.sourceRef}`);
+        this.scope.pop(this.globalScopeTypes);
+        return result;
+    }
     execChallengeDeclaration(s) {
         this.declare(s, 'challenge', true, false, {stage: s.stage ? Number(s.stage):0});
         // TODO: initialization
@@ -2003,6 +2069,24 @@ module.exports = class Processor {
             this.proto.addAirGroupValueDefaultValueConstraint(airId, airGroupValue.data.airGroupId, airGroupValue.definition.relativeId, defaultValue);
         }
     }
+    // domain explicitly attached to the constraint (expr === expr domain NAME) or,
+    // when not specified, the domain of the enclosing domain block (if any).
+    // Global constraints apply to the whole proof, they could not have a domain.
+    getConstraintDomain(s, global, sourceTag) {
+        const domain = s.domain ?? false;
+        if (domain === false) {
+            const current = global ? false : this.currentDomain;
+            if (global && this.currentDomain !== false) {
+                throw new Error(`Global constraint inside domain ${this.getDomainLabel(this.currentDomain)} block, `
+                                + `global constraints could not have a domain at ${sourceTag}`);
+            }
+            return current;
+        }
+        if (global) {
+            throw new Error(`Global constraint could not be attached to domain ${domain.complement ? '!' : ''}${domain.name} at ${sourceTag}`);
+        }
+        return this.getDomain(domain);
+    }
     execConstraint(s) {
         const scopeType = this.scope.getInstanceType();
 
@@ -2035,9 +2119,11 @@ module.exports = class Processor {
             this.hints.define('witness_calc', {reference: _left, expression: _right});
         }
 
+        const domain = this.getConstraintDomain(s, global, sourceTag);
+
         const constraints = global ? this.globalConstraints : this.constraints;
         const constraintId = constraints.getLastConstraintId();
-        const id = constraints.define(_left, _right,false, sourceTag);
+        const id = constraints.define(_left, _right, domain, sourceTag);
 
 
         if (Context.config.outputConstraints || (Context.config.outputGlobalConstraints && scopeType === 'proof')) {
@@ -2045,7 +2131,8 @@ module.exports = class Processor {
             const color = global ? '\x1B[38;2;93;240;0m': '\x1B[38;2;192;255;2m';
             const expr = constraints.getExpr(id);
             // draw constraint +1 to match with verify constraints message
-            const prefix = `${prompt}${global ? 'Global ' : ''}Constraint #${constraintId+1} [${Context.proofLevel}]`;
+            const domainLabel = domain === false ? '' : ` domain ${this.getDomainLabel(domain)}`;
+            const prefix = `${prompt}${global ? 'Global ' : ''}Constraint #${constraintId+1} [${Context.proofLevel}]${domainLabel}`;
             if (Context.config.bothConstraintsFormat || !Context.config.rawConstraintsFormat) {
                 console.log(`${prefix} > ${color}${expr.toString({hideClass:true, hideLabel:false})} === 0\x1B[0m (${sourceTag})`);
             }

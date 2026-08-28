@@ -37,7 +37,7 @@ module.exports = class Constraints {
         const res = (options.expressions ?? this.getExpressions()).getPackedExpressionId(id, container, options);
         return res;
     }
-    define(left, right, boundery, sourceRef) {
+    define(left, right, domain, sourceRef) {
         assert.instanceOf(left, Expression);
         assert.instanceOf(right, Expression);
         if (left.isRuntime()) {
@@ -56,14 +56,53 @@ module.exports = class Constraints {
             left.insert('sub', right);
         }
         left.simplify();
-        return this.defineExpressionAsConstraint(left, boundery, sourceRef);
+        return this.defineExpressionAsConstraint(left, domain, sourceRef);
     }
     getLastConstraintId() {
         return this.constraints.length - 1;
     }
-    defineExpressionAsConstraint(e, boundery, sourceRef) {
+    // domain is false (whole air) or {id, complement}, sourceRef is always the last argument.
+    defineExpressionAsConstraint(e, domain, sourceRef) {
         const exprId = this.getExpressions().insert(e);
-        return this.constraints.push({exprId, sourceRef: sourceRef ?? Context.sourceTag, boundery: boundery ?? false}) - 1;
+        const _domain = domain ?? false;
+        return this.constraints.push({exprId, sourceRef: sourceRef ?? Context.sourceTag,
+                                      domainId: _domain === false ? false : _domain.id,
+                                      complementDomain: _domain === false ? false : (_domain.complement ?? false)}) - 1;
+    }
+    // ids of the domains used by these constraints, without repetitions and sorted
+    getDomainIds() {
+        let ids = [];
+        for (const constraint of this.constraints) {
+            const domainId = constraint.domainId ?? false;
+            if (domainId !== false && !ids.includes(domainId)) ids.push(domainId);
+        }
+        return ids.sort((a, b) => a - b);
+    }
+    // [[domain, [constraintId, ...]], ...] grouped by domain, where domain is false
+    // (whole air, packed first) or {id, complement}. Groups are sorted by domain id,
+    // the domain before its complement.
+    getGroupedByDomain() {
+        let groups = new Map();
+        for (const [index, constraint] of this.keyValues()) {
+            const domainId = constraint.domainId ?? false;
+            const complement = constraint.complementDomain ?? false;
+            const key = domainId === false ? 'all' : `${domainId}:${complement ? 1 : 0}`;
+            if (!groups.has(key)) {
+                groups.set(key, {domain: domainId === false ? false : {id: domainId, complement}, ids: []});
+            }
+            groups.get(key).ids.push(index);
+        }
+        let res = [];
+        if (groups.has('all')) {
+            res.push([false, groups.get('all').ids]);
+            groups.delete('all');
+        }
+        const sorted = [...groups.values()].sort((a, b) => a.domain.id !== b.domain.id ? a.domain.id - b.domain.id
+                                                                                      : (a.domain.complement ? 1 : 0) - (b.domain.complement ? 1 : 0));
+        for (const group of sorted) {
+            res.push([group.domain, group.ids]);
+        }
+        return res;
     }
     *[Symbol.iterator]() {
         for (let index = 0; index < this.constraints.length; ++index) {

@@ -21,6 +21,9 @@ module.exports = class FixedFile {
         this.labels[col] = label;
     }
     saveToFile(filename) {
+        if (Context.Fr.p >= 0x10000000000000000n) {
+            throw new Error(`fixed-to-file only supports fields of 64 bits or less (prime 0x${Context.Fr.p.toString(16)}), keep fixed data inside the pilout`);
+        }
         const _filename = (!Context.fixedOutputDir || filename.startsWith('/')) ? filename : path.join(Context.fixedOutputDir, filename);
         const dirname = path.dirname(_filename);
         console.log(`  > Saving fixed file ${COLORS.filename(_filename)} ...`);

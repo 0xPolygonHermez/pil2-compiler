@@ -1,0 +1,33 @@
+// Fixed columns whose values need more than 64 bits once the field is larger than Goldilocks.
+// Every column is written in terms of PRIME, so the same pil is valid for any field.
+airtemplate BigFixed(int N = 2**4) {
+    const int G = PRIME - 2;
+
+    col fixed GEO = [1, G..*..];            // geometric sequence
+    col fixed LST = [PRIME - 1, 7]...;      // explicit list with a big value
+    col fixed NEG = [-1, 7]...;             // negative literal
+    col fixed ARI = [0, -1..+..];           // decreasing arithmetic sequence
+
+    col fixed ROW;                          // row by row assignment
+    for (int row = 0; row < N; ++row) {
+        ROW[row] = PRIME - 1 - row;
+    }
+
+    col fixed FILL;                         // Tables.fill with a big value
+    Tables.fill(-1, FILL, 0, N / 2);
+    Tables.fill(3, FILL, N / 2, N / 2);
+
+    col fixed FILL_RESIZE;                  // small fill, then a big value forces a resize
+    Tables.fill(3, FILL_RESIZE, 0, N);
+    FILL_RESIZE[0] = -1;
+
+    col fixed COPY;                         // Tables.copy from a big column
+    Tables.copy(ROW, 0, COPY, 0, N);
+
+    col witness W;
+    W * (GEO + LST + NEG + ARI + ROW + FILL + FILL_RESIZE + COPY) === 0;
+}
+
+airgroup BigFixed {
+    BigFixed();
+}

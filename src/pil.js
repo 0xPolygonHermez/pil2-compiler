@@ -126,7 +126,11 @@ async function run() {
     if (argv.exec || argv.output === 'none') {
         config.protoOut = false;
     }
-    const F = new ffjavascript.F1Field((1n<<64n)-(1n<<32n)+1n );
+    if (typeof config.prime !== 'undefined' && typeof config.prime !== 'string') {
+        console.log(`\x1B[1;31mERROR:\x1B[0;31m prime on config must be a string (a JSON number loses precision)\x1B[0m`);
+        process.exit(1);
+    }
+    const F = new ffjavascript.F1Field(config.prime ? BigInt(config.prime) : (1n<<64n)-(1n<<32n)+1n );
 
     if (argv.lib) {
         config.includes = argv.lib.split(',');

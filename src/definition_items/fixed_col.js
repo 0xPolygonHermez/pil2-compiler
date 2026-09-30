@@ -107,7 +107,7 @@ module.exports = class FixedCol extends ProofItem {
     }
     createBuffer(rows, bytes) {
         if (bytes === true) {
-            return [false, new Array(rows), x => x];
+            return [false, new Array(rows).fill(0n), x => x];
         }
         const buffer = new Buffer.alloc(rows * bytes);
         switch (bytes) {
@@ -161,9 +161,8 @@ module.exports = class FixedCol extends ProofItem {
             [this.buffer, this.values, this.converter] = this.createBuffer(this.rows, this.bytes);
             this.updateSize();
             this.updateSetRowValue();
-        } else {
-            this.checkIfResize(row, value);
         }
+        this.checkIfResize(row, value);
         if (row > this.maxRow) this.maxRow = row;
         this.values[row] = this.converter(value);
     }
@@ -235,7 +234,7 @@ module.exports = class FixedCol extends ProofItem {
         if (!this.loaded) {
             this.loadFromFile();
         }
-        if (row >= this.size) {
+        if (row >= (this.size === false ? this.rows : this.size)) {
             throw new Error(`Out-of-bounds on fixed, to access to row ${row} valid indexs [0..${this.size}] N=${Context.rows} in ${Context.references.getLabelByItem(this)}`);
         }
         if (rowOffset) {
@@ -407,8 +406,17 @@ module.exports = class FixedCol extends ProofItem {
         if (offset + count > this.getValues().length) {
             throw new Error('Destination range exceeds destination length');
         }
+        value = Context.Fr.e(value);
+        if (!this.sequence) {
+            this.checkIfResize(Number(offset), value);
+        } else if (value > U64_MAX && this.getValues() instanceof BigUint64Array) {
+            throw new Error(`Tables.fill of ${value} doesn't fit in the 64-bit sequence assigned to fixed column ${this.label} at ${Context.sourceRef}`);
+        }
         const values = this.getValues();
-        values.fill(value, Number(offset), Number(offset + count));
+        values.fill(this.converter(value), Number(offset), Number(offset + count));
+        // resizeValues only preserves rows up to maxRow
+        const lastRow = Number(offset + count) - 1;
+        if (count > 0 && lastRow > this.maxRow) this.maxRow = lastRow;
     }    
     // NOTE: named *Range (not isConstant/isSequence) on purpose: `isSequence` is
     // an established truthy protocol property (Sequence.isSequence, checked by

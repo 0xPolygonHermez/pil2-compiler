@@ -30,12 +30,11 @@ Generate pilout file specifing paths where search pil files:
 ```sh
 $ node src/pil.js <filename.pil> -o <filename.pilout> -I path1,path2,lib/std
 ```
-The field is Goldilocks by default. To compile for another prime field, set `prime` in a configuration file passed with `-P`:
+The field is Goldilocks (`p = 2^64 - 2^32 + 1`) by default. To compile for the BN254 scalar field (Fr), pass `--field bn254` (`bn128`, circom's name for the same field, is accepted too):
 ```sh
-$ echo '{"prime": "21888242871839275222246405745257275088548364400416034343698204186575808495617"}' > bn254.json
-$ node src/pil.js <filename.pil> -o <filename.pilout> -P bn254.json
+$ node src/pil.js <filename.pil> -o <filename.pilout> --field bn254
 ```
-`fixed-to-file` only supports fields of 64 bits or less and fails with a bigger field; in that case keep fixed data inside the pilout (the default).
+On a field larger than 64 bits, omit `-O fixed-to-file`: it only supports fields of 64 bits or less, and fails otherwise. The fixed data then stays inside the pilout, as by default.
 ## Quick Reference
 In this section you will find a quick reference for the language in [doc/quick_reference.md](doc/quick_reference.md).
 The STD library written in PIL2 is available in [pil2-components](https://github.com/0xPolygonHermez/pil2-proofman/tree/main/pil2-components).

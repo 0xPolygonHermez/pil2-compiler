@@ -41,13 +41,12 @@ const OPTIONS = {
     // TODO: option to force witness name as snake_case and air, airtemplate, airgroup in CamelCase
 }
 
-// The prime fields the compiler knows, by the name --field takes. Goldilocks is the default.
+// The prime fields the compiler knows, by the name --field takes. Goldilocks is the default; bn128
+// is the scalar field of BN128 (Ethereum's alt_bn128).
 const FIELDS = {
     goldilocks: (1n << 64n) - (1n << 32n) + 1n,
-    bn254: 21888242871839275222246405745257275088548364400416034343698204186575808495617n,
+    bn128: 21888242871839275222246405745257275088548364400416034343698204186575808495617n,
 };
-// circom's name for the same field (circom --prime bn128).
-FIELDS.bn128 = FIELDS.bn254;
 
 const yargs = require("yargs").version(version)
     .usage("$0 <source.pil> <options>")
@@ -59,7 +58,7 @@ const yargs = require("yargs").version(version)
     .option('o', { alias: 'output', describe: 'output pilout file. if filename is none, no pilout will be generated'})
     .option('n', { alias: 'name', describe: 'name of pilout (protobuf)'})
     .option('P', { alias: 'config', describe: 'pil configuration file (json format)'})
-    .option('field', { describe: 'prime field: goldilocks (default) or bn254, the BN254 scalar field (bn128, its name in circom, too)', type: 'string'})
+    .option('field', { describe: 'prime field: goldilocks (default) or bn128, the scalar field of BN128', type: 'string'})
     .option('v', { alias: 'verbose', describe: 'verbose output'})
     .option('I', { alias: 'include', describe: 'include a pil (as adding a include on main pil)'})
     .option('l', { alias: 'lib', describe: 'include paths separated by ,'})

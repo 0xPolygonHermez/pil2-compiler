@@ -4,15 +4,15 @@ const fs = require('fs');
 const path = require('path');
 const protobuf = require('protobufjs');
 
-// A field larger than 64 bits (the BN254 scalar field, selected with --field bn254) puts values of more
+// A field larger than 64 bits (the scalar field of BN128, selected with --field bn128) puts values of more
 // than 64 bits in the pilout: the base field itself, every negative constant and most fixed values. This spec
-// compiles the same pil on Goldilocks and on BN254 and reads the fixed columns back from the pilout.
+// compiles the same pil on Goldilocks and on BN128 and reads the fixed columns back from the pilout.
 
 const GOLDILOCKS = 0xffffffff00000001n;
-const BN254 = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+const BN128 = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 const N = 16;
 
-const PIL = path.join(__dirname, 'bn254', 'big_fixed.pil');
+const PIL = path.join(__dirname, 'bn128', 'big_fixed.pil');
 const TMP = path.join(__dirname, '..', 'tmp');
 
 // Compiles big_fixed.pil into tmp/<name>.pilout, with --field `field` unless it is false.
@@ -77,7 +77,7 @@ function fixedColumns(pilout) {
     return columns;
 }
 
-for (const [fieldName, field, p] of [['Goldilocks', false, GOLDILOCKS], ['BN254', 'bn254', BN254]]) {
+for (const [fieldName, field, p] of [['Goldilocks', false, GOLDILOCKS], ['BN128', 'bn128', BN128]]) {
     describe(`Fixed values of more than 64 bits on ${fieldName}`, function () {
         this.timeout(120000);
 
@@ -107,7 +107,7 @@ describe('fixed-to-file on a field larger than 64 bits', function () {
     it('fails instead of truncating the values', () => {
         let output = '';
         try {
-            compile('big_fixed_bn254_fixed_to_file', 'bn254', ['-O', 'fixed-to-file', '-u', path.join(TMP, 'big_fixed_bn254_fixed')]);
+            compile('big_fixed_bn128_fixed_to_file', 'bn128', ['-O', 'fixed-to-file', '-u', path.join(TMP, 'big_fixed_bn128_fixed')]);
         } catch (error) {
             output = (error.stdout || '') + (error.stderr || '');
         }
@@ -122,17 +122,13 @@ describe('--field', function () {
         assert.strictEqual(buf2bint(loadPilout(compile('field_goldilocks', 'goldilocks')).baseField), GOLDILOCKS);
     });
 
-    it('takes bn128, circom\'s name, for the BN254 scalar field', () => {
-        assert.strictEqual(buf2bint(loadPilout(compile('field_bn128', 'bn128')).baseField), BN254);
-    });
-
     it('refuses an unknown field, naming the known ones', () => {
-        assert.include(failure('field_unknown', ['--field', 'bn256']), 'unknown field "bn256": use goldilocks, bn254, bn128');
+        assert.include(failure('field_unknown', ['--field', 'bn256']), 'unknown field "bn256": use goldilocks, bn128');
     });
 
     it('refuses a config that sets the prime', () => {
         const config = path.join(TMP, 'field_config_prime.json');
-        fs.writeFileSync(config, JSON.stringify({ prime: BN254.toString() }));
+        fs.writeFileSync(config, JSON.stringify({ prime: BN128.toString() }));
         assert.include(failure('field_config_prime', ['-P', config]), "the config's prime is not read: choose the field with --field");
     });
 });

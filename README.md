@@ -30,9 +30,9 @@ Generate pilout file specifing paths where search pil files:
 ```sh
 $ node src/pil.js <filename.pil> -o <filename.pilout> -I path1,path2,lib/std
 ```
-The field is Goldilocks (`p = 2^64 - 2^32 + 1`) by default. To compile for the BN254 scalar field (Fr), pass `--field bn254` (`bn128`, circom's name for the same field, is accepted too):
+The field is Goldilocks (`p = 2^64 - 2^32 + 1`) by default. To compile for the scalar field of BN128, the curve of Ethereum's precompiles (`alt_bn128`), pass `--field bn128`. Its order is `r = 21888242871839275222246405745257275088548364400416034343698204186575808495617`.
 ```sh
-$ node src/pil.js <filename.pil> -o <filename.pilout> --field bn254
+$ node src/pil.js <filename.pil> -o <filename.pilout> --field bn128
 ```
 On a field larger than 64 bits, omit `-O fixed-to-file`: it only supports fields of 64 bits or less, and fails otherwise. The fixed data then stays inside the pilout, as by default.
 ## Quick Reference

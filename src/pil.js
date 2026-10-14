@@ -134,10 +134,6 @@ async function run() {
     if (argv.exec || argv.output === 'none') {
         config.protoOut = false;
     }
-    if (typeof config.prime !== 'undefined') {
-        console.log(`\x1B[1;31mERROR:\x1B[0;31m the config's prime is not read: choose the field with --field\x1B[0m`);
-        process.exit(1);
-    }
     const fieldName = typeof argv.field === 'undefined' ? 'goldilocks' : String(argv.field).trim().toLowerCase();
     if (!Object.prototype.hasOwnProperty.call(FIELDS, fieldName)) {
         console.log(`\x1B[1;31mERROR:\x1B[0;31m unknown field "${argv.field}": use ${Object.keys(FIELDS).join(', ')}\x1B[0m`);

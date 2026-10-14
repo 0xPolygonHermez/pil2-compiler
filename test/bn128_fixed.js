@@ -156,10 +156,4 @@ describe('--field', function () {
     it('refuses an unknown field, naming the known ones', () => {
         assert.include(failure('field_unknown', ['--field', 'bn256']), 'unknown field "bn256": use goldilocks, bn128');
     });
-
-    it('refuses a config that sets the prime', () => {
-        const config = path.join(TMP, 'field_config_prime.json');
-        fs.writeFileSync(config, JSON.stringify({ prime: BN128.toString() }));
-        assert.include(failure('field_config_prime', ['-P', config]), "the config's prime is not read: choose the field with --field");
-    });
 });

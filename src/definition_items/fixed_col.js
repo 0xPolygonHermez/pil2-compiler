@@ -234,8 +234,8 @@ module.exports = class FixedCol extends ProofItem {
         if (!this.loaded) {
             this.loadFromFile();
         }
-        if (row >= (this.size === false ? this.rows : this.size)) {
-            throw new Error(`Out-of-bounds on fixed, to access to row ${row} valid indexs [0..${this.size}] N=${Context.rows} in ${Context.references.getLabelByItem(this)}`);
+        if (row < 0 || row >= this.rows) {
+            throw new Error(`Out-of-bounds on fixed, to access to row ${row} valid indexes [0..${this.rows - 1}] N=${Context.rows} in ${Context.references.getLabelByItem(this)}`);
         }
         if (rowOffset) {
             const rows  = BigInt(this.rows);

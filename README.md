@@ -34,7 +34,7 @@ The field is Goldilocks (`p = 2^64 - 2^32 + 1`) by default. To compile for the s
 ```sh
 $ node src/pil.js <filename.pil> -o <filename.pilout> --field bn128
 ```
-On a field larger than 64 bits, omit `-O fixed-to-file`: it only supports fields of 64 bits or less, and fails otherwise. The fixed data then stays inside the pilout, as by default.
+Binary fixed files (`-O fixed-to-file`, `#pragma extern_fixed_file` and `#pragma fixed_dump` of a column with values of more than 64 bits) store each value as little-endian 64-bit limbs, as many as the field needs: one on a field of 64 bits or less, four on BN128.
 
 To size a fixed column for the field, instead of resizing it when its first value of more than 64 bits arrives, put `#pragma fixed_bytes field` before it (see [Pragmas](doc/quick_reference.md#pragmas)).
 ## Quick Reference

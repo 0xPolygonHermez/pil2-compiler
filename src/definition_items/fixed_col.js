@@ -310,8 +310,9 @@ module.exports = class FixedCol extends ProofItem {
 
         if (value && value.loaded) {
             console.log(`  > Fixed ${this.label} loaded from file`);
-            this.bytes = 8;
-            this.buffer = value.values.buffer;
+            // a BigUint64Array, or an Array of big ints on fields larger than 64 bits
+            this.bytes = value.values.BYTES_PER_ELEMENT ?? true;
+            this.buffer = value.values.buffer ?? false;
             this.values = value.values;
             this.converter = x => x;
             this.rows = value.values.length;
@@ -336,7 +337,16 @@ module.exports = class FixedCol extends ProofItem {
     }
     dumpToFile(filename) {
         console.log(`Dumping ${this.id} to ${filename} ......`);
-        const buffer = this.sequence ? this.sequence.getBuffer() : this.values;
+        let buffer = this.sequence ? this.sequence.getBuffer() : this.values;
+        if ((this.sequence ?? this).bytes === true) {
+            // big ints have no binary storage: dump each value as its little-endian 64-bit limbs
+            const values = this.sequence ? this.sequence.getValues() : this.values;
+            const limbs = Context.Fr.n64;
+            buffer = new BigUint64Array(values.length * limbs);
+            for (let index = 0; index < buffer.length; ++index) {
+                buffer[index] = BigInt(values[Math.floor(index / limbs)]) >> (64n * BigInt(index % limbs));
+            }
+        }
         if (buffer === false) {
             throw new Error('This sequence cannot be saved to file');
         }

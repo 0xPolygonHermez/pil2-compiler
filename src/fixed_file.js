@@ -21,9 +21,6 @@ module.exports = class FixedFile {
         this.labels[col] = label;
     }
     saveToFile(filename) {
-        if (Context.Fr.p >= 0x10000000000000000n) {
-            throw new Error(`fixed-to-file only supports fields of 64 bits or less (prime 0x${Context.Fr.p.toString(16)}), keep fixed data inside the pilout`);
-        }
         const _filename = (!Context.fixedOutputDir || filename.startsWith('/')) ? filename : path.join(Context.fixedOutputDir, filename);
         const dirname = path.dirname(_filename);
         console.log(`  > Saving fixed file ${COLORS.filename(_filename)} ...`);
@@ -34,7 +31,8 @@ module.exports = class FixedFile {
 
         const cols = this.valuesList.length;
         const maxBuffSize = MAX_BUFF_SIZE;
-        const totalSize = cols * this.rows;
+        const limbs = Context.Fr.n64;
+        const totalSize = cols * this.rows * limbs;
         const buff = new BigUint64Array(Math.min(totalSize, maxBuffSize));
 
         let p=0;
@@ -46,15 +44,17 @@ module.exports = class FixedFile {
                     let value = BigInt(this.valuesList[icol][irow]);
                     // improvements if no negative 
                     if (value < 0n) {
-                        // value += Context.Prime;                
-                        value += 0xFFFF_FFFF_0000_0001n;
+                        value += Context.Fr.p;
                     }
                     // assert(value >= 0n, `Negative value ${value} at row ${irow} and column ${icol}`);
-                    buff[p++] = value;
-                    if (p == buff.length) {
-                        const buff8 = new Uint8Array(buff.buffer);
-                        fs.writeSync(fd, buff8);
-                        p=0;
+                    for (let limb = 0; limb < limbs; ++limb) {
+                        buff[p++] = value;  // BigUint64Array keeps the lowest 64 bits
+                        value >>= 64n;
+                        if (p == buff.length) {
+                            const buff8 = new Uint8Array(buff.buffer);
+                            fs.writeSync(fd, buff8);
+                            p=0;
+                        }
                     }
                 }
                 

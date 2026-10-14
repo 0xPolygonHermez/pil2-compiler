@@ -72,6 +72,33 @@ function expectedColumns(p) {
     };
 }
 
+// Values of a binary fixed file, each one as `limbs` little-endian 64-bit limbs. fixed-to-file interleaves the
+// columns row by row; a fixed_dump holds a single column.
+function readLimbs(filename, limbs) {
+    const words = new BigUint64Array(new Uint8Array(fs.readFileSync(filename)).buffer);
+    const values = [];
+    for (let index = 0; index < words.length; index += limbs) {
+        let value = 0n;
+        for (let limb = limbs - 1; limb >= 0; --limb) value = (value << 64n) | words[index + limb];
+        values.push(value);
+    }
+    return values;
+}
+
+// Writes an extern fixed file ("cnst") with the column <air>.<name>, each value as `limbs` little-endian
+// 64-bit limbs.
+function writeExternFixedFile(filename, air, name, values, limbs) {
+    const str = (s) => Buffer.from(`${s}\0`, 'latin1');
+    const u32 = (v) => { const b = Buffer.alloc(4); b.writeUInt32LE(v); return b; };
+    const u64 = (v) => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(v)); return b; };
+    const words = new BigUint64Array(values.length * limbs);
+    for (let index = 0; index < words.length; ++index) {
+        words[index] = values[Math.floor(index / limbs)] >> (64n * BigInt(index % limbs));
+    }
+    const body = Buffer.concat([str(air), str(air), u64(values.length), u32(1), str(`${air}.${name}`), u32(0), Buffer.from(words.buffer)]);
+    fs.writeFileSync(filename, Buffer.concat([Buffer.from('cnst\x01\0\0\0\x01\0\0\0\x01\0\0\0', 'latin1'), u64(body.length), body]));
+}
+
 function fixedColumns(pilout) {
     const air = pilout.airGroups[0].airs[0];
     const columns = {};
@@ -83,7 +110,8 @@ function fixedColumns(pilout) {
     return columns;
 }
 
-for (const [fieldName, field, p] of [['Goldilocks', false, GOLDILOCKS], ['BN128', 'bn128', BN128]]) {
+// limbs: 64-bit limbs of a field element in the binary fixed files
+for (const [fieldName, field, p, limbs] of [['Goldilocks', false, GOLDILOCKS, 1], ['BN128', 'bn128', BN128, 4]]) {
     describe(`Fixed values of more than 64 bits on ${fieldName}`, function () {
         this.timeout(120000);
 
@@ -104,22 +132,42 @@ for (const [fieldName, field, p] of [['Goldilocks', false, GOLDILOCKS], ['BN128'
                 assert.deepEqual(columns[name], expected[name]);
             });
         }
+
+        it('writes the same values with fixed-to-file', () => {
+            const dir = path.join(TMP, `big_fixed_${fieldName.toLowerCase()}_fixed`);
+            const symbols = loadPilout(compile(`big_fixed_${fieldName.toLowerCase()}_fixed_to_file`, field, ['-O', 'fixed-to-file', '-u', dir]))
+                .symbols.filter((symbol) => symbol.type === 1 /* FIXED_COL */);
+            const values = readLimbs(path.join(dir, 'BigFixed.fixed'), limbs);
+            for (const symbol of symbols) {
+                const column = values.filter((_, index) => index % symbols.length === symbol.id);
+                assert.deepEqual(column, expected[symbol.name.split('.').pop()]);
+            }
+        });
+
+        it('loads an extern fixed file and dumps columns with fixed_dump', () => {
+            const dir = path.join(TMP, `extern_fixed_${fieldName.toLowerCase()}`);
+            fs.mkdirSync(dir, { recursive: true });
+            writeExternFixedFile(path.join(dir, 'extern.bin'), 'ExternFixed', 'E', expected.ROW, limbs);
+            const pil = path.join(dir, 'extern_fixed.pil');
+            fs.writeFileSync(pil, [
+                `airtemplate ExternFixed(int N = ${N}) {`,
+                '    #pragma extern_fixed_file "extern.bin"',
+                '    col fixed E;',
+                `    #pragma fixed_dump ExternFixed.E ${path.join(dir, 'E.bin')}`,
+                '    col fixed S = [0, -1..+..];',
+                `    #pragma fixed_dump ExternFixed.S ${path.join(dir, 'S.bin')}`,
+                '    col witness W;',
+                '    W * (E + S) === 0;',
+                '}',
+                'airgroup ExternFixed { ExternFixed(); }',
+            ].join('\n'));
+            const columns = fixedColumns(loadPilout(compilePil(pil, `extern_fixed_${fieldName.toLowerCase()}`, field).pilout));
+            assert.deepEqual(columns.E, expected.ROW);
+            assert.deepEqual(readLimbs(path.join(dir, 'E.bin'), limbs), expected.ROW);
+            assert.deepEqual(readLimbs(path.join(dir, 'S.bin'), limbs), expected.ARI);
+        });
     });
 }
-
-describe('fixed-to-file on a field larger than 64 bits', function () {
-    this.timeout(120000);
-
-    it('fails instead of truncating the values', () => {
-        let output = '';
-        try {
-            compile('big_fixed_bn128_fixed_to_file', 'bn128', ['-O', 'fixed-to-file', '-u', path.join(TMP, 'big_fixed_bn128_fixed')]);
-        } catch (error) {
-            output = (error.stdout || '') + (error.stderr || '');
-        }
-        assert.include(output, 'fixed-to-file only supports fields of 64 bits or less');
-    });
-});
 
 // fixed_bytes_field.pil: BIG, sized by "#pragma fixed_bytes field", stores the same values as PLAIN and never
 // resizes; only PLAIN resizes, on a field larger than 64 bits, and its warning suggests the pragma.

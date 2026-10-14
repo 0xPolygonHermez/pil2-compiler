@@ -98,7 +98,7 @@ module.exports = class FixedCol extends ProofItem {
         // TODO: review
         this.set(value);
     }
-    valueToBytes(value) {
+    static valueToBytes(value) {
         if (value < 256n) return 1;
         if (value < 65536n) return 2;
         if (value < 4294967296n) return 4;
@@ -190,7 +190,7 @@ module.exports = class FixedCol extends ProofItem {
         this.values[row] = value;
     }
     resizeValues(row, value) {
-        let _bytes = this.valueToBytes(value);
+        let _bytes = FixedCol.valueToBytes(value);
         let [_buffer, _values, _converter] = this.createBuffer(this.rows, _bytes);
         const _resizeConvert = !this.useBigIntValue() && this.useBigIntValue(_bytes) ? (x) => BigInt(x) : (x) => x;
         for (let i = 0; i <= this.maxRow; ++i) {
@@ -198,7 +198,7 @@ module.exports = class FixedCol extends ProofItem {
         }
         if (this.maxRow > 128) {
             console.log(`  > \x1B[33mWARNING: fixed RESIZE from ${this.bytes} bytes to ${_bytes} on row ${row}/${this.maxRow} at ${Context.sourceRef}\x1B[0m`);
-            console.log(`  > \x1B[33muse #pragma fixed_bytes ${_bytes} to force initial size\x1B[0m`);
+            console.log(`  > \x1B[33muse #pragma fixed_bytes ${_bytes === true ? 'field' : _bytes} to force initial size\x1B[0m`);
         } else if (Context.config.logFixedResize) {
             console.log(`  > resize fixed size from ${this.bytes} bytes to ${_bytes} on row ${row} at ${Context.sourceRef}`);
         }

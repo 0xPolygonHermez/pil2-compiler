@@ -15,17 +15,23 @@ const N = 16;
 const PIL = path.join(__dirname, 'bn128', 'big_fixed.pil');
 const TMP = path.join(__dirname, '..', 'tmp');
 
-// Compiles big_fixed.pil into tmp/<name>.pilout, with --field `field` unless it is false.
-function compile(name, field, extraArgs = []) {
+// Compiles `pil` into tmp/<name>.pilout, with --field `field` unless it is false. Returns the pilout's
+// path and the compiler's output.
+function compilePil(pil, name, field, extraArgs = []) {
     const compiler = path.join(__dirname, '..', 'src', 'pil.js');
     const pilout = path.join(TMP, `${name}.pilout`);
-    const args = [compiler, PIL, '-o', pilout, ...extraArgs];
+    const args = [compiler, pil, '-o', pilout, ...extraArgs];
     fs.mkdirSync(TMP, { recursive: true });
     if (field !== false) {
         args.push('--field', field);
     }
-    execFileSync(process.execPath, args, { encoding: 'utf8', stdio: 'pipe' });
-    return pilout;
+    const output = execFileSync(process.execPath, args, { encoding: 'utf8', stdio: 'pipe' });
+    return { pilout, output };
+}
+
+// Compiles big_fixed.pil into tmp/<name>.pilout, with --field `field` unless it is false.
+function compile(name, field, extraArgs = []) {
+    return compilePil(PIL, name, field, extraArgs).pilout;
 }
 
 // The output of a compilation that must fail.
@@ -114,6 +120,31 @@ describe('fixed-to-file on a field larger than 64 bits', function () {
         assert.include(output, 'fixed-to-file only supports fields of 64 bits or less');
     });
 });
+
+// fixed_bytes_field.pil: BIG, sized by "#pragma fixed_bytes field", stores the same values as PLAIN and never
+// resizes; only PLAIN resizes, on a field larger than 64 bits, and its warning suggests the pragma.
+for (const [fieldName, field] of [['Goldilocks', 'goldilocks'], ['BN128', 'bn128']]) {
+    describe(`#pragma fixed_bytes field on ${fieldName}`, function () {
+        this.timeout(120000);
+
+        let output;
+        let columns;
+        before(() => {
+            let pilout;
+            ({ pilout, output } = compilePil(path.join(__dirname, 'bn128', 'fixed_bytes_field.pil'), `fixed_bytes_field_${field}`, field));
+            columns = fixedColumns(loadPilout(pilout));
+        });
+
+        it('stores the same values as without the pragma', () => {
+            assert.deepEqual(columns.BIG, columns.PLAIN);
+        });
+
+        it('only resizes the column without the pragma, suggesting it', () => {
+            const suggestions = output.match(/use #pragma fixed_bytes \S+/g) ?? [];
+            assert.deepEqual(suggestions, field === 'bn128' ? ['use #pragma fixed_bytes field'] : []);
+        });
+    });
+}
 
 describe('--field', function () {
     this.timeout(120000);

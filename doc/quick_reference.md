@@ -1349,6 +1349,7 @@ Pragmas provide compiler directives:
 #pragma fixed_size word         // 2 bytes per element
 #pragma fixed_size dword        // 4 bytes per element
 #pragma fixed_size lword        // 8 bytes per element
+#pragma fixed_size field        // Narrowest width for any field element
 #pragma fixed_tmp               // Mark as temporary
 #pragma fixed_external          // Load from external file
 #pragma fixed_load "file.bin" 0 // Load from file, column 0

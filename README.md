@@ -35,6 +35,8 @@ The field is Goldilocks (`p = 2^64 - 2^32 + 1`) by default. To compile for the s
 $ node src/pil.js <filename.pil> -o <filename.pilout> --field bn128
 ```
 On a field larger than 64 bits, omit `-O fixed-to-file`: it only supports fields of 64 bits or less, and fails otherwise. The fixed data then stays inside the pilout, as by default.
+
+To size a fixed column for the field, instead of resizing it when its first value of more than 64 bits arrives, put `#pragma fixed_bytes field` before it (see [Pragmas](doc/quick_reference.md#pragmas)).
 ## Quick Reference
 In this section you will find a quick reference for the language in [doc/quick_reference.md](doc/quick_reference.md).
 The STD library written in PIL2 is available in [pil2-components](https://github.com/0xPolygonHermez/pil2-proofman/tree/main/pil2-components).

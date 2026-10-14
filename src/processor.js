@@ -22,6 +22,7 @@ const List = require("./list.js");
 const Assign = require("./assign.js");
 const Function = require("./function.js");
 const AirTemplateFunction = require("./air_template_function.js");
+const InlineInstance = require("./inline_instance.js");
 const PackedExpressions = require("./packed_expressions.js");
 const ProtoOut = require("./proto_out.js");
 const FixedCols = require("./fixed_cols.js");
@@ -165,6 +166,7 @@ module.exports = class Processor {
         this.airGroupStack = [];
 
         this.airStack = [];
+        this.inlineStack = [];
 
         this.sourceRef = '(init)';
 
@@ -651,6 +653,8 @@ module.exports = class Processor {
                 return func.exec(callinfo, {}, options);
             } else if (options.alias) {
                 throw new Error(`Alias can not be used on function calls at ${Context.sourceRef}`);
+            } else if (options.inline) {
+                throw new Error(`inline only could be used to instance an airtemplate, ${name} isn't one at ${Context.sourceRef}`);
             }
             this.checkNoVirtual(callinfo);
 
@@ -1314,6 +1318,9 @@ module.exports = class Processor {
         Context.airGroupId = this.airGroupId;
         this.setAirGroupBuiltIntConstants(this.currentAirGroup);
     }
+    get currentInline() {
+        return this.inlineStack.length ? this.inlineStack[this.inlineStack.length - 1] : false;
+    }
     /**
     * create a new air on current airgroup, take number of rows of N parameter of airgroup
     * if this parameter doesn't exists an error was produced
@@ -1461,6 +1468,57 @@ module.exports = class Processor {
         console.log('  > Total time: ' + units.getHumanTime(t2-ti1));
 
         return (res === false || typeof res === 'undefined') ? new ExpressionItems.IntValue() : res;
+    }
+    /**
+     * Expands an airtemplate inside the air that instances it, no air is created: its columns,
+     * expressions and constraints belong to the host air and share its number of rows. When the
+     * instance declares lanes, its body is executed once per lane and every declaration is
+     * reserved for all the lanes at once (see InlineInstance).
+     */
+    executeInlineAirTemplate(airTemplate, airTemplateFunc, callinfo, options = {}) {
+        const air = this.currentAir;
+        if (air === false) {
+            throw new Exceptions.Runtime(`Inline instance of ${airTemplate.name} must be done inside an air`);
+        }
+        if (callinfo.virtual) {
+            throw new Exceptions.Runtime(`virtual could not be used on the inline instance of ${airTemplate.name}`);
+        }
+        if (this.currentInline !== false) {
+            throw new Exceptions.Runtime(`Inline instance of ${airTemplate.name} inside the inline instance ` +
+                                         `of ${this.currentInline.template} isn't supported yet`);
+        }
+        const {prefix, lanes} = options.inline;
+        const instance = new InlineInstance(airTemplate.name, prefix, lanes, {hostDeep: this.scope.deep});
+        console.log(`\nINLINE instance \x1B[38;5;208m${airTemplate.name}\x1B[0m in air \x1B[38;5;208m${air.name}\x1B[0m` +
+                    `${prefix === '' ? '' : ' alias \x1B[38;5;208m' + prefix + '\x1B[0m'}` +
+                    `${lanes === false ? '' : ' lanes \x1B[38;5;208m' + lanes + '\x1B[0m'}`);
+        const ti1 = performance.now();
+        const bdir = airTemplate.getBaseDir();
+        for (let lane = 0; lane < instance.count; ++lane) {
+            instance.startLane(lane);
+            const mapinfo = this.prepareFunctionCall(airTemplateFunc, callinfo);
+            airTemplateFunc.prepareInline(callinfo, mapinfo, air.rows);
+            instance.bodyDeep = this.scope.deep;
+            this.declareLaneConstants(lane, instance.count);
+            this.inlineStack.push(instance);
+            this.pushInclude(bdir);
+            try {
+                airTemplate.exec(callinfo);
+            } finally {
+                this.popInclude();
+                this.inlineStack.pop();
+                this.finishFunctionCall(airTemplate);
+            }
+            instance.endLane();
+        }
+        const ti2 = performance.now();
+        console.log('  > Execution time: ' + units.getHumanTime(ti2 - ti1));
+        return new ExpressionItems.IntValue(0);
+    }
+    declareLaneConstants(lane, lanes) {
+        const options = {sourceRef: Context.sourceRef, const: true};
+        this.references.declare('LANE', 'int', [], options, new ExpressionItems.IntValue(lane));
+        this.references.declare('LANES', 'int', [], options, new ExpressionItems.IntValue(lanes));
     }
     debugAirInfo() {
         let labels;
@@ -1701,10 +1759,17 @@ module.exports = class Processor {
         const features = Features.extractFeatures('witness', s.features, {stage: true});
         let res = this.declare(s, 'witness', false, true, features);
         if (features.bits !== undefined) {          
+            // inside an inline instance the column was declared under its prefixed name, once
+            // for all the lanes, and that is the name the hint has to carry
+            const inline = this.currentInline;
             for (let [name, id] of res) {
+                if (inline !== false && inline.lane !== 0) continue;
                 let lastNameIndex = name.lastIndexOf('.');
                 if (lastNameIndex !== -1) {
                     name = name.substring(lastNameIndex + 1);
+                }
+                if (inline !== false) {
+                    name = inline.getTargetName(name);
                 }
                 let hint ={name, bits: features.bits[0]};
                 if (features.bits[1] == 'signed') {
@@ -1873,7 +1938,9 @@ module.exports = class Processor {
         for (const value of s.items) {
             const lengths = this.decodeLengths(value);
             const stage = s.stage;
-            const res = this.currentAir.declareAirValue(value.name, lengths, {sourceRef: this.sourceRef, stage});
+            // declared through declareFullReference, as the columns are, so that an inline
+            // instance prefixes it and reserves it for all its lanes
+            this.declareFullReference(value.name, 'airvalue', lengths, {sourceRef: this.sourceRef, stage});
         }
     }
     execChallengeDeclaration(s) {
@@ -1928,11 +1995,32 @@ module.exports = class Processor {
         fcall.virtual = true;
         // check if function call is virtual is done his evaluation
     }
+    /**
+     * alias of an inline instance: the prefix applied to the names it declares and the number
+     * of identical instances (lanes) to create. A bare `_` is no prefix, it's only there to
+     * carry the lanes.
+     */
+    decodeInlineInfo(inline) {
+        const isIdentifier = typeof inline.alias === 'string';
+        const alias = inline.alias === false ? '' : this.getAsString(inline.alias);
+        const prefix = (isIdentifier && alias === '_') ? '' : alias;
+        let lanes = false;
+        if (inline.lanes !== false) {
+            lanes = Number(inline.lanes.evalAsInt());
+            if (!Number.isInteger(lanes) || lanes < 1) {
+                throw new Error(`Invalid number of lanes ${lanes} on inline instance at ${Context.sourceRef}`);
+            }
+        }
+        return {prefix, lanes};
+    }
     execExpr(s) {
         let options = {};
         this.checkVirtual(s);
         if (s.alias) {
             options.alias = this.getAsString(s.alias);
+        }
+        if (s.inline) {
+            options.inline = this.decodeInlineInfo(s.inline);
         }
         s.expr.eval(options);
         if (!s.expr.isAlone()) {
@@ -1974,6 +2062,17 @@ module.exports = class Processor {
         }
         return res;
     }
+    /**
+     * A variable declared at the top level of an inline instance is expanded like its columns,
+     * to be visible from the air that inlines it.
+     */
+    declareVariableReference(name, type, lengths, options, initValue) {
+        const inline = this.currentInline;
+        if (inline !== false && inline.isExpandedVariable(type, this.scope.deep)) {
+            return this.declareInlineReference(inline, name, type, lengths, options, initValue);
+        }
+        return this.references.declare(name, type, lengths, options, initValue);
+    }
     declareFullReference(name, type, lengths = [], data = {}, initValue = null) {
         const _name = Context.getFullName(name);
         return this.declareReference(_name, type, lengths, data, initValue);
@@ -1982,7 +2081,32 @@ module.exports = class Processor {
         if (!data.sourceRef) {
             data.sourceRef = this.sourceRef;
         }
+        const inline = this.currentInline;
+        if (inline !== false && inline.isExpanded(type)) {
+            return this.declareInlineReference(inline, name, type, lengths, data, initValue);
+        }
         const res = this.references.declare(name, type, lengths, data);
+        if (initValue !== null) {
+            this.references.set(name, [], initValue);
+        }
+        return res;
+    }
+    /**
+     * A declaration of an inline instance is prefixed with its alias and, when it has lanes,
+     * reserved for all of them at once, because the ids of an array must be consecutive. It's
+     * declared on the scope of the air that instances it, so it outlives the lane that declares
+     * it, and the name used by the body is bound to the slice of the lane.
+     */
+    declareInlineReference(inline, name, type, lengths, data, initValue) {
+        const target = inline.getTargetName(name);
+        inline.declared(target, type);
+        if (inline.lane === 0) {
+            this.references.declare(target, type, inline.getTargetLengths(lengths), {...data, scopeDeep: inline.hostDeep});
+        }
+        // without prefix and without lanes the body uses the declaration itself, there is
+        // nothing to bind
+        const res = (target === name && inline.laneIndex === false) ? this.references.getReference(name).getId()
+                  : this.references.declareInlineAlias(name, target, inline.laneIndex);
         if (initValue !== null) {
             this.references.set(name, [], initValue);
         }
@@ -2099,7 +2223,7 @@ module.exports = class Processor {
                     if (Debug.active) console.log(name, s.vtype, initValue.toString ? initValue.toString() : initValue);
                 }
             }            
-            this.references.declare(name, s.vtype, lengths, { scope, sourceRef, const: s.const ?? false}, initValue);
+            this.declareVariableReference(name, s.vtype, lengths, { scope, sourceRef, const: s.const ?? false}, initValue);
             if (initValue !== null) {
                 const initValueText = typeof initValue.toString === 'function' ? initValue.toString() : initValue;
                 if (Debug.active) console.log(`ASSIGN(DECL) ${name} = ${initValueText} \x1B[0;90m[${Context.sourceTag}]\x1B[0m`);

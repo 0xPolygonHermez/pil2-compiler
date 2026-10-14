@@ -891,6 +891,76 @@ Adder(N: 2**20) alias MyAdder;
 virtual U8Air(N: 256);
 ```
 
+### Inline Instances
+
+An **inline instance** expands an airtemplate *inside* the air that instances it. No new air is
+created: its columns, expressions and constraints belong to the host air and share its `N`.
+
+```pil
+airtemplate Lane(int N = 2**16, int W = 32) {
+    col witness a, b, c;
+    expr sum = a + b;
+
+    a * b === c + W;
+}
+
+airtemplate Top(int N = 2**16) {
+    col witness t;
+
+    inline Lane(W: 32);                   // declares a, b, c and sum on Top
+    inline Lane(W: 16) alias other_;      // declares other_a, other_b, other_c, other_sum
+
+    t === a + other_c;
+}
+```
+
+The alias is the **prefix** applied to everything the instance declares, so the air that inlines
+it reaches those declarations by their prefixed name. Without alias the names are used as they
+are, which means two instances without alias collide.
+
+#### Lanes
+
+Adding a length to the alias creates that number of **identical instances** (lanes). Every
+declaration becomes an array with the lane as its outermost dimension, so `col witness a` of 4
+lanes is `a[4]` and `col witness v[2]` is `v[4][2]`:
+
+```pil
+airtemplate Top(int N = 2**16) {
+    // 4 identical lanes: lanes_a[4], lanes_b[4], lanes_c[4], lanes_sum[4]
+    inline Lane(W: 32) alias lanes_[4];
+
+    // chain them from the air that inlines them
+    for (int i = 0; i < 3; ++i) {
+        lanes_c[i] === lanes_a[i + 1];
+    }
+}
+
+airtemplate Top2(int N = 2**16) {
+    // `_` is no prefix, it's only there to carry the lanes: a[4], b[4], c[4], sum[4]
+    inline Lane(W: 32) alias _[4];
+}
+```
+
+Inside the instance, `LANE` is the index of the lane and `LANES` the number of lanes (`0` and `1`
+when there are none). Arguments that change per lane are passed as an array indexed by `LANE`.
+
+The ids of an array have to be consecutive, so the declarations of all the lanes are reserved at
+once, on the first one. This means the lanes must declare exactly the same things, in the same
+order: the **constraints** can depend on `LANE`, the **declarations** cannot, and the compiler
+refuses an instance whose lanes diverge.
+
+#### Rules
+
+| | |
+|---|---|
+| `N` | inherited from the host air, the default of the template is ignored. Passing it explicitly is allowed only if it's exactly the `N` of the air |
+| columns, airvals and expressions | declared on the host air, prefixed with the alias, arrays when there are lanes |
+| `container air.x` (absolute path) | not prefixed, shared with the host air, so `std` buses accumulate across instances |
+| variables on inner scopes (blocks, loops) | local to the instance |
+| `on final air` | registered as if it were declared outside, it runs when the host air closes, not when the instance ends |
+
+Nested inline instances (an instance that inlines another) are not supported yet.
+
 ### Virtual Instances
 
 A **virtual air instance** does not appear in the final `pilout` file. Virtual instances are used internally by the standard library to:
@@ -1544,6 +1614,8 @@ int rows = Tables.num_rows(TABLE);  // Returns 256
 | `AIR_NAME` | Current air name |
 | `AIRTEMPLATE` | Current air template name |
 | `VIRTUAL` | 1 if inside virtual instantiation |
+| `LANE` | Index of the lane inside an inline instance (0 when it has no lanes) |
+| `LANES` | Number of lanes of an inline instance (1 when it has no lanes) |
 
 ---
 

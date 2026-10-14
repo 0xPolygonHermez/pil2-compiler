@@ -1,0 +1,44 @@
+// An inline instance expands an airtemplate inside the air that instances it: no air is
+// created, its columns and constraints belong to the host air and share its number of rows.
+
+airtemplate Lane(int N = 2**8, int W = 3) {
+    col witness a, b;
+    col witness v[2];
+
+    // air values are part of the interface of the instance too, prefixed like the columns
+    airval pad;
+
+    // expressions declared at the top level are part of the interface of the instance too
+    expr sum = a + b;
+
+    a * b === W + v[0] + v[1] + LANE * LANES;
+}
+
+airtemplate InlineAir(int N = 2**8) {
+    col witness t;
+
+    // without prefix and without lanes the instance declares exactly what its body declares
+    inline Lane(W: 1);
+
+    // the alias is the prefix of everything the instance declares, and N could be passed
+    // explicitly as long as it's the N of the air
+    inline Lane(N: 2**8, W: 2) alias one_;
+
+    // an array of identical lanes, the lane is the outermost dimension of the declarations
+    inline Lane(W: 3) alias lanes_[4];
+
+    // everything the instances declare is reachable from the air that inlines them
+    t === a + one_b + lanes_a[3] + lanes_v[2][1] + lanes_sum[2];
+}
+
+airtemplate InlineLanes(int N = 2**8) {
+    // `_` is no prefix, it's only there to carry the lanes
+    inline Lane(W: 4) alias _[3];
+
+    a[0] === a[1] + a[2];
+}
+
+airgroup G {
+    InlineAir();
+    InlineLanes();
+}

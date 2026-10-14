@@ -6,7 +6,8 @@ const protobuf = require('protobufjs');
 
 // A field larger than 64 bits (the scalar field of BN128, selected with --field bn128) puts values of more
 // than 64 bits in the pilout: the base field itself, every negative constant and most fixed values. This spec
-// compiles the same pil on Goldilocks and on BN128 and reads the fixed columns back from the pilout.
+// compiles the same pil on Goldilocks and on BN128 and reads the fixed columns back from the pilout and the
+// binary fixed files.
 
 const GOLDILOCKS = 0xffffffff00000001n;
 const BN128 = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
@@ -112,7 +113,7 @@ function fixedColumns(pilout) {
 
 // limbs: 64-bit limbs of a field element in the binary fixed files
 for (const [fieldName, field, p, limbs] of [['Goldilocks', false, GOLDILOCKS, 1], ['BN128', 'bn128', BN128, 4]]) {
-    describe(`Fixed values of more than 64 bits on ${fieldName}`, function () {
+    describe(`Fixed values on ${fieldName}`, function () {
         this.timeout(120000);
 
         let pilout;

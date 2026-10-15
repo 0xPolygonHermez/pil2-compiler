@@ -2099,7 +2099,7 @@ module.exports = class Processor {
      */
     declareInlineReference(inline, name, type, lengths, data, initValue) {
         const target = inline.getTargetName(name);
-        inline.declared(target, type);
+        inline.declared(target, type, lengths);
         if (inline.lane === 0) {
             this.references.declare(target, type, inline.getTargetLengths(lengths), {...data, scopeDeep: inline.hostDeep});
         }

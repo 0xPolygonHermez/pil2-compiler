@@ -40,6 +40,16 @@ describe('Inline instance controls', () => {
                      /Lane 1 of inline L declares .* but lane 0 declares .* all the lanes must declare the same/);
     });
 
+    it('refuses lanes that declare different lengths', () => {
+        // the first lane reserves the array for all of them, so a lane declaring other
+        // dimensions would be bound to a slice of a different shape
+        const pil = writePil('inline_lanes_lengths_diverge',
+            'airtemplate L(int N = 2**6) {\n    col witness a[LANE + 2];\n    a[0] === 0;\n}\n' +
+            'airtemplate T(int N = 2**6) {\n    inline L() alias l_[2];\n}\nairgroup G { T(); }\n');
+        assert.match(compileError(pil, 'inline_lanes_lengths_diverge'),
+                     /Lane 1 of inline L declares \(witness l_a\[3\]\) but lane 0 declares \(witness l_a\[2\]\)/);
+    });
+
     it('refuses an inline instance out of an air', () => {
         const pil = writePil('inline_out_of_air', LANE + 'airgroup G {\n    inline L();\n}\n');
         assert.match(compileError(pil, 'inline_out_of_air'),

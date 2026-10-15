@@ -71,8 +71,10 @@ module.exports = class InlineInstance {
         throw new Error(`Lane ${this.lane} of inline ${this.template} declares (${current}) but lane 0 declares ` +
                         `(${first}), all the lanes must declare the same at ${this.sourceRef}`);
     }
-    declared(name, type) {
-        this.laneDeclarations.push(`${type} ${name}`);
+    // the lengths are part of the signature: the first lane reserves the array for all of
+    // them, so a lane declaring other dimensions would be bound to a slice of a different shape
+    declared(name, type, lengths = []) {
+        this.laneDeclarations.push(`${type} ${name}${lengths.map(length => `[${length}]`).join('')}`);
     }
     /**
      * the prefix applies to the name itself, not to the namespace it could be on,

@@ -153,14 +153,11 @@ module.exports = class FixedCol extends ProofItem {
     #setRowValue(row, value) {
         value = Context.Fr.e(value);
         if (this.values === false){
-            this.rows = Number(Context.rows);
-            if (this.bytes === false) {
-                this.bytes = 8;
-                // this.bytes = this.valueToBytes(value);
+            // virtual(n)/temporal(n) already fixed their own row count
+            if (this.rows === 0) {
+                this.rows = Number(Context.rows);
             }
-            [this.buffer, this.values, this.converter] = this.createBuffer(this.rows, this.bytes);
-            this.updateSize();
-            this.updateSetRowValue();
+            this.initDefaultValues();
         }
         this.checkIfResize(row, value);
         if (row > this.maxRow) this.maxRow = row;

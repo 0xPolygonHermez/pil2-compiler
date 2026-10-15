@@ -97,14 +97,18 @@ module.exports = class Scope {
     }
     setValue(name, value) {
         // set sigle value associate to current level with hiherancy
-        if (typeof this.values[name] === 'undefined') {
-            this.values[name] = value;
-        } else if (this.valuesStack.length > 0)  {
-            this.valuesStack[this.valuesStack.length - 1][name] = this.values[name];
+        if (this.valuesStack.length > 0) {
+            const stackValues = this.valuesStack[this.valuesStack.length - 1];
+            // save the value to recover on pop, only on first set of this scope level, to
+            // avoid to lose the value of the previous level. Undefined values must be saved
+            // too, in other case the value leaks out of this scope.
+            if (!Object.prototype.hasOwnProperty.call(stackValues, name)) {
+                stackValues[name] = this.values[name];
+            }
             this.values[name] = value;
         } else {
             // empty scope stack, never recover previous value
-            this.values[name] = value;              
+            this.values[name] = value;
         }
     }
     getValue(name, defaultValue = false) {

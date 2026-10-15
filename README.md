@@ -30,6 +30,12 @@ Generate pilout file specifing paths where search pil files:
 ```sh
 $ node src/pil.js <filename.pil> -o <filename.pilout> -I path1,path2,lib/std
 ```
+Generate the legacy pilout version (1), the format defined by `src/pilout_1.proto`.
+By default version 2 (`src/pilout.proto`) is generated, the only one supporting
+domain constraints:
+```sh
+$ node src/pil.js <filename.pil> -o <filename.pilout> -O pilout-version=1
+```
 ## Quick Reference
 In this section you will find a quick reference for the language in [doc/quick_reference.md](doc/quick_reference.md).
 The STD library written in PIL2 is available in [pil2-components](https://github.com/0xPolygonHermez/pil2-proofman/tree/main/pil2-components).

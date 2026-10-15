@@ -13,10 +13,12 @@ const AirValue = require("./definition_items/air_value.js");
 const Variable = require("./definition_items/variable.js");
 const WitnessCol = require("./definition_items/witness_col.js");
 const FixedCol = require("./definition_items/fixed_col.js");
+const Domain = require("./definition_items/domain.js");
 const ExpressionVariable = require("./definition_items/expression_variable.js");
 
 module.exports = {
     DefinitionItem,
+    Domain,
     FeVariable,
     FixedCol,
     IntVariable,

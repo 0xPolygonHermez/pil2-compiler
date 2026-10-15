@@ -40,7 +40,7 @@ function finalPSB() {
     println("finalPSB");
 }
 function me(int k) {
-    container subproof.k alias pepe {
+    container air.k alias pepe {
         int counter = k;
     }
     pepe.counter = pepe.counter + 1;

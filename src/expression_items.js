@@ -20,6 +20,7 @@ const WitnessCol = require("./expression_items/witness_col.js");
 const CustomCol = require("./expression_items/custom_col.js");
 const ArrayOf = require("./expression_items/array_of.js");
 const FixedCol = require("./expression_items/fixed_col.js");
+const Domain = require("./expression_items/domain.js");
 const FunctionCall = require("./expression_items/function_call.js");
 const ParamItem = require("./expression_items/param_item.js");
 const RangeIndex = require("./expression_items/range_index.js");
@@ -31,6 +32,7 @@ module.exports = {
     ExpressionReference,
     FeValue,
     FixedCol,
+    Domain,
     IntValue,
     ProofItem,
     ProofValue,

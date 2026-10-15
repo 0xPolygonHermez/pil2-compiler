@@ -24,6 +24,7 @@ const OPTIONS = {
     'log-deferred-calls': { describe: 'log all deferred calls (finals)'},
     'log-redundant-deferred-calls': { describe: 'log redundant deferred calls (finals)'},
     'disable-reentrant-deferred-calls': { describe: 'disable reentrant deferred calls (final)' },
+    'pilout-version': { describe: 'pilout version to generate, 1 (legacy, no domains) or 2 (default)' },
     'no-proto-fixed-data': { describe: 'no store data of fixed inside pilout' },
     'enable-periodic-cols': { describe: 'enable periodic tables' },
     'output-constraints': { describe: 'output all air and global constraints generated' },

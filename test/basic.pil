@@ -1,4 +1,4 @@
-subproof Main(2**23) {
+airtemplate Main(int N = 2**23) {
     expr cols[3];
 
     col witness a;
@@ -22,4 +22,8 @@ subproof Main(2**23) {
     #pragma dump res
     res === 0;
     #pragma dump res
+}
+
+airgroup Basic {
+    Main();
 }

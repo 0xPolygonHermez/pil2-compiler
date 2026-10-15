@@ -1,0 +1,18 @@
+// BIG is sized for the field by "#pragma fixed_bytes field". PLAIN starts at 8 bytes and, on a field larger
+// than 64 bits, its first big value (row 200, past row 128) resizes it with a warning.
+airtemplate FixedBytesField(int N = 2**8) {
+    #pragma fixed_bytes field
+    col fixed BIG;
+    col fixed PLAIN;
+    for (int row = 0; row < N; ++row) {
+        BIG[row] = row < 200 ? row : -1;
+        PLAIN[row] = row < 200 ? row : -1;
+    }
+
+    col witness W;
+    W * (BIG + PLAIN) === 0;
+}
+
+airgroup FixedBytesField {
+    FixedBytesField();
+}

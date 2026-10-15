@@ -41,6 +41,13 @@ const OPTIONS = {
     // TODO: option to force witness name as snake_case and air, airtemplate, airgroup in CamelCase
 }
 
+// The prime fields the compiler knows, by the name --field takes. Goldilocks is the default; bn128
+// is the scalar field of BN128 (Ethereum's alt_bn128).
+const FIELDS = {
+    goldilocks: (1n << 64n) - (1n << 32n) + 1n,
+    bn128: 21888242871839275222246405745257275088548364400416034343698204186575808495617n,
+};
+
 const yargs = require("yargs").version(version)
     .usage("$0 <source.pil> <options>")
     .wrap(160)
@@ -51,6 +58,7 @@ const yargs = require("yargs").version(version)
     .option('o', { alias: 'output', describe: 'output pilout file. if filename is none, no pilout will be generated'})
     .option('n', { alias: 'name', describe: 'name of pilout (protobuf)'})
     .option('P', { alias: 'config', describe: 'pil configuration file (json format)'})
+    .option('field', { describe: 'prime field: goldilocks (default) or bn128, the scalar field of BN128', type: 'string'})
     .option('v', { alias: 'verbose', describe: 'verbose output'})
     .option('I', { alias: 'include', describe: 'include a pil (as adding a include on main pil)'})
     .option('l', { alias: 'lib', describe: 'include paths separated by ,'})
@@ -126,7 +134,12 @@ async function run() {
     if (argv.exec || argv.output === 'none') {
         config.protoOut = false;
     }
-    const F = new ffjavascript.F1Field((1n<<64n)-(1n<<32n)+1n );
+    const fieldName = typeof argv.field === 'undefined' ? 'goldilocks' : String(argv.field).trim().toLowerCase();
+    if (!Object.prototype.hasOwnProperty.call(FIELDS, fieldName)) {
+        console.log(`\x1B[1;31mERROR:\x1B[0;31m unknown field "${argv.field}": use ${Object.keys(FIELDS).join(', ')}\x1B[0m`);
+        process.exit(1);
+    }
+    const F = new ffjavascript.F1Field(FIELDS[fieldName]);
 
     if (argv.lib) {
         config.includes = argv.lib.split(',');

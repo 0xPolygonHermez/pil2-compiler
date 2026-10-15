@@ -98,7 +98,7 @@ module.exports = class FixedCol extends ProofItem {
         // TODO: review
         this.set(value);
     }
-    valueToBytes(value) {
+    static valueToBytes(value) {
         if (value < 256n) return 1;
         if (value < 65536n) return 2;
         if (value < 4294967296n) return 4;
@@ -107,7 +107,7 @@ module.exports = class FixedCol extends ProofItem {
     }
     createBuffer(rows, bytes) {
         if (bytes === true) {
-            return [false, new Array(rows), x => x];
+            return [false, new Array(rows).fill(0n), x => x];
         }
         const buffer = new Buffer.alloc(rows * bytes);
         switch (bytes) {
@@ -153,17 +153,13 @@ module.exports = class FixedCol extends ProofItem {
     #setRowValue(row, value) {
         value = Context.Fr.e(value);
         if (this.values === false){
-            this.rows = Number(Context.rows);
-            if (this.bytes === false) {
-                this.bytes = 8;
-                // this.bytes = this.valueToBytes(value);
+            // virtual(n)/temporal(n) already fixed their own row count
+            if (this.rows === 0) {
+                this.rows = Number(Context.rows);
             }
-            [this.buffer, this.values, this.converter] = this.createBuffer(this.rows, this.bytes);
-            this.updateSize();
-            this.updateSetRowValue();
-        } else {
-            this.checkIfResize(row, value);
+            this.initDefaultValues();
         }
+        this.checkIfResize(row, value);
         if (row > this.maxRow) this.maxRow = row;
         this.values[row] = this.converter(value);
     }
@@ -191,7 +187,7 @@ module.exports = class FixedCol extends ProofItem {
         this.values[row] = value;
     }
     resizeValues(row, value) {
-        let _bytes = this.valueToBytes(value);
+        let _bytes = FixedCol.valueToBytes(value);
         let [_buffer, _values, _converter] = this.createBuffer(this.rows, _bytes);
         const _resizeConvert = !this.useBigIntValue() && this.useBigIntValue(_bytes) ? (x) => BigInt(x) : (x) => x;
         for (let i = 0; i <= this.maxRow; ++i) {
@@ -199,7 +195,7 @@ module.exports = class FixedCol extends ProofItem {
         }
         if (this.maxRow > 128) {
             console.log(`  > \x1B[33mWARNING: fixed RESIZE from ${this.bytes} bytes to ${_bytes} on row ${row}/${this.maxRow} at ${Context.sourceRef}\x1B[0m`);
-            console.log(`  > \x1B[33muse #pragma fixed_bytes ${_bytes} to force initial size\x1B[0m`);
+            console.log(`  > \x1B[33muse #pragma fixed_bytes ${_bytes === true ? 'field' : _bytes} to force initial size\x1B[0m`);
         } else if (Context.config.logFixedResize) {
             console.log(`  > resize fixed size from ${this.bytes} bytes to ${_bytes} on row ${row} at ${Context.sourceRef}`);
         }
@@ -235,8 +231,8 @@ module.exports = class FixedCol extends ProofItem {
         if (!this.loaded) {
             this.loadFromFile();
         }
-        if (row >= this.size) {
-            throw new Error(`Out-of-bounds on fixed, to access to row ${row} valid indexs [0..${this.size}] N=${Context.rows} in ${Context.references.getLabelByItem(this)}`);
+        if (row < 0 || row >= this.rows) {
+            throw new Error(`Out-of-bounds on fixed, to access to row ${row} valid indexes [0..${this.rows - 1}] N=${Context.rows} in ${Context.references.getLabelByItem(this)}`);
         }
         if (rowOffset) {
             const rows  = BigInt(this.rows);
@@ -311,8 +307,9 @@ module.exports = class FixedCol extends ProofItem {
 
         if (value && value.loaded) {
             console.log(`  > Fixed ${this.label} loaded from file`);
-            this.bytes = 8;
-            this.buffer = value.values.buffer;
+            // a BigUint64Array, or an Array of big ints on fields larger than 64 bits
+            this.bytes = value.values.BYTES_PER_ELEMENT ?? true;
+            this.buffer = value.values.buffer ?? false;
             this.values = value.values;
             this.converter = x => x;
             this.rows = value.values.length;
@@ -337,7 +334,16 @@ module.exports = class FixedCol extends ProofItem {
     }
     dumpToFile(filename) {
         console.log(`Dumping ${this.id} to ${filename} ......`);
-        const buffer = this.sequence ? this.sequence.getBuffer() : this.values;
+        let buffer = this.sequence ? this.sequence.getBuffer() : this.values;
+        if ((this.sequence ?? this).bytes === true) {
+            // big ints have no binary storage: dump each value as its little-endian 64-bit limbs
+            const values = this.sequence ? this.sequence.getValues() : this.values;
+            const limbs = Context.Fr.n64;
+            buffer = new BigUint64Array(values.length * limbs);
+            for (let index = 0; index < buffer.length; ++index) {
+                buffer[index] = BigInt(values[Math.floor(index / limbs)]) >> (64n * BigInt(index % limbs));
+            }
+        }
         if (buffer === false) {
             throw new Error('This sequence cannot be saved to file');
         }
@@ -407,8 +413,17 @@ module.exports = class FixedCol extends ProofItem {
         if (offset + count > this.getValues().length) {
             throw new Error('Destination range exceeds destination length');
         }
+        value = Context.Fr.e(value);
+        if (!this.sequence) {
+            this.checkIfResize(Number(offset), value);
+        } else if (value > U64_MAX && this.getValues() instanceof BigUint64Array) {
+            throw new Error(`Tables.fill of ${value} doesn't fit in the 64-bit sequence assigned to fixed column ${this.label} at ${Context.sourceRef}`);
+        }
         const values = this.getValues();
-        values.fill(value, Number(offset), Number(offset + count));
+        values.fill(this.converter(value), Number(offset), Number(offset + count));
+        // resizeValues only preserves rows up to maxRow
+        const lastRow = Number(offset + count) - 1;
+        if (count > 0 && lastRow > this.maxRow) this.maxRow = lastRow;
     }    
     // NOTE: named *Range (not isConstant/isSequence) on purpose: `isSequence` is
     // an established truthy protocol property (Sequence.isSequence, checked by

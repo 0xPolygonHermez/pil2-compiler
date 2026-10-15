@@ -510,9 +510,15 @@ module.exports = class Processor {
             }
             case 'fixed_bytes':
             case 'fixed_size':{
+                // field: the narrowest width that holds any element of the field, so the column never
+                // resizes and the same pil fits any field
+                if (params[1] === 'field') {
+                    this.pragmas.nextFixed.bytes = DefinitionItems.FixedCol.valueToBytes(this.prime - 1n);
+                    break;
+                }
                 const bytes = {byte: 1, word: 2, dword: 4, lword: 4}[params[1]] ?? params[1];
                 if (bytes != 1 && bytes != 2 && bytes != 4 && bytes != 8) {
-                    throw new Error(`Invalid bytes ${params[1]} on pragma fixed_size (valid values: bytes, word, dword, lword) at ${Context.sourceRef}`);
+                    throw new Error(`Invalid bytes ${params[1]} on pragma fixed_size (valid values: bytes, word, dword, lword, field) at ${Context.sourceRef}`);
                 }
                 this.pragmas.nextFixed.bytes = Number(bytes);
                 break;

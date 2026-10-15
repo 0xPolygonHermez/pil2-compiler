@@ -1,0 +1,14 @@
+// A virtual fixed column filled row by row must keep its own row count
+// instead of taking N on the first write.
+airtemplate VirtualFixedRows(int N = 2**3) {
+    col fixed virtual(5) V;
+    for (int i = 0; i < 5; ++i) {
+        V[i] = 10 * (i + 1);
+    }
+    println("V[4]=", V[4]);
+    println("V[5]=", V[5]);
+}
+
+airgroup VirtualFixedRowsGroup {
+    VirtualFixedRows();
+}

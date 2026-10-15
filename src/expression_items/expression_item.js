@@ -176,6 +176,12 @@ class ExpressionItem {
         const prior = this.evalPrior(options);
         const next = this.evalNext(options);
         const rowOffset = (next ? next : 0) + (prior ? prior : 0);
+        if (rowOffset !== 0 && typeof options.evaluateRow !== 'undefined') {
+            // evaluating at a fixed row: the inside resolves to a value, on which applyNext
+            // would be a no-op, so the offset travels with the options to the column read
+            const evaluateRowOffset = (options.evaluateRowOffset ?? 0) + rowOffset;
+            return this.evalInsideExtra({...options, evaluateRowOffset, asItem: true, ignoreRowOffset: true}).result;
+        }
         const inside = this.evalInsideExtra({...options, asItem: true, ignoreRowOffset: true});
         if (rowOffset === 0 || !inside.isExpression) {
             return inside.result;

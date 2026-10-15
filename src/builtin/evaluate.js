@@ -15,7 +15,7 @@ module.exports = class Evaluate extends Function {
         }
         let row = false;
         const arg0 = s.args[0];
-        if (typeof arg0 === 'number' || arg0 instanceof BigInt) {
+        if (typeof arg0 === 'number' || typeof arg0 === 'bigint') {
             row = arg0;
         } else if (typeof arg0.asInt === 'function') {
             row = arg0.asInt();
@@ -23,7 +23,7 @@ module.exports = class Evaluate extends Function {
             console.log(arg0);
             throw new Exceptions.Runtime('First argument of evaluate must be a number');
         }
-        return s.args[1].eval({evaluateRow: Number(arg0), unroll: true, instance: true});
+        return s.args[1].eval({evaluateRow: Number(row), unroll: true, instance: true});
     }
     exec(s, mapInfo) {
         return mapInfo;

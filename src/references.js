@@ -228,12 +228,12 @@ module.exports = class References {
         }
         return false;
     }
-    prepareScope(nameInfo, type, existingReference) {
+    prepareScope(nameInfo, type, existingReference, scopeDeep = false) {
         if (nameInfo.isStatic) {
             return [Context.scope.declare(nameInfo.name, type, false, nameInfo.scope), nameInfo.scope];
         }
 
-        const scopeId = this.hasScope(type) ? Context.scope.declare(nameInfo.name, type, existingReference, false) : 0;
+        const scopeId = this.hasScope(type) ? Context.scope.declare(nameInfo.name, type, existingReference, scopeDeep) : 0;
         if (existingReference !== false && this.isVisible(existingReference)) {
             if  (existingReference.scopeId === scopeId || scopeId === false) { // existingReference.scope === false
                 console.log(existingReference);
@@ -274,7 +274,7 @@ module.exports = class References {
             if (this.isStaticDeclaredPreviously(nameInfo, existingReference)) {
                 return existingReference.getId();
             }
-            [scopeId, scope] = this.prepareScope(nameInfo, finalType, existingReference);
+            [scopeId, scope] = this.prepareScope(nameInfo, finalType, existingReference, options.scopeDeep ?? false);
         }
 
         const instance = this.getTypeInstance(finalType);
@@ -283,6 +283,7 @@ module.exports = class References {
         const constProperty = options.const ?? false;
         let data = {...options};
         delete data.const;
+        delete data.scopeDeep;
 
         const label = (!container || nameInfo.parts.length > 1) ? nameInfo.name : `${Context.airGroupName}.${nameInfo.name}`;
         const refProperties = {container, scope, isStatic: nameInfo.isStatic, data, const: constProperty, label, 
@@ -562,6 +563,28 @@ module.exports = class References {
     }
     getReferenceType (name) {
         return this.getReference(name, {type: false}).type;
+    }
+    /**
+     * An inline instance declares its columns once for all its lanes, the body of each lane
+     * uses the name of the declaration to access its own slice of them. Binds name to the
+     * slice of targetName given by index (false when the instance has no lanes).
+     */
+    declareInlineAlias (name, targetName, index) {
+        const src = this.getReference(targetName);
+        this.declare(name, '&' + src.type, [], {sourceRef: Context.sourceRef});
+        const reference = this.getReference(name);
+        if (index === false) {
+            // the array is cloned because unset() of the alias deletes it
+            reference.array = src.array ? src.array.clone() : false;
+            reference.locator = src.locator;
+        } else {
+            const sliced = src.array.getIndexesTypedOffset([index]);
+            reference.array = sliced.array;
+            reference.locator = src.locator + sliced.offset;
+        }
+        reference.type = src.type;
+        reference.instance = src.instance;
+        return reference.getId();
     }
     setReference (name, value) {
         let reference = this.getReference(name);

@@ -582,13 +582,13 @@ module.exports = class ProtoOut {
             }
         }
         const exprId = air.expressions.push(expressionPayload) - 1;
-        const constraintPayload = {
-            everyRow: {
-                expressionIdx: { idx: exprId },
-                debugLine: `airgroup default value (${defaultValue}) constraint`
-            }
+        const body = {
+            expressionIdx: { idx: exprId },
+            debugLine: `airgroup default value (${defaultValue}) constraint`
         };
-        air.constraints.push(constraintPayload);
+        // the constraint applies to every row, but each pilout version names
+        // that differently: everyRow on the legacy format, allRows from version 2
+        air.constraints.push(this.version < 2 ? { everyRow: body } : { allRows: body });
     }
     // domains are row selectors, they must be set before the constraints because
     // constraints reference them by their proto index. Only domains used by some

@@ -1,0 +1,22 @@
+// An airgroupval with a default value declared on an air of the airgroup must be
+// constrained to that default on every other air of the airgroup, also on the
+// airs closed before the airgroupval existed. Those earlier airs are already
+// packed on the pilout, so their default constraint is added straight to the
+// proto and it must use the constraint variant of the pilout version generated.
+
+airtemplate WithValue(int N = 2**4) {
+    airgroupval aggregate(sum) default(7) agv;
+    col witness a;
+    a * agv === 0;
+}
+
+airtemplate WithoutValue(int N = 2**4) {
+    col witness b;
+    b * b === b;
+}
+
+airgroup G {
+    WithoutValue() alias Before;   // closed before agv is declared
+    WithValue() alias Declares;
+    WithoutValue() alias After;    // the current air when agv is checked
+}

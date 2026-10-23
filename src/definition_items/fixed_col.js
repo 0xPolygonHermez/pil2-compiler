@@ -394,11 +394,21 @@ module.exports = class FixedCol extends ProofItem {
         if (srcBytes !== false && srcBytes === dstBytes) {
             dstValues.set(srcValues.subarray(srcStart, srcStart + n), dstStart);
         } else {
-            // different storage widths: copy element by element through
-            // setRowValue, which converts and resizes the destination if needed
+            // different storage widths, or plain-Array storage (values wider
+            // than 64 bits): copy element by element through setRowValue, which
+            // converts and resizes the destination if needed
             const srcLabel = src.definition?.label ?? src.label ?? false;
+            // unlike typed-array set(), this loop isn't overlap-safe: when source
+            // and destination share storage (a self-copy) snapshot the source
+            // window first, or a forward shift reads rows already overwritten
+            let from = srcValues;
+            let fromStart = srcStart;
+            if (srcValues === dstValues) {
+                from = srcValues.slice(srcStart, srcStart + n);
+                fromStart = 0;
+            }
             for (let index = 0; index < n; ++index) {
-                this.setRowValue(dstStart + index, definedRowValue(srcValues, srcStart + index, srcLabel));
+                this.setRowValue(dstStart + index, definedRowValue(from, fromStart + index, srcLabel));
             }
         }
         // block copies (and the fast setRowValue variants) don't track maxRow,
@@ -438,11 +448,16 @@ module.exports = class FixedCol extends ProofItem {
         }
         const start = Number(offset);
         const end = Number(offset + count);
-        // an empty range (or a single value) is trivially constant
-        if (end - start <= 1) {
+        // an empty range is trivially constant
+        if (end <= start) {
             return true;
         }
+        // read even when it's the only row: an undefined row is an error
+        // whatever the length of the range
         const first = definedRowValue(values, start, this.label);
+        if (end - start === 1) {
+            return true;
+        }
         for (let index = start + 1; index < end; ++index) {
             if (definedRowValue(values, index, this.label) !== first) {
                 return false;
@@ -460,8 +475,13 @@ module.exports = class FixedCol extends ProofItem {
         }
         const start = Number(offset);
         const end = Number(offset + count);
-        // an empty range (or a single value) is trivially a sequence
-        if (end - start <= 1) {
+        // an empty range is trivially a sequence, a single row too once it's
+        // checked to be defined (as on longer ranges)
+        if (end <= start) {
+            return true;
+        }
+        if (end - start === 1) {
+            definedRowValue(values, start, this.label);
             return true;
         }
         // values may be a typed array (Number) or a BigInt array; normalize

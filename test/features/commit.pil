@@ -1,14 +1,18 @@
 proofval rom_root1;
 public rom_root[4];
+public rom2_root[4];
 public usualops_root[4];
+public usualops2_root[4];
+public rom_b_root[4];
+public rom2_b_root[4];
 
 commit stage(18) public(usualops_root) usualops;
-// ERROR: commit public(usualops_root) usualops3;
-commit stage(9) usualops2;
+// ERROR, its publics are already used by usualops: commit stage(1) public(usualops_root) usualops3;
+commit stage(9) public(usualops2_root) usualops2;
 
 airtemplate CommitTest(int N = 2**13) {
-    commit public(rom_root) rom;
-    commit stage(13) rom2;
+    commit stage(1) public(rom_root) rom;
+    commit stage(13) public(rom2_root) rom2;
     col rom stage(2) line;
     col rom stage(2) line2;
     col usualops values;
@@ -24,8 +28,9 @@ airtemplate CommitTest(int N = 2**13) {
 
 
 airtemplate CommitTest2(int N = 2**13) {
-    commit rom;
-    commit stage(11) rom2;
+    // the publics of a commit can't be shared with another commit
+    commit stage(1) public(rom_b_root) rom;
+    commit stage(11) public(rom2_b_root) rom2;
     col rom stage(2) line;
     col rom2 instruction;
     // col usualops values;

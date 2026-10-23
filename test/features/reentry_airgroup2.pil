@@ -22,16 +22,15 @@ function std_call_range_check() {
 }
 
 function range_check_in_same_airgroup() {
-    // TODO: Expected to print 0 and 1, but prints 1 and 1
+    // runs on the final of each airgroup: prints 0 and then 1
     println("BEFORE AIRGROUP_ID",AIRGROUP_ID);
-    
-    // canvi airgroup context
-    // eval params
-    // canvi de contexte
-    // creació dels parametres local y la asignació
+
+    // the arguments are evaluated inside airgroup AirC (AIRGROUP_ID is its id), but
+    // _id2 keeps the id of the airgroup that triggered the final. Each final adds an
+    // AirC instance, so the alias tells them apart.
     int _id2 = AIRGROUP_ID;
     airgroup AirC {
-        AirC(id: AIRGROUP_ID, id2:_id2);
+        AirC(id: AIRGROUP_ID, id2:_id2) alias `AirC_${_id2}`;
     }
     println("AFTER AIRGROUP_ID",AIRGROUP_ID);
 }

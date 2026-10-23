@@ -50,14 +50,14 @@ function me(int k) {
 
 airgroup PSA {
     PSA();
-    PSA(2**10, loops: 2**8);
-    PSA(loops: 2**16);
-    PSA(N:1 , chunks: 2, loops: 3);
+    PSA(2**10, loops: 2**8) alias PSA_2;
+    PSA(loops: 2**16) alias PSA_3;
+    PSA(N:1 , chunks: 2, loops: 3) alias PSA_4;
 }
 
 airgroup PSB {
     PSB();
-    PSB(2**10, loops: 2**8);
-    PSB(loops: 2**16);
-    PSB(N:1 , chunks: 2, loops: 3);
+    PSB(2**10, loops: 2**8) alias PSB_2;
+    PSB(loops: 2**16) alias PSB_3;
+    PSB(N:1 , chunks: 2, loops: 3) alias PSB_4;
 }

@@ -2,7 +2,6 @@ const ProofItem = require("./proof_item.js");
 const Context = require('../context.js');
 const fs = require('fs');
 const IntValue = require('../expression_items/int_value.js');
-const FixedFile = require('../fixed_file.js');
 const ExpressionItems = require('../expression_items.js');
 const TableAnalysis = require('../table_analysis.js');
 const assert = require('../assert.js');
@@ -55,13 +54,6 @@ module.exports = class FixedCol extends ProofItem {
         this.buffer = null;
         this.converter = x => x;
         this.currentSetRowValue = this.#setRowValue;
-        if (data.loadFromFile) {
-            this.fromFile = data.loadFromFile;
-            this.loaded = false;
-        } else {
-            this.fromFile = false;
-            this.loaded = true;
-        }        
         // TODO: more faster option, change function that call
         // for each value to avoid verify if value is bigger than bytes specified
     }
@@ -72,12 +64,6 @@ module.exports = class FixedCol extends ProofItem {
         [this.buffer, this.values, this.converter] = this.createBuffer(this.rows, this.bytes);
         this.updateSize();
         this.updateSetRowValue(); 
-    }
-    loadFromFile() {
-        this.rows = Number(Context.rows);
-        this.initDefaultValues();
-        FixedFile.loadColumnFromFile(this.fromFile.filename, this.fromFile.col, this.rows, this.values, this.label);
-        this.loaded = true;
     }
     getRowCount() {
         return this.getValues().length;
@@ -132,9 +118,6 @@ module.exports = class FixedCol extends ProofItem {
         if (this.sequence) {
             throw new Error(`setting a row value but assigned a sequence previously ${Context.sourceTag}`);
         }
-        if (this.fromFile) {
-            throw new Error(`Cannot assign a value to a fixed column that is loaded from file ${this.fromFile} at ${Context.sourceRef}`);
-        }
         if (value && typeof value.asInt === 'function') {
             value = value.asInt();
         }
@@ -165,9 +148,6 @@ module.exports = class FixedCol extends ProofItem {
     getValues() {
         if (this.sequence) {
             return this.sequence.getValues();
-        }
-        if (!this.loaded) {
-            throw new Error(`Data of fixed column ${this.label} not loaded/found`);
         }
         if (this.values === false) {
             if (this.rows === 0) {
@@ -226,9 +206,6 @@ module.exports = class FixedCol extends ProofItem {
             } catch (e) {
                 throw new Error(`Error getting row ${row} from fixed column ${this.label}(id:${this.id}) assigned to sequence at ${Context.sourceRef}: ${e.message}`);
             }
-        }
-        if (!this.loaded) {
-            this.loadFromFile();
         }
         if (row < 0 || row >= this.rows) {
             throw new Error(`Out-of-bounds on fixed, to access to row ${row} valid indexes [0..${this.rows - 1}] N=${Context.rows} in ${Context.references.getLabelByItem(this)}`);
@@ -294,13 +271,11 @@ module.exports = class FixedCol extends ProofItem {
             this.bytes = value.bytes ?? 8;
             this.updateSize();
             this.updateSetRowValue();
-            this.loaded = true;
             return;
         }
 
         if (value instanceof ExpressionItems.FixedCol) {
             this.copyRowsFrom(value, 0, 0, value.getRowCount());
-            this.loaded = true;
             return;
         }
 
@@ -314,7 +289,6 @@ module.exports = class FixedCol extends ProofItem {
             this.rows = value.values.length;
             this.updateSize();
             this.updateSetRowValue();        
-            this.loaded = true;
             return;
         }
         throw new Error(`Invalid value for fixed column ${this.id} at ${Context.sourceTag}, expected a sequence or an expression, got ${value.constructor.name}`);

@@ -1352,7 +1352,6 @@ Pragmas provide compiler directives:
 #pragma fixed_size field        // Narrowest width for any field element
 #pragma fixed_tmp               // Mark as temporary
 #pragma fixed_external          // Load from external file
-#pragma fixed_load "file.bin" 0 // Load from file, column 0
 ```
 
 ### Feature Flags

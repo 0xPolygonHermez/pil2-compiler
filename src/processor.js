@@ -535,23 +535,6 @@ module.exports = class Processor {
                 this.currentAir.loadExternFixedFile(this.getPragmaStringTemplateParam(params[1], true));
                 break;
             } 
-            case 'fixed_load': {
-                if (typeof params[1] === 'undefined') {
-                    if (typeof this.currentAir.fixedLoadFromFile === 'undefined') {
-                        throw new Error(`Pragma fixed_load without filename at ${Context.sourceRef}`);
-                    } 
-                    params[1] = this.currentAir.fixedLoadFromFile.filename;
-                    ++this.currentAir.fixedLoadFromFile.col;
-                    params[2] = this.currentAir.fixedLoadFromFile.col;
-                } else if (typeof params[2] === 'undefined' && typeof this.currentAir.fixedLoadFromFile !== 'undefined') {
-                    ++this.currentAir.fixedLoadFromFile.col;
-                    params[2] = this.currentAir.fixedLoadFromFile.col;
-                } else {
-                    this.currentAir.fixedLoadFromFile = {filename: params[1], col: this.value2num(params[2] ?? 0)};
-                }
-                this.pragmas.nextFixed.loadFromFile = {filename: this.getPragmaStringTemplateParam(params[1], true), col: this.value2num(params[2] ?? 0)};
-                break;
-            }
             case 'output_fixed_file': {
                 Context.air.setOutputFixedFile(this.getPragmaStringTemplateParam(params[1], Context.airName+'.fixed'));
                 break;
@@ -1761,10 +1744,6 @@ module.exports = class Processor {
             if (this.pragmas.nextFixed.external) {
                 data.external = true;
                 this.pragmas.nextFixed.external = false;
-            }
-            if (this.pragmas.nextFixed.loadFromFile) {
-                data.loadFromFile = this.pragmas.nextFixed.loadFromFile;
-                this.pragmas.nextFixed.loadFromFile = false;
             }
             if (initValue === null) {
                 const loadData = this.currentAir.findExternFixedCol(colname);

@@ -126,12 +126,14 @@ assert_eq(string(f(1, w * w)), "w * w");
 const expr w1 = w*2 + k*w + 10;
 const expr w2 = w*w*k + 1;
 
+// a const expr is printed by its name, so the results are plain exprs: they print
+// the const expr of the selected branch
 a = 10;
-const expr _w1 = a > 0 ? w1 : w2;
-assert_eq(string(_w1), `w * 2 + ${k} * w + 10`);
+expr _w1 = a > 0 ? w1 : w2;
+assert_eq(string(_w1), "w1");
 
-const expr __w1 = w2;
-assert_eq(string(__w1), `w * w * ${k} + 1`);
+expr __w1 = w2;
+assert_eq(string(__w1), "w2");
 
 
 const expr e1 = w;
@@ -141,5 +143,5 @@ const expr e3 = e2;
 const expr _e = a > 0 ? e3 : e1;
 assert_eq(string(_e), "w");
 
-const expr _e2 = a < 5 ? e3 : w * 2 + 8;
+expr _e2 = a < 5 ? e3 : w * 2 + 8;
 assert_eq(string(_e2), "w * 2 + 8");

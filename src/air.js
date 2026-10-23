@@ -1,7 +1,6 @@
 const { log2 } = require("./utils.js");
 const Context = require('./context.js');
 const COLORS = require("./colors.js");
-const FixedFile = require('./fixed_file.js');
 const ExternFixedFile = require('./extern_fixed_file.js');
 const path = require('path');
 module.exports = class Air {
@@ -15,7 +14,6 @@ module.exports = class Air {
         const bits = log2(this._rows);
         this.bits = this._rows > (2 ** bits) ? bits + 1 : bits;
         this.name = (options.name ?? airTemplate.name) ?? '';
-        this.loadFixedFiles = {};
         this.virtual = options.virtual ?? false;
         const previousNameIsUsed = Air._airnames[this.name];
         if (typeof previousNameIsUsed !== 'undefined') {
@@ -55,22 +53,6 @@ module.exports = class Air {
             throw new Error(`Invalid fixed file name ${filename} on ${Context.sourceRef}`);
         }
         this.outputFixedFile = filename;
-    }
-    // Unused function to define a load fixed column, to allow load all fixed file columns together
-    defineLoadFixedFile(filename, col, values, label) {
-        let fixedFile = this.loadFixedFiles[filename];
-        if (!fixedFile) {
-            fixedFile = new FixedFile([], this.rows);
-            this.loadFixedFiles[filename] = fixedFile;
-        }
-        fixedFile.defineCol(col, values, label);
-    }
-    // Unused function to load all fixed file columns together
-    loadFiledFiles() {
-        for (const [filename, fixedFile] of Object.entries(this.loadFixedFiles)) {            
-            console.log(`  > Loading fixed file ${COLORS.filename(filename)} ...`);
-            fixedFile.loadFromFile(filename);
-        }
     }
     loadExternFixedFile(filename) {
         if (typeof filename !== 'string') {

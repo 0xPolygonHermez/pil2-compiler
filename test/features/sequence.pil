@@ -59,7 +59,7 @@ airtemplate Expressions(int N = 2**7) {
 
     col fixed X3 = [13,39..*..(13*3**31)]...;
     {
-        const int value = 13;
+        int value = 13;
         const int lvalue = 8029754151691311; // 13*3**31
         for (int row = 0; row < N; ++row) {
             assert_eq(X3[row], value, `X3[${row}](${X3[row]}) != ${value}`);
@@ -70,7 +70,7 @@ airtemplate Expressions(int N = 2**7) {
 
     col fixed FACTOR = [1,2..*..512]...;
     {
-        const int value = 1;
+        int value = 1;
         const int lvalue = 512;
         for (int row = 0; row < N; ++row) {
             assert_eq(FACTOR[row], value, `FACTOR[${row}](${FACTOR[row]}) != ${value}`);

@@ -62,7 +62,8 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
             code += '}\n';
         }
         if (partialLoop) {
-            code += `  __data[__dindex++] = ${v};`
+            code += `  __data[__dindex] = ${v};`
+            code += `  if (__data[__dindex++] !== ${v}) throw new Error(`+'`conversion problem __data[${__dindex-1}](${__data[__dindex-1]}) !== ${'+v+'})`);\n';
         }
         if (partialRepeat) {
             code += this.#getCodeRepeatLastElements(1, partialRepeat);
@@ -183,7 +184,10 @@ module.exports = class SequenceFastCodeGen extends SequenceBase {
     expr(e) {
         // no cache
         const num = Context.Fr.e(this.e2num(e));
-        const type = this.bytes === 8 ? 'n' :''
+        if (this.bytes !== true && num >= 2n ** BigInt(8 * this.bytes)) {
+            throw new Error(`value ${num} doesn't fit in ${this.bytes} bytes of sequence at ${Context.sourceTag}`);
+        }
+        const type = this.useBigInt() ? 'n' :''
         return [`__data[__dindex++] = ${num}${type};\n`, 1];
     }
     createCodeVariable(prefix = '_i') {

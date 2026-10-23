@@ -717,7 +717,7 @@ module.exports = class ProtoOut {
         const buf = Buffer.alloc(chunks.length * 8);
         const lastIndex = chunks.length - 1;
         for (let index = 0; index <= lastIndex; ++index) {
-            buf.writeBigUInt64BE(chunks[lastIndex - index], index);
+            buf.writeBigUInt64BE(chunks[lastIndex - index], index * 8);
         }
         if (bytes === 0 && this.varbytes) {
             let index = 0;

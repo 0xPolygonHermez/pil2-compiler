@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const MultiArray = require("./multi_array.js");
+const Context = require("./context.js");
 const MAX_BUFF_SIZE = 1024 * 1024 * 16; // 8 * 32Mb
 const HEADER_SIGNATURE = "cnst\x01\0\0\0\x01\0\0\0\x01\0\0\0";
 
@@ -73,15 +74,28 @@ module.exports = class ExternFixedFile {
         for (let idim = 0; idim < dim; ++idim) {
             indexes.push(this.readULE32());
         }  
-        const size = this.rows * 8;
+        const limbs = Context.Fr.n64;
+        const size = this.rows * 8 * limbs;
         if (this.config.logFixedFile) {
             console.log(`    • loading ${name}${dim === 0?'':('['+indexes.join('][')+']')}`);
         }
         
         const buffer = Buffer.alloc(size);
-        const values = new BigUint64Array(buffer.buffer, 0, this.rows);
+        let values = new BigUint64Array(buffer.buffer, 0, this.rows * limbs);
         fs.readSync(this.fd, buffer, 0, size, this.position);
         this.position += size;
+        if (limbs > 1) {
+            // values wider than 64 bits: join each value's little-endian limbs into a big int
+            const limbValues = values;
+            values = new Array(this.rows);
+            for (let row = 0; row < this.rows; ++row) {
+                let value = 0n;
+                for (let limb = limbs - 1; limb >= 0; --limb) {
+                    value = (value << 64n) | limbValues[row * limbs + limb];
+                }
+                values[row] = value;
+            }
+        }
         return  [name, dim === 0 ? false : indexes, values];
     } 
     getFullFilename() {

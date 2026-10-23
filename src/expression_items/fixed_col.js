@@ -54,12 +54,10 @@ module.exports = class FixedCol extends ProofItem {
     }
     eval(options) {
         if (options && typeof options.evaluateRow !== 'undefined') {
-            let row = Number(options.evaluateRow);
-            if (this.rowOffset) {
-                const rowOffset = this.rowOffset.getValue();
-                row += rowOffset; 
-            }
-            return this.getValueItem(row);
+            const row = Number(options.evaluateRow);
+            // the offset wraps around the column, as it does on constraints
+            const rowOffset = (options.evaluateRowOffset ?? 0) + (this.rowOffset ? this.rowOffset.getValue() : 0);
+            return this.definition.getValueItem(row, rowOffset);
         }
         return this.clone();
     }

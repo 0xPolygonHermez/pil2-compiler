@@ -30,6 +30,13 @@ Generate pilout file specifing paths where search pil files:
 ```sh
 $ node src/pil.js <filename.pil> -o <filename.pilout> -I path1,path2,lib/std
 ```
+The field is Goldilocks (`p = 2^64 - 2^32 + 1`) by default. To compile for the scalar field of BN128, the curve of Ethereum's precompiles (`alt_bn128`), pass `--field bn128`. Its order is `r = 21888242871839275222246405745257275088548364400416034343698204186575808495617`.
+```sh
+$ node src/pil.js <filename.pil> -o <filename.pilout> --field bn128
+```
+Binary fixed files (`-O fixed-to-file`, `#pragma extern_fixed_file` and `#pragma fixed_dump` of a column with values of more than 64 bits) store each value as little-endian 64-bit limbs, as many as the field needs: one on a field of 64 bits or less, four on BN128.
+
+To size a fixed column for the field, instead of resizing it when its first value of more than 64 bits arrives, put `#pragma fixed_bytes field` before it (see [Pragmas](doc/quick_reference.md#pragmas)).
 ## Quick Reference
 In this section you will find a quick reference for the language in [doc/quick_reference.md](doc/quick_reference.md).
 The STD library written in PIL2 is available in [pil2-components](https://github.com/0xPolygonHermez/pil2-proofman/tree/main/pil2-components).

@@ -23,6 +23,10 @@ function first_value_nested(col fixed f): int {
     return first_value(f);
 }
 
+function set_first_nested(col fixed f, int v) {
+    set_first(f, v);
+}
+
 airtemplate TestFixedArg(int N = 2**4) {
     // 1) row-materialized fixed
     col fixed M;
@@ -54,6 +58,18 @@ airtemplate TestFixedArg(int N = 2**4) {
 
     // 6) passing the argument through to another function keeps the reference
     assert_eq(first_value_nested(M), 99, "nested fixed arg pass-through");
+
+    // 7) a write forwarded through another function still reaches the caller
+    set_first_nested(M, 77);
+    assert_eq(M[0], 77, "nested write through fixed arg");
+
+    // 8) an element of a fixed array, directly and forwarded
+    col fixed A[2];
+    A[1][0] = 5;
+    assert_eq(first_value(A[1]), 5, "fixed array element as arg");
+    assert_eq(first_value_nested(A[1]), 5, "fixed array element forwarded");
+    set_first_nested(A[0], 33);
+    assert_eq(A[0][0], 33, "nested write through fixed array element");
 }
 
 airgroup TestFixedArg { TestFixedArg(); }

@@ -502,7 +502,7 @@ module.exports = class Processor {
             case 'fixed_dump':{
                 const [name, indexes] = utils.extractNameAndNumIndexes(params[1]);
                 const filename = params[2] ?? false;
-                const bytes = {byte: 1, word: 2, dword: 4, lword: 4}[params[3]] ?? false;
+                const bytes = {byte: 1, word: 2, dword: 4, lword: 8}[params[3]] ?? false;
                 console.log('dumping.....');
                 console.log(name, indexes, filename, bytes);
                 Context.references.getItem(name, indexes).definition.dumpToFile(filename, bytes);
@@ -510,9 +510,15 @@ module.exports = class Processor {
             }
             case 'fixed_bytes':
             case 'fixed_size':{
-                const bytes = {byte: 1, word: 2, dword: 4, lword: 4}[params[1]] ?? params[1];
+                // field: the narrowest width that holds any element of the field, so the column never
+                // resizes and the same pil fits any field
+                if (params[1] === 'field') {
+                    this.pragmas.nextFixed.bytes = DefinitionItems.FixedCol.valueToBytes(this.prime - 1n);
+                    break;
+                }
+                const bytes = {byte: 1, word: 2, dword: 4, lword: 8}[params[1]] ?? params[1];
                 if (bytes != 1 && bytes != 2 && bytes != 4 && bytes != 8) {
-                    throw new Error(`Invalid bytes ${params[1]} on pragma fixed_size (valid values: bytes, word, dword, lword) at ${Context.sourceRef}`);
+                    throw new Error(`Invalid bytes ${params[1]} on pragma fixed_size (valid values: bytes, word, dword, lword, field) at ${Context.sourceRef}`);
                 }
                 this.pragmas.nextFixed.bytes = Number(bytes);
                 break;
@@ -1734,7 +1740,9 @@ module.exports = class Processor {
             let init = s.sequence ?? null;
             let initValue = null;
             if (init) {
-                // virtual(n)/temporal(n) bound the sequence to their own row count
+                // virtual(n)/temporal(n) bound the sequence to their own row count.
+                // temporal(0) is the default of the feature and means no row count
+                // of its own (FixedCol takes 0 rows as N), so it falls back to N
                 const featureRows = features.virtual ?? (typeof features.temporal === 'number' && features.temporal > 0 ? features.temporal : null);
                 initValue = new Sequence(init, {maxSize: featureRows ?? ExpressionItems.IntValue.castTo(this.references.get('N'))});
                 if (Context.config.fixed !== false) initValue.extend();

@@ -31,7 +31,8 @@ module.exports = class FixedFile {
 
         const cols = this.valuesList.length;
         const maxBuffSize = MAX_BUFF_SIZE;
-        const totalSize = cols * this.rows;
+        const limbs = Context.Fr.n64;
+        const totalSize = cols * this.rows * limbs;
         const buff = new BigUint64Array(Math.min(totalSize, maxBuffSize));
 
         let p=0;
@@ -43,15 +44,17 @@ module.exports = class FixedFile {
                     let value = BigInt(this.valuesList[icol][irow]);
                     // improvements if no negative 
                     if (value < 0n) {
-                        // value += Context.Prime;                
-                        value += 0xFFFF_FFFF_0000_0001n;
+                        value += Context.Fr.p;
                     }
                     // assert(value >= 0n, `Negative value ${value} at row ${irow} and column ${icol}`);
-                    buff[p++] = value;
-                    if (p == buff.length) {
-                        const buff8 = new Uint8Array(buff.buffer);
-                        fs.writeSync(fd, buff8);
-                        p=0;
+                    for (let limb = 0; limb < limbs; ++limb) {
+                        buff[p++] = value;  // BigUint64Array keeps the lowest 64 bits
+                        value >>= 64n;
+                        if (p == buff.length) {
+                            const buff8 = new Uint8Array(buff.buffer);
+                            fs.writeSync(fd, buff8);
+                            p=0;
+                        }
                     }
                 }
                 

@@ -1,0 +1,20 @@
+// evaluate(row, expr): the row may be any int expression, and the row offsets
+// of the expression ('F previous row, F' next row) apply, wrapping around N.
+airtemplate EvaluateRow(int N = 2**3) {
+    col fixed F = [10,20,30,40,50,60,70,80];
+    int i = 2;
+    println("literal: ", evaluate(2, F));
+    println("int expr: ", evaluate(1+1, F));
+    println("int var: ", evaluate(i, F));
+    println("prev: ", evaluate(2, 'F));
+    println("next: ", evaluate(2, F'));
+    println("next2: ", evaluate(2, F'2));
+    println("prev2: ", evaluate(2, 2'F));
+    println("sum: ", evaluate(2, F + 'F + F'));
+    println("wrap prev: ", evaluate(0, 'F));
+    println("wrap next: ", evaluate(7, F'));
+}
+
+airgroup EvaluateRowGroup {
+    EvaluateRow();
+}

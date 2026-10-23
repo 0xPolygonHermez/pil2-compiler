@@ -109,7 +109,7 @@ module.exports = class Sequence {
             this.size = size;
         }
         this.engines.sizeOf.updateMaxSizeWithPadingSize(this.paddingSize);
-        this.bytes = 8; // this.engines.sizeOf.getMaxBytes();
+        this.bytes = this.engines.sizeOf.getMaxBytes();
         return this.size;
     }
     toList() {

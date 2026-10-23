@@ -135,13 +135,18 @@ A constant column is a delta-0 sequence: `Tables.is_sequence(col, 0, N, 0) == 1`
 ### signature
 
 **`Tables.signature(col, offset, count)`** → a non-cryptographic 64-bit hash of
-the range. It is order- and length-sensitive: two ranges hash equal **iff** they
-hold the same values in the same order. Meant to cheaply detect whether two
-tables are identical; not resistant to adversarial collisions (~2⁻⁶⁴ chance).
+the range. It is order- and length-sensitive: two ranges holding the same values
+in the same order always hash equal, but equal hashes don't guarantee equal
+ranges, since distinct ranges can collide (~2⁻⁶⁴ chance, and it isn't resistant
+to adversarial collisions). Meant to cheaply discard tables that differ; confirm
+a match with `Tables.are_equals`.
 
 ```
-// equal iff the two columns hold the same data
-assert_eq(Tables.signature(a) == Tables.signature(b), 1);
+// different signatures: the columns are surely different
+// equal signatures: probably equal, are_equals confirms it
+if (Tables.signature(a) == Tables.signature(b)) {
+    assert_eq(Tables.are_equals(a, 0, b, 0), 1);
+}
 ```
 
 ### are_equals

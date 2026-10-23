@@ -26,9 +26,9 @@ Generate pilout file from pil file:
 ```sh
 $ node src/pil.js <input.pil> -o <output.pilout>
 ```
-Generate pilout file specifing paths where search pil files:
+Generate pilout file specifing paths where search pil files, e.g. the std library of [pil2-proofman](https://github.com/0xPolygonHermez/pil2-proofman) (`pil2-components/lib/std/pil`):
 ```sh
-$ node src/pil.js <filename.pil> -o <filename.pilout> -I path1,path2,lib/std
+$ node src/pil.js <filename.pil> -o <filename.pilout> -I path1,path2,<pil2-proofman>/pil2-components/lib/std/pil
 ```
 The field is Goldilocks (`p = 2^64 - 2^32 + 1`) by default. To compile for the scalar field of BN128, the curve of Ethereum's precompiles (`alt_bn128`), pass `--field bn128`. Its order is `r = 21888242871839275222246405745257275088548364400416034343698204186575808495617`.
 ```sh

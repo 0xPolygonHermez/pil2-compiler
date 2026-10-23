@@ -69,14 +69,10 @@ airtemplate Runtime2(int N = 2**11) {
 
 airgroup Runtime1 {
     Runtime1();
-    Runtime1(2**13);
+    Runtime1(2**13) alias Runtime1_2;
 }
 
 airgroup Runtime2 {
     Runtime2();
-    Runtime2(2**13);
+    Runtime2(2**13) alias Runtime2_2;
 }
-Runtime1();
-Runtime1(2**13);
-Runtime2();
-Runtime2(2**13);

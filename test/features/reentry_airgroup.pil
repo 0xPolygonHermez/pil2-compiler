@@ -68,6 +68,6 @@ on final airgroup final_range_check();
 airgroup Reentry {
     int rows = 2**3;
     AirA(rows, 0);
-    AirA(rows, 1);
+    AirA(rows, 1) alias AirA_2;
     AirB(rows);
 }

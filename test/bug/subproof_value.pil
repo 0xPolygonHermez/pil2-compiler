@@ -22,7 +22,7 @@ airtemplate AirB(int N = 2**16) {
 
 airgroup AirA {
     AirA(2**8, 0);
-    AirA(2**16, 1);
+    AirA(2**16, 1) alias AirA_2;
 }
 
 airgroup AirB {

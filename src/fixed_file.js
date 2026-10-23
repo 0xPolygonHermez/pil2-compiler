@@ -9,16 +9,8 @@ const HEADER_SIGNATURE = "cnst\x01\0\0\0\x01\0\0\0\x01\0\0\0";
 module.exports = class FixedFile {
     constructor (valuesList, rows, labels = []) {
         this.valuesList = valuesList;
-        this.loaded = valuesList.map(() => false);
         this.rows = rows;
         this.labels = labels;
-    }
-    defineCol(col, values, label) {
-        if (this.valuesList[col] !== undefined) {
-            throw new Error(`Column ${col} already defined in fixed file`);
-        }
-        this.valuesList[col] = values;
-        this.labels[col] = label;
     }
     saveToFile(filename) {
         const _filename = (!Context.fixedOutputDir || filename.startsWith('/')) ? filename : path.join(Context.fixedOutputDir, filename);

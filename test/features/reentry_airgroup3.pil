@@ -13,10 +13,10 @@ function std_call_range_check() {
 }
 
 function range_check() {
-    // TODO: Expected to print 0 and 1, but prints 1 and 2
+    // runs on the final of each airgroup: prints 0 and then 1
     println("AIRGROUP_ID",AIRGROUP_ID);
-    // adding air...
-    AirC();
+    // adds an AirC instance to the airgroup being closed, the alias tells them apart
+    AirC() alias `AirC_${AIRGROUP_ID}`;
 }
 
 airtemplate AirC(int N = 2**16) {

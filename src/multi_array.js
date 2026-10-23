@@ -178,9 +178,9 @@ class MultiArray {
         if (dim === 0) {
             return {offset, array: false};
         }
-        EXIT_HERE;
-        // return {offset, dim, lengths: dim ? this.lengths.slice(-dim):[], array: this.createSubArray(dim)};
-        return {offset, array: this.createSubArray(dim)};
+        // partially indexed, the array of the dimensions not indexed yet. Its offsets are
+        // relative to the indexes already applied, because offset is absolute.
+        return {offset, array: new MultiArray(this.lengths.slice(-dim))};
     }
     initOffsets(lengths) {
         this.lengths = lengths;

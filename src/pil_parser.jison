@@ -35,6 +35,7 @@ proof                                       { return 'PROOF' }
 commit                                      { return 'COMMIT' }
 package                                     { return 'PACKAGE'; }    
 virtual                                     { return 'VIRTUAL'; }
+inline                                      { return 'INLINE'; }
 int                                         { return 'INT' }
 fe                                          { return 'FE' }
 expr                                        { return 'EXPR' }
@@ -586,6 +587,13 @@ statement_no_closed
     | VIRTUAL expression
         { $$ = {type: 'expr', expr: $2, virtual: true} }
 
+    // inline instances (expand an airtemplate inside the current air)
+    | INLINE function_call
+        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$2}, getSrcRef(this, @2)), inline: { alias: false, lanes: false }} }
+
+    | INLINE function_call ALIAS inline_alias
+        { $$ = {type: 'expr', expr: ExpressionFactory.fromObject({...$2}, getSrcRef(this, @2)), inline: $4} }
+
     | expression '===' expression
         { $$ = { type: 'constraint', left: $1, right: $3, witness: false } }
 
@@ -668,6 +676,24 @@ data_array
 function_call
     : name_optional_index '(' multiple_expression_list ')'
         { $$ = { type: 'call', function: $1, args: $3 } }
+    ;
+
+/*
+    alias of an inline instance: <prefix>[<lanes>], where prefix `_` means no prefix.
+    lanes is the number of identical instances to be created, only one dimension is allowed.
+*/
+inline_alias
+    : IDENTIFIER
+        { $$ = { alias: $1, lanes: false } }
+
+    | IDENTIFIER '[' expression ']'
+        { $$ = { alias: $1, lanes: $3 } }
+
+    | flexible_string
+        { $$ = { alias: $1, lanes: false } }
+
+    | flexible_string '[' expression ']'
+        { $$ = { alias: $1, lanes: $3 } }
     ;
 
 deferred_function_event

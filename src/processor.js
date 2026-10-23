@@ -502,7 +502,7 @@ module.exports = class Processor {
             case 'fixed_dump':{
                 const [name, indexes] = utils.extractNameAndNumIndexes(params[1]);
                 const filename = params[2] ?? false;
-                const bytes = {byte: 1, word: 2, dword: 4, lword: 4}[params[3]] ?? false;
+                const bytes = {byte: 1, word: 2, dword: 4, lword: 8}[params[3]] ?? false;
                 console.log('dumping.....');
                 console.log(name, indexes, filename, bytes);
                 Context.references.getItem(name, indexes).definition.dumpToFile(filename, bytes);
@@ -516,7 +516,7 @@ module.exports = class Processor {
                     this.pragmas.nextFixed.bytes = DefinitionItems.FixedCol.valueToBytes(this.prime - 1n);
                     break;
                 }
-                const bytes = {byte: 1, word: 2, dword: 4, lword: 4}[params[1]] ?? params[1];
+                const bytes = {byte: 1, word: 2, dword: 4, lword: 8}[params[1]] ?? params[1];
                 if (bytes != 1 && bytes != 2 && bytes != 4 && bytes != 8) {
                     throw new Error(`Invalid bytes ${params[1]} on pragma fixed_size (valid values: bytes, word, dword, lword, field) at ${Context.sourceRef}`);
                 }

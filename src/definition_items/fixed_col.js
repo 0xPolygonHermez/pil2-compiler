@@ -115,7 +115,6 @@ module.exports = class FixedCol extends ProofItem {
             case 2: return [buffer, new Uint16Array(buffer.buffer, 0, rows), x => Number(x)];
             case 4: return [buffer, new Uint32Array(buffer.buffer, 0, rows), x => Number(x)];
             case 8: return [buffer, new BigUint64Array(buffer.buffer, 0, rows), x => x];
-            case BIG_INT: return [buffer, new Array(rows), x => x];
         }
         throw new Error(`invalid number of bytes ${bytes}`);
     }

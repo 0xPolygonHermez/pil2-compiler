@@ -269,6 +269,11 @@ function register(analysis) {
 }
 
 function get(id) {
+    // only integer ids: Number(false), Number(null) or Number('') would be 0
+    // and silently return the first analysis
+    if (typeof id !== 'bigint' && typeof id !== 'number') {
+        throw new Error(`Invalid analysis id ${id}`);
+    }
     const index = Number(id);
     if (!Number.isInteger(index) || index < 0 || index >= analyses.length) {
         throw new Error(`Invalid analysis id ${id}`);

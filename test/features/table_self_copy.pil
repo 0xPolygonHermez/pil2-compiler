@@ -1,0 +1,38 @@
+#pragma test
+
+// Tables.copy inside the same column, with overlapping windows. Values are
+// negative so they fill the field: 64 bits on Goldilocks (typed-array storage,
+// block copy) and more than 64 bits on BN128 (plain-Array storage, copied row
+// by row), and the expected values are read back from the column itself so the
+// same file works on any field.
+
+airtemplate TableSelfCopy(int N = 2**4) {
+    col fixed C;
+    for (int i = 0; i < N; ++i) {
+        C[i] = -1 - i;
+    }
+    int orig[N];
+    for (int i = 0; i < N; ++i) {
+        orig[i] = C[i];
+    }
+
+    // forward shift: every row takes the previous one
+    Tables.copy(C, 0, C, 1, N - 1);
+    assert_eq(C[0], orig[0], "forward shift keeps row 0");
+    for (int i = 1; i < N; ++i) {
+        assert_eq(C[i], orig[i - 1], "forward shift");
+    }
+
+    // backward shift: every row takes the next one
+    col fixed D;
+    for (int i = 0; i < N; ++i) {
+        D[i] = -1 - i;
+    }
+    Tables.copy(D, 1, D, 0, N - 1);
+    for (int i = 0; i < N - 1; ++i) {
+        assert_eq(D[i], orig[i + 1], "backward shift");
+    }
+    assert_eq(D[N - 1], orig[N - 1], "backward shift keeps last row");
+}
+
+airgroup TableSelfCopy { TableSelfCopy(); }

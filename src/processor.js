@@ -1740,7 +1740,9 @@ module.exports = class Processor {
             let init = s.sequence ?? null;
             let initValue = null;
             if (init) {
-                // virtual(n)/temporal(n) bound the sequence to their own row count
+                // virtual(n)/temporal(n) bound the sequence to their own row count.
+                // temporal(0) is the default of the feature and means no row count
+                // of its own (FixedCol takes 0 rows as N), so it falls back to N
                 const featureRows = features.virtual ?? (typeof features.temporal === 'number' && features.temporal > 0 ? features.temporal : null);
                 initValue = new Sequence(init, {maxSize: featureRows ?? ExpressionItems.IntValue.castTo(this.references.get('N'))});
                 if (Context.config.fixed !== false) initValue.extend();
